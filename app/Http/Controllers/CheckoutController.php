@@ -52,6 +52,13 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index');
         }
 
+        // Basic validation of quantities stored in the session
+        foreach ($cart as $variantId => $quantity) {
+            if (!is_numeric($quantity) || (int)$quantity < 1) {
+                abort(422, "Quantité invalide pour l'article $variantId.");
+            }
+        }
+
         $order = DB::transaction(function () use ($request, $cart) {
             $total = 0;
             $orderItemsData = [];
@@ -80,6 +87,10 @@ class CheckoutController extends Controller
                     'variant_id' => $variant->id,
                     'quantity' => $quantity,
                     'price' => $variant->product->price,
+                    'variant_sku' => $variant->sku,
+                    'variant_size' => $variant->size,
+                    'variant_color' => $variant->color,
+                    'product_name' => $variant->product->name,
                 ];
 
                 // Décrément immédiat, toujours dans le verrou

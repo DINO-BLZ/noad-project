@@ -8,6 +8,8 @@ use App\Models\Product;
 use App\Models\Variant;
 use App\Models\OrderItem;
 use App\Models\ProductImage;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -57,6 +59,10 @@ class ProductController extends Controller
 
             foreach ($request->input('variants', []) as $v) {
                 if (empty($v['size'])) continue;
+                if (!empty($v['sku']) && \App\Models\Variant::where('sku', $v['sku'])->exists()) {
+                    ValidationException::withMessages(['variants' => ["SKU {$v['sku']} déjà utilisé."]]);
+                }
+
                 $product->variants()->create([
                     'size' => $v['size'],
                     'stock' => $v['stock'] ?? 0,
@@ -124,6 +130,11 @@ class ProductController extends Controller
             foreach ($request->input('variants', []) as $v) {
                 if (isset($v['id']) && $v['id'] && $existing->has($v['id'])) {
                     $variant = $existing->get($v['id']);
+                    // SKU uniqueness check if changed
+                    if (!empty($v['sku']) && $v['sku'] !== $variant->sku && \App\Models\Variant::where('sku', $v['sku'])->exists()) {
+                        ValidationException::withMessages(['variants' => ["SKU {$v['sku']} déjà utilisé."]]);
+                    }
+
                     $variant->update([
                         'size' => $v['size'],
                         'stock' => $v['stock'] ?? 0,
@@ -133,6 +144,10 @@ class ProductController extends Controller
                     $kept[] = $variant->id;
                 } else {
                     if (empty($v['size'])) continue;
+                    if (!empty($v['sku']) && \App\Models\Variant::where('sku', $v['sku'])->exists()) {
+                        ValidationException::withMessages(['variants' => ["SKU {$v['sku']} déjà utilisé."]]);
+                    }
+
                     $new = $product->variants()->create([
                         'size' => $v['size'],
                         'stock' => $v['stock'] ?? 0,
@@ -152,7 +167,8 @@ class ProductController extends Controller
 
             // images
             if ($request->hasFile('images')) {
-                $position = $product->images()->max('position') ?? 0;
+                $maxPos = $product->images()->max('position');
+                $position = is_null($maxPos) ? 0 : $maxPos + 1;
                 foreach ($request->file('images') as $index => $img) {
                     $path = $img->store('products', 'public');
                     $product->images()->create([
@@ -165,7 +181,13 @@ class ProductController extends Controller
 
             foreach ($request->input('remove_images', []) as $imgId) {
                 $img = $product->images()->find($imgId);
-                if ($img) $img->delete();
+                if ($img) {
+                    // physical file removal handled in model boot, but ensure disk cleanup
+                    if ($img->path) {
+                        Storage::disk('public')->delete($img->path);
+                    }
+                    $img->delete();
+                }
             }
 
             if ($primary = $request->input('primary_image')) {

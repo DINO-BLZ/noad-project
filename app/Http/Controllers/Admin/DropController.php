@@ -43,6 +43,8 @@ class DropController extends Controller
             'new_products.*.sizes' => 'nullable|array',
             'new_products.*.sizes.*.size' => 'nullable|string|max:10',
             'new_products.*.sizes.*.stock' => 'nullable|integer|min:0',
+            'new_products.*.sizes.*.sku' => 'nullable|string|max:50',
+            'new_products.*.sizes.*.color' => 'nullable|string|max:50',
         ]);
 
         $data['slug'] = Str::slug($data['name']) . '-' . uniqid();
@@ -141,7 +143,7 @@ class DropController extends Controller
                 'slug' => Str::slug($newProduct['name']) . '-' . uniqid(),
                 'price' => $newProduct['price'],
                 'image' => $imagePath,
-                'category_id' => Product::first()?->category_id,
+                'category_id' => $newProduct['category_id'] ?? null,
             ]);
 
             $sizes = $newProduct['sizes'] ?? [];
@@ -149,9 +151,16 @@ class DropController extends Controller
 
             foreach ($sizes as $sizeData) {
                 if (!empty($sizeData['size']) && isset($sizeData['stock'])) {
+                    // SKU uniqueness check
+                    if (!empty($sizeData['sku']) && \App\Models\Variant::where('sku', $sizeData['sku'])->exists()) {
+                        \Illuminate\Validation\ValidationException::withMessages(['new_products.'.$index.'.sizes' => ["SKU {$sizeData['sku']} déjà utilisé."]]);
+                    }
+
                     $product->variants()->create([
                         'size' => $sizeData['size'],
                         'stock' => $sizeData['stock'],
+                        'sku' => $sizeData['sku'] ?? null,
+                        'color' => $sizeData['color'] ?? null,
                     ]);
                     $hasValidSize = true;
                 }
