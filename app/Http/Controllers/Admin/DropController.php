@@ -20,8 +20,9 @@ class DropController extends Controller
     public function create()
     {
         $products = Product::all();
+        $categories = \App\Models\Category::all();
 
-        return view('admin.drops.create', compact('products'));
+        return view('admin.drops.create', compact('products', 'categories'));
     }
 
     public function store(Request $request)
@@ -38,6 +39,7 @@ class DropController extends Controller
             'new_products.*.name' => 'nullable|string|max:255',
             'new_products.*.price' => 'nullable|numeric|min:0',
             'new_products.*.image' => 'nullable|image|max:4096',
+            'new_products.*.category_id' => 'nullable|exists:categories,id',
             'new_products.*.sizes' => 'nullable|array',
             'new_products.*.sizes.*.size' => 'nullable|string|max:10',
             'new_products.*.sizes.*.stock' => 'nullable|integer|min:0',
@@ -64,7 +66,7 @@ class DropController extends Controller
                 'slug' => Str::slug($newProduct['name']) . '-' . uniqid(),
                 'price' => $newProduct['price'],
                 'image' => $imagePath,
-                'category_id' => Product::first()?->category_id,
+                'category_id' => $newProduct['category_id'] ?? null,
             ]);
 
             $sizes = $newProduct['sizes'] ?? [];
@@ -95,9 +97,10 @@ class DropController extends Controller
     public function edit(Drop $drop)
     {
         $products = Product::all();
+        $categories = \App\Models\Category::all();
         $whitelistRequests = $drop->whitelists()->with('user')->latest()->get();
 
-        return view('admin.drops.edit', compact('drop', 'products', 'whitelistRequests'));
+        return view('admin.drops.edit', compact('drop', 'products', 'categories', 'whitelistRequests'));
     }
 
     public function update(Request $request, Drop $drop)

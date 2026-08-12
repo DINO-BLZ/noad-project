@@ -3,49 +3,44 @@
 @section('content')
 <div class="admin-form-page">
 
-    <h1>Créer un drop</h1>
+    <h1>Créer un produit</h1>
 
-    <form action="{{ route('admin.drops.store') }}" method="POST" enctype="multipart/form-data" class="admin-form" id="drop-form">
+    <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" class="admin-form">
         @csrf
 
-        <label>Nom du drop
+        <label>Nom du produit
             <input type="text" name="name" value="{{ old('name') }}" required>
         </label>
 
-        <label>Description
-            <textarea name="description" rows="3">{{ old('description') }}</textarea>
-        </label>
-
-        <label>Date de début
-            <input type="datetime-local" name="start_date" id="start_date" value="{{ old('start_date') }}" required>
-        </label>
-
-        <label>Date de fin
-            <input type="datetime-local" name="end_date" id="end_date" value="{{ old('end_date') }}" required>
-        </label>
-
-        <label>Statut
-            <select name="status" required>
-                <option value="upcoming">À venir</option>
-                <option value="active">En cours</option>
-                <option value="ended">Terminé</option>
+        <label>Catégorie
+            <select name="category_id" required>
+                @foreach($categories as $category)
+                    <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                        {{ $category->name }}
+                    </option>
+                @endforeach
             </select>
         </label>
 
-        <label>Produits existants (optionnel)
-            <div class="checkbox-list">
-                @foreach($products as $product)
-                    <label class="checkbox-item">
-                        <input type="checkbox" name="products[]" value="{{ $product->id }}">
-                        {{ $product->name }}
-                    </label>
-                @endforeach
-            </div>
+        <label>Prix (DA)
+            <input type="number" name="price" step="0.01" value="{{ old('price') }}" required>
         </label>
 
-        <label>Nouveaux produits pour ce drop</label>
-        <div id="new-products-list"></div>
-        <button type="button" id="add-product-row" class="admin-btn-secondary">+ Ajouter un produit</button>
+        <label>Description
+            <textarea name="description" rows="4">{{ old('description') }}</textarea>
+        </label>
+
+        <label>Photo principale (optionnel)
+            <input type="file" name="image" accept="image/*">
+        </label>
+
+        <label>Variantes (taille, couleur, SKU, stock)</label>
+        <div id="variants-list"></div>
+        <button type="button" id="add-variant" class="admin-btn-secondary">+ Ajouter une variante</button>
+
+        <label>Images supplémentaires
+            <input type="file" name="images[]" accept="image/*" multiple>
+        </label>
 
         @if($errors->any())
             <div class="admin-form__errors">
@@ -55,19 +50,44 @@
             </div>
         @endif
 
-        <button type="submit" class="admin-btn">Créer le drop</button>
+        <button type="submit" class="admin-btn">Créer</button>
     </form>
 
 </div>
 
 <style>
-.admin-form-page{
-    padding:3rem;
-    max-width:600px;
-    margin:0 auto;
-}
+/* reuse existing styles from edit form */
+</style>
 
-.admin-form-page h1{
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    let idx = 0;
+    const list = document.getElementById('variants-list');
+    document.getElementById('add-variant').addEventListener('click', () => {
+        const row = document.createElement('div');
+        row.className = 'size-row';
+        row.innerHTML = `
+            <label>Taille
+                <input type="text" name="variants[${idx}][size]" placeholder="S, M, L, 42..." required>
+            </label>
+            <label>Couleur
+                <input type="text" name="variants[${idx}][color]" placeholder="Noir, Blanc...">
+            </label>
+            <label>SKU
+                <input type="text" name="variants[${idx}][sku]" placeholder="SKU123">
+            </label>
+            <label>Stock
+                <input type="number" name="variants[${idx}][stock]" min="0" value="1" required>
+            </label>
+            <button type="button" class="size-row__remove">Retirer</button>
+        `;
+        row.querySelector('.size-row__remove').addEventListener('click', () => row.remove());
+        list.appendChild(row);
+        idx++;
+    });
+});
+</script>
+@endsection
     font-size:1.6rem;
     font-weight:900;
     text-transform:uppercase;

@@ -23,11 +23,6 @@ class Product extends Model
         return $this->hasMany(Variant::class);
     }
 
-    public function images()
-    {
-        return $this->hasMany(ProductImage::class)->orderBy('position');
-    }
-
     public function drops()
     {
         return $this->belongsToMany(Drop::class);
@@ -40,5 +35,15 @@ class Product extends Model
         }
 
         return $this->drops()->active()->first();
+    }
+
+    public function images()
+    {
+        return $this->hasMany(ProductImage::class)->orderBy('position');
+    }
+
+    public function primaryImage()
+    {
+        return $this->images()->where('is_primary', true)->first();
     }
 }

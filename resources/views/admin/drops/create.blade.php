@@ -205,6 +205,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let productIndex = 0;
     const list = document.getElementById('new-products-list');
 
+    const categoryOptions = `@foreach($categories as $c)<option value="{{ $c->id }}">{{ addslashes($c->name) }}</option>@endforeach`;
+
     document.getElementById('add-product-row').addEventListener('click', () => {
         const row = document.createElement('div');
         row.className = 'new-product-row';
@@ -215,6 +217,12 @@ document.addEventListener('DOMContentLoaded', () => {
             </label>
             <label>Prix (DA)
                 <input type="number" step="0.01" name="new_products[${productIndex}][price]">
+            </label>
+            <label>Catégorie
+                <select name="new_products[${productIndex}][category_id]">
+                    <option value="">--Choisir--</option>
+                    ${categoryOptions}
+                </select>
             </label>
             <label>Photo
                 <input type="file" name="new_products[${productIndex}][image]" accept="image/*">
