@@ -28,9 +28,11 @@ Route::post('/panier/ajouter/{product}', [CartController::class, 'add'])->name('
 Route::patch('/panier/{variantId}', [CartController::class, 'update'])->name('cart.update');
 Route::delete('/panier/{variantId}', [CartController::class, 'remove'])->name('cart.remove');
 
-Route::get('/commande', [CheckoutController::class, 'index'])->name('checkout.index');
-Route::post('/commande', [CheckoutController::class, 'store'])->name('checkout.store');
-Route::get('/commande/succes/{order}', [CheckoutController::class, 'success'])->name('checkout.success');
+Route::middleware('auth')->group(function () {
+    Route::get('/commande', [CheckoutController::class, 'index'])->name('checkout.index');
+    Route::post('/commande', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::get('/commande/succes/{order}', [CheckoutController::class, 'success'])->name('checkout.success');
+});
 
 Route::get('/drops', [DropController::class, 'index'])->name('drops.index');
 Route::get('/drops/{drop:slug}', [DropController::class, 'show'])->name('drops.show');

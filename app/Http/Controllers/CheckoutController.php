@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Variant;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class CheckoutController extends Controller
@@ -16,21 +15,9 @@ class CheckoutController extends Controller
         $items = [];
         $total = 0;
 
-        if (empty($cart)) {
-            return redirect()->route('cart.index');
-        }
-
-        $variants = Variant::with('product')
-            ->whereIn('id', array_keys($cart))
-            ->get()
-            ->keyBy('id');
-
         foreach ($cart as $variantId => $quantity) {
-            $variant = $variants->get($variantId);
-
-            if (!$variant) {
-                return redirect()->route('cart.index')->withErrors(['cart' => 'Un article de votre panier est introuvable.']);
-            }
+            $variant = Variant::with('product')->find($variantId);
+            if (!$variant) continue;
 
             $subtotal = $variant->product->price * $quantity;
             $total += $subtotal;
@@ -65,40 +52,42 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index');
         }
 
-        $variantIds = array_keys($cart);
-        $variants = Variant::with('product')
-            ->whereIn('id', $variantIds)
-            ->lockForUpdate()
-            ->get()
-            ->keyBy('id');
+        $order = DB::transaction(function () use ($request, $cart) {
+            $total = 0;
+            $orderItemsData = [];
 
-        $orderItemsData = [];
-        $total = 0;
+            foreach ($cart as $variantId => $quantity) {
+                // Verrou réel : la ligne est verrouillée jusqu'à la fin de la transaction
+                $variant = Variant::with('product')->lockForUpdate()->find($variantId);
 
-        foreach ($cart as $variantId => $quantity) {
-            $variant = $variants->get($variantId);
+                if (!$variant) continue;
 
-            if (!$variant || $variant->stock < $quantity) {
-                return back()->withErrors(['cart' => 'Un article de votre panier est indisponible ou en quantité insuffisante.']);
+                // Revérification du stock APRÈS le verrou (source de vérité à cet instant)
+                if ($variant->stock < $quantity) {
+                    abort(422, "Stock insuffisant pour {$variant->product->name} ({$variant->size}).");
+                }
+
+                // Vérification whitelist : bloque au checkout, pas seulement au panier
+                $activeDrop = $variant->product->activeDrop();
+                if ($activeDrop && (!auth()->check() || !auth()->user()->isWhitelistedForDrop($activeDrop))) {
+                    abort(403, "Vous n'êtes pas autorisé à acheter ce produit de drop.");
+                }
+
+                $subtotal = $variant->product->price * $quantity;
+                $total += $subtotal;
+
+                $orderItemsData[] = [
+                    'variant_id' => $variant->id,
+                    'quantity' => $quantity,
+                    'price' => $variant->product->price,
+                ];
+
+                // Décrément immédiat, toujours dans le verrou
+                $variant->decrement('stock', $quantity);
             }
 
-            $subtotal = $variant->product->price * $quantity;
-            $total += $subtotal;
-
-            $orderItemsData[] = [
-                'variant_id' => $variant->id,
-                'quantity' => $quantity,
-                'price' => $variant->product->price,
-            ];
-        }
-
-        if ($total <= 0 || empty($orderItemsData)) {
-            return back()->withErrors(['cart' => 'Impossible de passer commande avec un panier vide.']);
-        }
-
-        DB::transaction(function () use ($request, $orderItemsData, $total) {
             $order = Order::create([
-                'user_id' => Auth::id(),
+                'user_id' => auth()->id(),
                 'full_name' => $request->full_name,
                 'phone' => $request->phone,
                 'address' => $request->address,
@@ -110,21 +99,23 @@ class CheckoutController extends Controller
 
             foreach ($orderItemsData as $item) {
                 $order->items()->create($item);
-                Variant::where('id', $item['variant_id'])->decrement('stock', $item['quantity']);
             }
 
-            session()->forget('cart');
-
-            request()->session()->flash('order_id', $order->id);
+            return $order;
         });
 
-        $order = Order::latest()->firstWhere('total', $total);
+        session()->forget('cart');
 
         return redirect()->route('checkout.success', $order->id);
     }
 
     public function success(Order $order)
     {
+        // Propriété : seul le propriétaire (ou un admin) peut voir cette commande
+        if ($order->user_id !== auth()->id() && !(auth()->check() && auth()->user()->is_admin)) {
+            abort(403);
+        }
+
         return view('checkout.success', compact('order'));
     }
 }

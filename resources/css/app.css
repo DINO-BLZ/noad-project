@@ -1,9 +1,32 @@
-@import 'tailwindcss';
+@import 'header.css';
+@import 'home.css';
+@import 'shop.css';
+@import 'product.css';
+@import 'cart.css';
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+:root{
+    --bg:#0A0A0A;
+    --text:#F5F5F5;
+    --accent:#B02E26;
+    --border:rgba(245,245,245,.12);
+}
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+html[data-theme="light"]{
+    --bg:#F5F5F5;
+    --text:#0A0A0A;
+    --accent:#B02E26;
+    --border:rgba(10,10,10,.12);
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:"Archivo",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    transition:.3s ease;
 }

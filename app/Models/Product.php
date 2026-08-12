@@ -8,7 +8,6 @@ class Product extends Model
 {
     protected $fillable = ['category_id', 'name', 'slug', 'description', 'price', 'image'];
 
-    // Laravel utilisera automatiquement le champ "slug" pour le route model binding
     public function getRouteKeyName(): string
     {
         return 'slug';
@@ -22,6 +21,11 @@ class Product extends Model
     public function variants()
     {
         return $this->hasMany(Variant::class);
+    }
+
+    public function images()
+    {
+        return $this->hasMany(ProductImage::class)->orderBy('position');
     }
 
     public function drops()
