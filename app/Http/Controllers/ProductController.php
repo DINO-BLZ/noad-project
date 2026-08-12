@@ -12,7 +12,11 @@ class ProductController extends Controller
     {
         $categories = Category::all();
 
-        $products = Product::with(['variants', 'category', 'drops'])
+        $products = Product::with([
+                'variants',
+                'category',
+                'drops' => fn($query) => $query->active(),
+            ])
             ->when($request->category, function ($query, $categorySlug) {
                 $query->whereHas('category', fn($q) => $q->where('slug', $categorySlug));
             })

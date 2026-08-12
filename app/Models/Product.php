@@ -31,6 +31,10 @@ class Product extends Model
 
     public function activeDrop()
     {
+        if ($this->relationLoaded('drops')) {
+            return $this->drops->first(fn ($drop) => $drop->isActive());
+        }
+
         return $this->drops()->active()->first();
     }
 }

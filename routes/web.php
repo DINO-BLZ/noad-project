@@ -38,12 +38,14 @@ Route::middleware('auth')->post('/drops/{drop:slug}/request-whitelist', [DropReq
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
     Route::get('/produits', [AdminProductController::class, 'index'])->name('products.index');
-    Route::get('/produits/{id}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
-  Route::get('/produits', [AdminProductController::class, 'index'])->name('products.index');
-Route::get('/produits/creer', [AdminProductController::class, 'create'])->name('products.create');
-Route::post('/produits', [AdminProductController::class, 'store'])->name('products.store');
-Route::get('/produits/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
-Route::put('/produits/{product}', [AdminProductController::class, 'update'])->name('products.update');
-Route::delete('/produits/{product}', [AdminProductController::class, 'destroy'])->name('products.destroy');
+    Route::get('/produits/creer', [AdminProductController::class, 'create'])->name('products.create');
+    Route::post('/produits', [AdminProductController::class, 'store'])->name('products.store');
+    Route::get('/produits/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
+    Route::put('/produits/{product}', [AdminProductController::class, 'update'])->name('products.update');
+    Route::delete('/produits/{product}', [AdminProductController::class, 'destroy'])->name('products.destroy');
+
+    Route::get('/drops', [AdminDropController::class, 'index'])->name('drops.index');
+    Route::get('/drops/{drop}/edit', [AdminDropController::class, 'edit'])->name('drops.edit');
 });

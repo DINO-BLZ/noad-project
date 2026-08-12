@@ -19,13 +19,18 @@
         @forelse($products as $product)
             @php
                 $totalStock = $product->variants->sum('stock');
+                $activeDrop = $product->activeDrop();
             @endphp
 
-            <a href="{{ route('products.show', $product->slug) }}" class="product-card">
+            <a href="{{ route('products.show', $product) }}" class="product-card">
                 <div class="product-card__image">
                     <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}">
                     @if($totalStock <= 0)
                         <span class="product-card__badge">Épuisé</span>
+                    @elseif($activeDrop)
+                        <span class="product-card__badge product-card__badge--drop">
+                            Drop : {{ \Illuminate\Support\Str::limit($activeDrop->name, 18) }}
+                        </span>
                     @endif
                 </div>
                 <h3 class="product-card__name">{{ $product->name }}</h3>
@@ -122,6 +127,10 @@
     letter-spacing:.05em;
     text-transform:uppercase;
     padding:.3rem .7rem;
+}
+
+.product-card__badge--drop{
+    background:#2563eb;
 }
 
 .product-card__name{
