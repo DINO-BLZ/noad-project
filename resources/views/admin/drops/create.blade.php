@@ -147,31 +147,6 @@
     cursor:pointer;
 }
 
-.size-row{
-    display:grid;
-    grid-template-columns:1fr 1fr auto;
-    gap:.8rem;
-    align-items:end;
-    border:1px solid var(--border);
-    padding:1rem;
-    margin-bottom:.8rem;
-}
-
-.size-row label{
-    margin:0;
-}
-
-.size-row__remove{
-    background:transparent;
-    border:1px solid var(--accent);
-    color:var(--accent);
-    font-size:.7rem;
-    text-transform:uppercase;
-    padding:.6rem;
-    cursor:pointer;
-    height:fit-content;
-}
-
 .admin-btn-secondary{
     background:transparent;
     border:1px dashed var(--border);
@@ -231,50 +206,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const list = document.getElementById('new-products-list');
 
     document.getElementById('add-product-row').addEventListener('click', () => {
-        const currentIndex = productIndex;
         const row = document.createElement('div');
         row.className = 'new-product-row';
         row.innerHTML = `
-            <button type="button" class="new-product-row__remove">Retirer le produit</button>
+            <button type="button" class="new-product-row__remove">Retirer</button>
             <label>Nom du produit
-                <input type="text" name="new_products[${currentIndex}][name]">
+                <input type="text" name="new_products[${productIndex}][name]">
             </label>
             <label>Prix (DA)
-                <input type="number" step="0.01" name="new_products[${currentIndex}][price]">
+                <input type="number" step="0.01" name="new_products[${productIndex}][price]">
             </label>
             <label>Photo
-                <input type="file" name="new_products[${currentIndex}][image]" accept="image/*">
+                <input type="file" name="new_products[${productIndex}][image]" accept="image/*">
             </label>
-            <label>Tailles disponibles et stock</label>
-            <div class="sizes-list-inner"></div>
-            <button type="button" class="add-size-row-inner admin-btn-secondary">+ Ajouter une taille</button>
         `;
-
         row.querySelector('.new-product-row__remove').addEventListener('click', () => row.remove());
-
-        let sizeIndex = 0;
-        const sizesList = row.querySelector('.sizes-list-inner');
-
-        function addSizeRow() {
-            const sizeRow = document.createElement('div');
-            sizeRow.className = 'size-row';
-            sizeRow.innerHTML = `
-                <label>Taille
-                    <input type="text" name="new_products[${currentIndex}][sizes][${sizeIndex}][size]" placeholder="S, M, L, 42...">
-                </label>
-                <label>Stock
-                    <input type="number" name="new_products[${currentIndex}][sizes][${sizeIndex}][stock]" min="0" value="1">
-                </label>
-                <button type="button" class="size-row__remove">Retirer</button>
-            `;
-            sizeRow.querySelector('.size-row__remove').addEventListener('click', () => sizeRow.remove());
-            sizesList.appendChild(sizeRow);
-            sizeIndex++;
-        }
-
-        row.querySelector('.add-size-row-inner').addEventListener('click', addSizeRow);
-        addSizeRow();
-
         list.appendChild(row);
         productIndex++;
     });

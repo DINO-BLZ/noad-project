@@ -32,14 +32,25 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'description' => 'nullable|string',
             'image' => 'required|image|max:4096',
+            'sizes' => 'required|array|min:1',
+            'sizes.*.size' => 'required|string|max:10',
+            'sizes.*.stock' => 'required|integer|min:0',
         ]);
 
         $data['slug'] = Str::slug($data['name']) . '-' . uniqid();
+        $data['image'] = $request->file('image')->store('products', 'public');
 
-        $path = $request->file('image')->store('products', 'public');
-        $data['image'] = $path;
+        $sizes = $data['sizes'];
+        unset($data['sizes']);
 
-        Product::create($data);
+        $product = Product::create($data);
+
+        foreach ($sizes as $sizeData) {
+            $product->variants()->create([
+                'size' => $sizeData['size'],
+                'stock' => $sizeData['stock'],
+            ]);
+        }
 
         return redirect()->route('admin.products.index')->with('success', 'Produit ajouté avec succès.');
     }
@@ -47,6 +58,7 @@ class ProductController extends Controller
     public function edit(Product $product)
     {
         $categories = Category::all();
+        $product->load('variants');
 
         return view('admin.products.edit', compact('product', 'categories'));
     }
@@ -59,13 +71,27 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'description' => 'nullable|string',
             'image' => 'nullable|image|max:4096',
+            'sizes' => 'required|array|min:1',
+            'sizes.*.size' => 'required|string|max:10',
+            'sizes.*.stock' => 'required|integer|min:0',
         ]);
 
         if ($request->hasFile('image')) {
             $data['image'] = $request->file('image')->store('products', 'public');
         }
 
+        $sizes = $data['sizes'];
+        unset($data['sizes']);
+
         $product->update($data);
+
+        $product->variants()->delete();
+        foreach ($sizes as $sizeData) {
+            $product->variants()->create([
+                'size' => $sizeData['size'],
+                'stock' => $sizeData['stock'],
+            ]);
+        }
 
         return redirect()->route('admin.products.index')->with('success', 'Produit mis à jour.');
     }

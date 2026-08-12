@@ -38,6 +38,22 @@
             <input type="file" name="image" accept="image/*">
         </label>
 
+        <label>Tailles disponibles et stock</label>
+        <div id="sizes-list">
+            @foreach($product->variants as $index => $variant)
+                <div class="size-row">
+                    <label>Taille
+                        <input type="text" name="sizes[{{ $index }}][size]" value="{{ $variant->size }}" required>
+                    </label>
+                    <label>Stock
+                        <input type="number" name="sizes[{{ $index }}][stock]" value="{{ $variant->stock }}" min="0" required>
+                    </label>
+                    <button type="button" class="size-row__remove">Retirer</button>
+                </div>
+            @endforeach
+        </div>
+        <button type="button" id="add-size-row" class="admin-btn-secondary">+ Ajouter une taille</button>
+
         @if($errors->any())
             <div class="admin-form__errors">
                 @foreach($errors->all() as $error)
@@ -98,6 +114,42 @@
     color:var(--text);
 }
 
+.size-row{
+    display:grid;
+    grid-template-columns:1fr 1fr auto;
+    gap:.8rem;
+    align-items:end;
+    border:1px solid var(--border);
+    padding:1rem;
+    margin-bottom:.8rem;
+}
+
+.size-row label{
+    margin:0;
+}
+
+.size-row__remove{
+    background:transparent;
+    border:1px solid var(--accent);
+    color:var(--accent);
+    font-size:.7rem;
+    text-transform:uppercase;
+    padding:.6rem;
+    cursor:pointer;
+    height:fit-content;
+}
+
+.admin-btn-secondary{
+    background:transparent;
+    border:1px dashed var(--border);
+    color:var(--text);
+    padding:.8rem;
+    font-size:.8rem;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    cursor:pointer;
+}
+
 .admin-form__errors{
     background:rgba(176,46,38,.1);
     border:1px solid var(--accent);
@@ -115,8 +167,34 @@
     text-transform:uppercase;
     letter-spacing:.05em;
     cursor:pointer;
-    text-align:center;
-    text-decoration:none;
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    let sizeIndex = {{ $product->variants->count() }};
+    const list = document.getElementById('sizes-list');
+
+    document.querySelectorAll('.size-row__remove').forEach(btn => {
+        btn.addEventListener('click', () => btn.closest('.size-row').remove());
+    });
+
+    document.getElementById('add-size-row').addEventListener('click', () => {
+        const row = document.createElement('div');
+        row.className = 'size-row';
+        row.innerHTML = `
+            <label>Taille
+                <input type="text" name="sizes[${sizeIndex}][size]" placeholder="S, M, L, 42..." required>
+            </label>
+            <label>Stock
+                <input type="number" name="sizes[${sizeIndex}][stock]" min="0" value="1" required>
+            </label>
+            <button type="button" class="size-row__remove">Retirer</button>
+        `;
+        row.querySelector('.size-row__remove').addEventListener('click', () => row.remove());
+        list.appendChild(row);
+        sizeIndex++;
+    });
+});
+</script>
 @endsection

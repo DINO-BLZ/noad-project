@@ -46,6 +46,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::put('/produits/{product}', [AdminProductController::class, 'update'])->name('products.update');
     Route::delete('/produits/{product}', [AdminProductController::class, 'destroy'])->name('products.destroy');
 
-    Route::get('/drops', [AdminDropController::class, 'index'])->name('drops.index');
-    Route::get('/drops/{drop}/edit', [AdminDropController::class, 'edit'])->name('drops.edit');
+Route::get('/drops', [AdminDropController::class, 'index'])->name('drops.index');
+Route::get('/drops/creer', [AdminDropController::class, 'create'])->name('drops.create');
+Route::post('/drops', [AdminDropController::class, 'store'])->name('drops.store');
+Route::get('/drops/{drop}/edit', [AdminDropController::class, 'edit'])->name('drops.edit');
+Route::put('/drops/{drop}', [AdminDropController::class, 'update'])->name('drops.update');
+Route::delete('/drops/{drop}', [AdminDropController::class, 'destroy'])->name('drops.destroy');
+Route::post('/drops/{drop}/whitelist/{whitelistId}/approve', [AdminDropController::class, 'approveWhitelist'])->name('drops.whitelist.approve');
+Route::post('/drops/{drop}/whitelist/{whitelistId}/reject', [AdminDropController::class, 'rejectWhitelist'])->name('drops.whitelist.reject');
 });
