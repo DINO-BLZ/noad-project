@@ -3,6 +3,9 @@
 @import 'shop.css';
 @import 'product.css';
 @import 'cart.css';
+@import 'checkout.css';
+@import 'drops.css';
+@import 'admin.css';
 
 :root{
     --bg:#0A0A0A;

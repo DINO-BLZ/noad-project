@@ -16,6 +16,20 @@
 
         @php
             $activeDrop = $product->activeDrop();
+
+            $sizeOrder = ['XS' => 0, 'S' => 1, 'M' => 2, 'L' => 3, 'XL' => 4, 'XXL' => 5];
+
+            $sortedVariants = $product->variants->sortBy(function ($variant) use ($sizeOrder) {
+                if (isset($sizeOrder[$variant->size])) {
+                    return $sizeOrder[$variant->size];
+                }
+                // Pointures ou toute taille numérique : tri par valeur numérique
+                if (is_numeric($variant->size)) {
+                    return 100 + (float) $variant->size;
+                }
+                // Fallback : ordre alphabétique après tout le reste
+                return 1000;
+            })->values();
         @endphp
 
         @if($activeDrop)
@@ -33,7 +47,7 @@
             @csrf
 
             <div class="product__sizes">
-                @foreach($product->variants as $variant)
+                @foreach($sortedVariants as $variant)
                     <label class="size-option {{ $variant->stock <= 0 ? 'is-disabled' : '' }}">
                         <input type="radio"
                                name="variant_id"

@@ -1,0 +1,539 @@
+/* DASHBOARD */
+
+.admin-dashboard{
+    padding:3rem;
+    max-width:1200px;
+    margin:0 auto;
+}
+
+.admin-dashboard__header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:2rem;
+    flex-wrap:wrap;
+    gap:1rem;
+}
+
+.admin-dashboard__header h1{
+    font-size:1.6rem;
+    font-weight:900;
+    text-transform:uppercase;
+}
+
+.admin-nav{
+    display:flex;
+    gap:1.5rem;
+}
+
+.admin-nav a{
+    color:var(--text);
+    opacity:.6;
+    text-decoration:none;
+    font-size:.85rem;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+}
+
+.admin-nav a.is-active,
+.admin-nav a:hover{
+    opacity:1;
+    color:var(--accent);
+}
+
+.kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+    gap:1.2rem;
+    margin-bottom:2.5rem;
+}
+
+.kpi-card{
+    border:1px solid var(--border);
+    padding:1.5rem;
+    display:flex;
+    flex-direction:column;
+    gap:.5rem;
+}
+
+.kpi-card__label{
+    font-size:.75rem;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    opacity:.6;
+}
+
+.kpi-card__value{
+    font-size:1.6rem;
+    font-weight:900;
+}
+
+.admin-dashboard__row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:1.5rem;
+}
+
+.admin-panel{
+    border:1px solid var(--border);
+    padding:1.5rem;
+}
+
+.admin-panel h2{
+    font-size:1rem;
+    text-transform:uppercase;
+    margin-bottom:1rem;
+}
+
+.order-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:.6rem 0;
+    border-bottom:1px solid var(--border);
+    font-size:.85rem;
+}
+
+.order-row:last-child{
+    border-bottom:none;
+}
+
+.order-status{
+    font-size:.7rem;
+    text-transform:uppercase;
+    padding:.2rem .6rem;
+    border:1px solid var(--border);
+}
+
+.order-status--pending{ color:#e0a800; border-color:#e0a800; }
+.order-status--paid{ color:#2ecc71; border-color:#2ecc71; }
+.order-status--shipped{ color:#3498db; border-color:#3498db; }
+.order-status--cancelled{ color:var(--accent); border-color:var(--accent); }
+
+.stock-warning{
+    color:var(--accent);
+    font-weight:700;
+}
+
+.admin-panel__empty{
+    opacity:.5;
+    font-size:.85rem;
+}
+
+/* PRODUITS */
+
+.admin-products{
+    padding:3rem;
+    max-width:1000px;
+    margin:0 auto;
+}
+
+.admin-products__header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:2rem;
+}
+
+.admin-products__header h1{
+    font-size:1.6rem;
+    font-weight:900;
+    text-transform:uppercase;
+}
+
+.admin-btn{
+    background:var(--accent);
+    color:#fff;
+    text-decoration:none;
+    padding:.8rem 1.4rem;
+    font-size:.85rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    border:none;
+    cursor:pointer;
+}
+
+.admin-btn:hover{
+    opacity:.85;
+}
+
+.admin-notice{
+    background:rgba(46,204,113,.1);
+    border:1px solid #2ecc71;
+    color:#2ecc71;
+    padding:.8rem 1rem;
+    margin-bottom:1.5rem;
+    font-size:.85rem;
+}
+
+.admin-product-row{
+    display:grid;
+    grid-template-columns:60px 1fr auto;
+    align-items:center;
+    gap:1.2rem;
+    padding:1rem 0;
+    border-bottom:1px solid var(--border);
+}
+
+.admin-product-row img{
+    width:60px;
+    height:60px;
+    object-fit:cover;
+    background:var(--border);
+}
+
+.admin-product-row__info h3{
+    font-size:.9rem;
+    text-transform:uppercase;
+}
+
+.admin-product-row__info p{
+    font-size:.8rem;
+    opacity:.7;
+    margin-top:.2rem;
+}
+
+.admin-product-row__actions{
+    display:flex;
+    gap:.8rem;
+}
+
+.admin-product-row__actions a,
+.admin-product-row__actions button{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text);
+    font-size:.75rem;
+    text-transform:uppercase;
+    padding:.5rem 1rem;
+    cursor:pointer;
+    text-decoration:none;
+}
+
+.admin-product-row__actions button:hover{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+}
+
+/* FORMULAIRES ADMIN (produit / drop) */
+
+.admin-form-page{
+    padding:3rem;
+    max-width:700px;
+    margin:0 auto;
+}
+
+.admin-form-page h1{
+    font-size:1.6rem;
+    font-weight:900;
+    text-transform:uppercase;
+    margin-bottom:2rem;
+}
+
+.admin-form{
+    display:flex;
+    flex-direction:column;
+    gap:1.2rem;
+}
+
+.admin-form label{
+    display:flex;
+    flex-direction:column;
+    gap:.4rem;
+    font-size:.75rem;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    opacity:.8;
+}
+
+.admin-form input,
+.admin-form select,
+.admin-form textarea{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:.8rem;
+    font-family:inherit;
+    font-size:.9rem;
+    width:100%;
+    box-sizing:border-box;
+}
+
+.admin-form select option{
+    background:var(--bg);
+    color:var(--text);
+}
+
+.admin-form__errors{
+    background:rgba(176,46,38,.1);
+    border:1px solid var(--accent);
+    color:var(--accent);
+    padding:.8rem 1rem;
+    font-size:.8rem;
+}
+
+.admin-btn-secondary{
+    background:transparent;
+    border:1px dashed var(--border);
+    color:var(--text);
+    padding:.8rem;
+    font-size:.8rem;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    cursor:pointer;
+}
+
+.admin-btn-secondary:hover{
+    opacity:.7;
+}
+
+.sizes-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));
+    gap:.8rem;
+    border:1px solid var(--border);
+    padding:1rem;
+}
+
+.size-toggle{
+    display:flex;
+    flex-direction:column;
+    gap:.5rem;
+    border:1px solid var(--border);
+    padding:.8rem;
+}
+
+.size-toggle__checkbox{
+    flex-direction:row !important;
+    align-items:center;
+    gap:.5rem !important;
+    text-transform:none !important;
+    font-size:.9rem !important;
+    font-weight:700 !important;
+    opacity:1 !important;
+    cursor:pointer;
+}
+
+.size-toggle__checkbox input[type="checkbox"]{
+    width:auto;
+}
+
+.size-stock-input{
+    padding:.5rem !important;
+    font-size:.85rem !important;
+}
+
+.size-stock-input:disabled{
+    opacity:.3;
+    cursor:not-allowed;
+}
+
+.size-row{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr 80px auto;
+    gap:.8rem;
+    align-items:end;
+    border:1px solid var(--border);
+    padding:1rem;
+    margin-bottom:.8rem;
+}
+
+.size-row label{
+    margin:0;
+}
+
+.size-row input{
+    width:100%;
+    box-sizing:border-box;
+}
+
+.size-row__remove{
+    background:transparent;
+    border:1px solid var(--accent);
+    color:var(--accent);
+    font-size:.7rem;
+    text-transform:uppercase;
+    padding:.6rem .8rem;
+    cursor:pointer;
+    height:fit-content;
+    white-space:nowrap;
+}
+
+.checkbox-list{
+    display:flex;
+    flex-direction:column;
+    gap:.5rem;
+    border:1px solid var(--border);
+    padding:1rem;
+    max-height:200px;
+    overflow-y:auto;
+}
+
+.checkbox-item{
+    flex-direction:row !important;
+    align-items:center;
+    gap:.6rem !important;
+    text-transform:none !important;
+    font-size:.85rem !important;
+    opacity:1 !important;
+}
+
+.new-product-row{
+    border:1px solid var(--border);
+    padding:1rem;
+    display:flex;
+    flex-direction:column;
+    gap:.8rem;
+    margin-bottom:1rem;
+    position:relative;
+}
+
+.new-product-row__remove{
+    align-self:flex-end;
+    background:transparent;
+    border:1px solid var(--accent);
+    color:var(--accent);
+    font-size:.7rem;
+    text-transform:uppercase;
+    padding:.3rem .7rem;
+    cursor:pointer;
+}
+
+/* DROPS ADMIN */
+
+.admin-drops{
+    padding:3rem;
+    max-width:1000px;
+    margin:0 auto;
+}
+
+.admin-drops__header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:2rem;
+}
+
+.admin-drops__header h1{
+    font-size:1.6rem;
+    font-weight:900;
+    text-transform:uppercase;
+}
+
+.admin-drop-row{
+    display:grid;
+    grid-template-columns:1fr auto auto;
+    align-items:center;
+    gap:1.5rem;
+    padding:1.2rem 0;
+    border-bottom:1px solid var(--border);
+}
+
+.admin-drop-row h3{
+    font-size:.95rem;
+    text-transform:uppercase;
+}
+
+.admin-drop-row p{
+    font-size:.8rem;
+    opacity:.7;
+    margin-top:.2rem;
+}
+
+.drop-status{
+    font-size:.7rem;
+    text-transform:uppercase;
+    padding:.3rem .8rem;
+    border:1px solid var(--border);
+}
+
+.drop-status--upcoming{ color:#3498db; border-color:#3498db; }
+.drop-status--active{ color:#2ecc71; border-color:#2ecc71; }
+.drop-status--ended{ color:var(--accent); border-color:var(--accent); }
+
+.admin-drop-row__actions{
+    display:flex;
+    gap:.8rem;
+}
+
+.admin-drop-row__actions a,
+.admin-drop-row__actions button{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text);
+    font-size:.75rem;
+    text-transform:uppercase;
+    padding:.5rem 1rem;
+    cursor:pointer;
+    text-decoration:none;
+}
+
+.admin-drop-row__actions button:hover{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+}
+
+/* WHITELIST (page edit drop) */
+
+.whitelist-panel{
+    margin-top:3rem;
+    border-top:1px solid var(--border);
+    padding-top:2rem;
+}
+
+.whitelist-panel h2{
+    font-size:1rem;
+    text-transform:uppercase;
+    margin-bottom:1rem;
+}
+
+.whitelist-row{
+    display:grid;
+    grid-template-columns:1fr auto auto;
+    align-items:center;
+    gap:1rem;
+    padding:.8rem 0;
+    border-bottom:1px solid var(--border);
+    font-size:.85rem;
+}
+
+.whitelist-row__actions{
+    display:flex;
+    gap:.5rem;
+}
+
+.whitelist-row__actions button{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text);
+    font-size:.7rem;
+    text-transform:uppercase;
+    padding:.4rem .8rem;
+    cursor:pointer;
+}
+
+.whitelist-row__actions button:hover{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+}
+
+/* PAGE CRÉATION PRODUIT (compatibilité avec l'ancien nom de classe) */
+
+.admin-product-create{
+    max-width:900px;
+    margin:0 auto;
+    padding:4rem 2rem;
+}
+
+.admin-product-create h1{
+    font-size:1.6rem;
+    font-weight:900;
+    text-transform:uppercase;
+    margin-bottom:2rem;
+}
