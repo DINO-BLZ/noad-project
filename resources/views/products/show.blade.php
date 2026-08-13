@@ -43,7 +43,7 @@
             </div>
         @endif
 
-        <form action="{{ route('cart.add', $product) }}" method="POST" class="product__form">
+        <form action="{{ route('cart.add', $product) }}" method="POST" class="product__form" id="add-to-cart-form">
             @csrf
 
             <div class="product__sizes">

@@ -35,7 +35,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // On attend 300ms après la dernière frappe avant d'interroger le serveur
             debounceTimer = setTimeout(() => {
                 fetch(`/recherche/suggestions?q=${encodeURIComponent(query)}`)
                     .then((response) => response.json())
@@ -56,11 +55,139 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 300);
         });
 
-        // Fermer le menu déroulant si on clique ailleurs sur la page
         document.addEventListener("click", (event) => {
             if (!searchInput.contains(event.target) && !searchResults.contains(event.target)) {
                 searchResults.classList.remove("is-open");
             }
+        });
+    }
+
+    // --- Panier (AJAX) ---
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    const cartItems = document.querySelectorAll(".cart__item");
+
+    cartItems.forEach((row) => {
+        const variantId = row.dataset.variantId;
+        const qtyInput = row.querySelector(".cart__qty-input");
+        const subtotalEl = row.querySelector(".cart__subtotal");
+        const removeBtn = row.querySelector(".cart__remove");
+
+        qtyInput.addEventListener("change", () => {
+            const quantity = parseInt(qtyInput.value, 10);
+
+            if (quantity < 1) {
+                qtyInput.value = 1;
+                return;
+            }
+
+            row.classList.add("is-updating");
+
+            fetch(`/panier/${variantId}`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": csrfToken,
+                },
+                body: JSON.stringify({ quantity }),
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    subtotalEl.textContent = data.subtotal;
+                    document.querySelector(".cart__total-amount").textContent = data.total;
+                    updateCartBadge(data.count);
+                    row.classList.remove("is-updating");
+                });
+        });
+
+        removeBtn.addEventListener("click", () => {
+            fetch(`/panier/${variantId}`, {
+                method: "DELETE",
+                headers: {
+                    "X-CSRF-TOKEN": csrfToken,
+                },
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    row.remove();
+                    document.querySelector(".cart__total-amount").textContent = data.total;
+                    updateCartBadge(data.count);
+
+                    if (data.empty) {
+                        document.querySelector(".cart__items").innerHTML = '<p class="cart__empty">Ton panier est vide.</p>';
+                        document.querySelector(".cart__total")?.remove();
+                        document.querySelector(".checkout__link")?.remove();
+                    }
+                });
+        });
+    });
+
+    // --- Mini-panier (tiroir coulissant) ---
+    const cartDrawer = document.getElementById("cart-drawer");
+    const cartDrawerItems = document.getElementById("cart-drawer-items");
+    const cartDrawerTotal = document.getElementById("cart-drawer-total");
+    const cartBadge = document.getElementById("cart-badge");
+    const addToCartForm = document.getElementById("add-to-cart-form");
+
+    function updateCartBadge(count) {
+        if (!cartBadge) return;
+        cartBadge.textContent = count;
+        cartBadge.style.display = count > 0 ? "flex" : "none";
+    }
+
+    function openCartDrawer(data) {
+        if (!cartDrawer) return;
+
+        if (data.items.length === 0) {
+            cartDrawerItems.innerHTML = '<p class="cart-drawer__empty">Ton panier est vide.</p>';
+        } else {
+            cartDrawerItems.innerHTML = data.items.map((item) => `
+                <div class="cart-drawer__item">
+                    <img src="${item.image}" alt="">
+                    <div class="cart-drawer__item-info">
+                        <p class="cart-drawer__item-name">${item.name}</p>
+                        <p>Taille : ${item.size} · Qté : ${item.quantity}</p>
+                    </div>
+                    <span class="cart-drawer__item-subtotal">${item.subtotal}</span>
+                </div>
+            `).join("");
+        }
+
+        cartDrawerTotal.textContent = data.total;
+        updateCartBadge(data.count);
+        cartDrawer.classList.add("is-open");
+    }
+
+    function closeCartDrawer() {
+        cartDrawer?.classList.remove("is-open");
+    }
+
+    document.getElementById("cart-drawer-close")?.addEventListener("click", closeCartDrawer);
+    document.getElementById("cart-drawer-overlay")?.addEventListener("click", closeCartDrawer);
+    document.getElementById("cart-drawer-later")?.addEventListener("click", closeCartDrawer);
+
+    if (addToCartForm) {
+        addToCartForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+
+            const formData = new FormData(addToCartForm);
+
+            fetch(addToCartForm.action, {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": csrfToken,
+                    "Accept": "application/json",
+                },
+                body: formData,
+            })
+                .then((response) => response.json().then((data) => ({ status: response.status, data })))
+                .then(({ status, data }) => {
+                    if (status !== 200) {
+                        alert(data.message || "Une erreur est survenue.");
+                        return;
+                    }
+
+                    openCartDrawer(data);
+                });
         });
     }
 });

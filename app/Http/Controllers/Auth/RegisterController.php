@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\CartItem;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -23,6 +24,8 @@ class RegisterController extends Controller
             'password' => 'required|string|min:8|confirmed',
         ]);
 
+        $guestSessionId = $request->session()->getId();
+
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
@@ -30,6 +33,8 @@ class RegisterController extends Controller
         ]);
 
         Auth::login($user);
+
+        CartItem::mergeGuestCartIntoUser($guestSessionId, $user->id);
 
         return redirect()->route('home');
     }

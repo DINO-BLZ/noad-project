@@ -1,5 +1,5 @@
 .cart{
-    max-width:800px;
+    max-width:900px;
     margin:0 auto;
     padding:3rem 2rem;
 }
@@ -19,13 +19,30 @@
     font-size:.85rem;
 }
 
+.cart__items{
+    display:flex;
+    flex-direction:column;
+}
+
 .cart__item{
     display:grid;
-    grid-template-columns:2fr 1fr auto auto;
+    grid-template-columns:70px 2fr 1fr auto auto;
     align-items:center;
     gap:1.5rem;
     padding:1.2rem 0;
     border-bottom:1px solid var(--border);
+    transition:opacity .2s;
+}
+
+.cart__item.is-updating{
+    opacity:.5;
+}
+
+.cart__item-image img{
+    width:70px;
+    height:70px;
+    object-fit:cover;
+    border-radius:8px;
 }
 
 .cart__item-info h3{
@@ -38,47 +55,44 @@
     opacity:.7;
 }
 
-.cart__qty{
-    display:flex;
-    gap:.5rem;
-}
-
-.cart__qty input{
-    width:50px;
+.cart__qty-input{
+    width:60px;
     background:transparent;
     border:1px solid var(--border);
     color:var(--text);
-    padding:.3rem;
+    padding:.5rem;
     text-align:center;
+    border-radius:6px;
 }
 
-.cart__qty button,
+.cart__subtotal{
+    font-weight:700;
+    white-space:nowrap;
+}
+
 .cart__remove{
     background:transparent;
     border:1px solid var(--border);
     color:var(--text);
     font-size:.75rem;
     text-transform:uppercase;
-    padding:.4rem .8rem;
+    letter-spacing:.05em;
+    padding:.5rem .9rem;
+    border-radius:20px;
     cursor:pointer;
     transition:.2s;
 }
 
-.cart__qty button:hover,
 .cart__remove:hover{
     background:var(--accent);
     border-color:var(--accent);
     color:#fff;
 }
 
-.cart__subtotal{
-    font-weight:700;
-}
-
 .cart__empty{
-    opacity:.6;
-    text-align:center;
     padding:3rem 0;
+    text-align:center;
+    opacity:.6;
 }
 
 .cart__total{
@@ -87,20 +101,25 @@
     font-size:1.2rem;
     font-weight:900;
     text-transform:uppercase;
-    margin-top:2rem;
-    padding-top:1.5rem;
+    padding:1.5rem 0;
     border-top:2px solid var(--text);
+    margin-top:1rem;
 }
 
 .checkout__link{
     display:block;
     text-align:center;
-    margin-top:1.5rem;
     background:var(--accent);
     color:#fff;
-    padding:1rem;
     text-decoration:none;
     font-weight:700;
     text-transform:uppercase;
     letter-spacing:.05em;
+    padding:1rem;
+    border-radius:6px;
+    transition:.2s;
+}
+
+.checkout__link:hover{
+    opacity:.85;
 }

@@ -30,4 +30,26 @@ class CartItem extends Model
 
         return $query->whereNull('user_id')->where('session_id', $sessionId);
     }
+    /**
+     * Fusionne le panier invité (par session) dans le panier de l'utilisateur
+     * qui vient de se connecter ou de s'inscrire. Si l'utilisateur avait déjà
+     * la même variante dans son panier, les quantités s'additionnent.
+     */
+    public static function mergeGuestCartIntoUser(string $sessionId, int $userId): void
+    {
+        $guestItems = static::where('session_id', $sessionId)->whereNull('user_id')->get();
+
+        foreach ($guestItems as $guestItem) {
+            $existing = static::where('user_id', $userId)
+                ->where('variant_id', $guestItem->variant_id)
+                ->first();
+
+            if ($existing) {
+                $existing->update(['quantity' => $existing->quantity + $guestItem->quantity]);
+                $guestItem->delete();
+            } else {
+                $guestItem->update(['user_id' => $userId, 'session_id' => null]);
+            }
+        }
+    }
 }

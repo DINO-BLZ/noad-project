@@ -38,6 +38,14 @@ class Drop extends Model
         return $query->where('status', 'active');
     }
 
+    public function scopeUpcoming($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('status', 'upcoming')
+              ->orWhere('start_date', '>', now());
+        });
+    }
+
     public function isActive(): bool
     {
         return $this->status === 'active' && $this->start_date->isPast() && $this->end_date->isFuture();

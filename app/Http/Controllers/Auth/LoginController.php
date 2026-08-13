@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\CartItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -20,8 +21,14 @@ class LoginController extends Controller
             'password' => 'required|string',
         ]);
 
+        // On garde l'identifiant de session AVANT la connexion,
+        // car regenerate() en crée un nouveau juste après.
+        $guestSessionId = $request->session()->getId();
+
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
+
+            CartItem::mergeGuestCartIntoUser($guestSessionId, Auth::id());
 
             if (Auth::user()->is_admin) {
                 return redirect()->intended(route('admin.dashboard'));
