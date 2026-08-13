@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Drop;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class DropController extends Controller
 {
@@ -49,49 +51,74 @@ class DropController extends Controller
 
         $data['slug'] = Str::slug($data['name']) . '-' . uniqid();
 
-        $drop = Drop::create($data);
-
-        $productIds = $request->input('products', []);
-
-        foreach ($request->input('new_products', []) as $index => $newProduct) {
-            if (empty($newProduct['name']) || empty($newProduct['price'])) {
-                continue;
-            }
-
-            $imagePath = null;
-            if ($request->hasFile("new_products.$index.image")) {
-                $imagePath = $request->file("new_products.$index.image")->store('products', 'public');
-            }
-
-            $product = Product::create([
-                'name' => $newProduct['name'],
-                'slug' => Str::slug($newProduct['name']) . '-' . uniqid(),
-                'price' => $newProduct['price'],
-                'image' => $imagePath,
-                'category_id' => $newProduct['category_id'] ?? null,
-            ]);
-
-            $sizes = $newProduct['sizes'] ?? [];
-            $hasValidSize = false;
-
-            foreach ($sizes as $sizeData) {
-                if (!empty($sizeData['size']) && isset($sizeData['stock'])) {
-                    $product->variants()->create([
-                        'size' => $sizeData['size'],
-                        'stock' => $sizeData['stock'],
-                    ]);
-                    $hasValidSize = true;
+        // Pré-validation des SKU fournis pour les nouveaux produits
+        $skus = [];
+        foreach ($request->input('new_products', []) as $npIndex => $np) {
+            foreach ($np['sizes'] ?? [] as $sizeData) {
+                if (!empty($sizeData['sku'])) {
+                    $skus[] = $sizeData['sku'];
                 }
             }
-
-            if (!$hasValidSize) {
-                $product->variants()->create(['size' => 'Unique', 'stock' => 1]);
-            }
-
-            $productIds[] = $product->id;
         }
 
-        $drop->products()->sync($productIds);
+        if (!empty($skus)) {
+            $duplicates = array_diff_assoc($skus, array_unique($skus));
+            if (!empty($duplicates)) {
+                throw ValidationException::withMessages(['new_products' => ['Doublon de SKU dans les nouveaux produits : ' . implode(', ', array_unique($duplicates))]]);
+            }
+
+            if (\App\Models\Variant::whereIn('sku', $skus)->exists()) {
+                throw ValidationException::withMessages(['new_products' => ['Un des SKU fournis est déjà utilisé.']]);
+            }
+        }
+
+        DB::transaction(function () use ($request, $data) {
+            $drop = Drop::create($data);
+
+            $productIds = $request->input('products', []);
+
+            foreach ($request->input('new_products', []) as $index => $newProduct) {
+                if (empty($newProduct['name']) || empty($newProduct['price'])) {
+                    continue;
+                }
+
+                $imagePath = null;
+                if ($request->hasFile("new_products.$index.image")) {
+                    $imagePath = $request->file("new_products.$index.image")->store('products', 'public');
+                }
+
+                $product = Product::create([
+                    'name' => $newProduct['name'],
+                    'slug' => Str::slug($newProduct['name']) . '-' . uniqid(),
+                    'price' => $newProduct['price'],
+                    'image' => $imagePath,
+                    'category_id' => $newProduct['category_id'] ?? null,
+                ]);
+
+                $sizes = $newProduct['sizes'] ?? [];
+                $hasValidSize = false;
+
+                foreach ($sizes as $sizeData) {
+                    if (!empty($sizeData['size']) && isset($sizeData['stock'])) {
+                        $product->variants()->create([
+                            'size' => $sizeData['size'],
+                            'stock' => $sizeData['stock'],
+                            'sku' => $sizeData['sku'] ?? null,
+                            'color' => $sizeData['color'] ?? null,
+                        ]);
+                        $hasValidSize = true;
+                    }
+                }
+
+                if (!$hasValidSize) {
+                    $product->variants()->create(['size' => 'Unique', 'stock' => 1]);
+                }
+
+                $productIds[] = $product->id;
+            }
+
+            $drop->products()->sync($productIds);
+        });
 
         return redirect()->route('admin.drops.index')->with('success', 'Drop créé avec succès.');
     }
@@ -119,61 +146,66 @@ class DropController extends Controller
             'new_products.*.name' => 'nullable|string|max:255',
             'new_products.*.price' => 'nullable|numeric|min:0',
             'new_products.*.image' => 'nullable|image|max:4096',
+            'new_products.*.category_id' => 'nullable|exists:categories,id',
             'new_products.*.sizes' => 'nullable|array',
             'new_products.*.sizes.*.size' => 'nullable|string|max:10',
             'new_products.*.sizes.*.stock' => 'nullable|integer|min:0',
+            'new_products.*.sizes.*.sku' => 'nullable|string|max:50',
+            'new_products.*.sizes.*.color' => 'nullable|string|max:50',
         ]);
 
-        $drop->update($data);
+        DB::transaction(function () use ($request, $data, $drop) {
+            $drop->update($data);
 
-        $productIds = $request->input('products', []);
+            $productIds = $request->input('products', []);
 
-        foreach ($request->input('new_products', []) as $index => $newProduct) {
-            if (empty($newProduct['name']) || empty($newProduct['price'])) {
-                continue;
-            }
-
-            $imagePath = null;
-            if ($request->hasFile("new_products.$index.image")) {
-                $imagePath = $request->file("new_products.$index.image")->store('products', 'public');
-            }
-
-            $product = Product::create([
-                'name' => $newProduct['name'],
-                'slug' => Str::slug($newProduct['name']) . '-' . uniqid(),
-                'price' => $newProduct['price'],
-                'image' => $imagePath,
-                'category_id' => $newProduct['category_id'] ?? null,
-            ]);
-
-            $sizes = $newProduct['sizes'] ?? [];
-            $hasValidSize = false;
-
-            foreach ($sizes as $sizeData) {
-                if (!empty($sizeData['size']) && isset($sizeData['stock'])) {
-                    // SKU uniqueness check
-                    if (!empty($sizeData['sku']) && \App\Models\Variant::where('sku', $sizeData['sku'])->exists()) {
-                        \Illuminate\Validation\ValidationException::withMessages(['new_products.'.$index.'.sizes' => ["SKU {$sizeData['sku']} déjà utilisé."]]);
-                    }
-
-                    $product->variants()->create([
-                        'size' => $sizeData['size'],
-                        'stock' => $sizeData['stock'],
-                        'sku' => $sizeData['sku'] ?? null,
-                        'color' => $sizeData['color'] ?? null,
-                    ]);
-                    $hasValidSize = true;
+            foreach ($request->input('new_products', []) as $index => $newProduct) {
+                if (empty($newProduct['name']) || empty($newProduct['price'])) {
+                    continue;
                 }
+
+                $imagePath = null;
+                if ($request->hasFile("new_products.$index.image")) {
+                    $imagePath = $request->file("new_products.$index.image")->store('products', 'public');
+                }
+
+                $product = Product::create([
+                    'name' => $newProduct['name'],
+                    'slug' => Str::slug($newProduct['name']) . '-' . uniqid(),
+                    'price' => $newProduct['price'],
+                    'image' => $imagePath,
+                    'category_id' => $newProduct['category_id'] ?? null,
+                ]);
+
+                $sizes = $newProduct['sizes'] ?? [];
+                $hasValidSize = false;
+
+                foreach ($sizes as $sizeData) {
+                    if (!empty($sizeData['size']) && isset($sizeData['stock'])) {
+                        // SKU uniqueness check
+                        if (!empty($sizeData['sku']) && \App\Models\Variant::where('sku', $sizeData['sku'])->exists()) {
+                            throw \Illuminate\Validation\ValidationException::withMessages(['new_products.'.$index.'.sizes' => ["SKU {$sizeData['sku']} déjà utilisé."]]);
+                        }
+
+                        $product->variants()->create([
+                            'size' => $sizeData['size'],
+                            'stock' => $sizeData['stock'],
+                            'sku' => $sizeData['sku'] ?? null,
+                            'color' => $sizeData['color'] ?? null,
+                        ]);
+                        $hasValidSize = true;
+                    }
+                }
+
+                if (!$hasValidSize) {
+                    $product->variants()->create(['size' => 'Unique', 'stock' => 1]);
+                }
+
+                $productIds[] = $product->id;
             }
 
-            if (!$hasValidSize) {
-                $product->variants()->create(['size' => 'Unique', 'stock' => 1]);
-            }
-
-            $productIds[] = $product->id;
-        }
-
-        $drop->products()->sync($productIds);
+            $drop->products()->sync($productIds);
+        });
 
         return redirect()->route('admin.drops.index')->with('success', 'Drop mis à jour.');
     }
