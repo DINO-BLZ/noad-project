@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\Variant;
 use Illuminate\Http\Request;
@@ -11,39 +12,20 @@ class CartController extends Controller
 {
     public function index()
     {
-        $cart = session('cart', []);
+        $cartItems = $this->cartItemsQuery()->with('variant.product')->get();
+
         $items = [];
         $total = 0;
 
-        if (empty($cart)) {
-            return view('cart.index', compact('items', 'total'));
-        }
-
-        $variants = Variant::with('product')
-            ->whereIn('id', array_keys($cart))
-            ->get()
-            ->keyBy('id');
-
-        foreach ($cart as $variantId => $quantity) {
-            $variant = $variants->get($variantId);
-
-            if (!$variant) {
-                unset($cart[$variantId]);
-                continue;
-            }
-
-            $subtotal = $variant->product->price * $quantity;
+        foreach ($cartItems as $cartItem) {
+            $subtotal = $cartItem->variant->product->price * $cartItem->quantity;
             $total += $subtotal;
 
             $items[] = [
-                'variant' => $variant,
-                'quantity' => $quantity,
+                'variant' => $cartItem->variant,
+                'quantity' => $cartItem->quantity,
                 'subtotal' => $subtotal,
             ];
-        }
-
-        if (count($cart) !== count($items)) {
-            session(['cart' => $cart]);
         }
 
         return view('cart.index', compact('items', 'total'));
@@ -79,15 +61,34 @@ class CartController extends Controller
             }
         }
 
-        $cart = session('cart', []);
-        $quantity = ($cart[$variant->id] ?? 0) + 1;
+        $upcomingDrop = $product->drops()->upcoming()->first();
+
+        if ($upcomingDrop) {
+            return back()->withErrors(['drop' => 'Ce produit fait partie d\'un drop à venir et n\'est pas encore disponible à l\'achat.']);
+        }
+
+        [$userId, $sessionId] = $this->owner();
+
+        $cartItem = CartItem::forOwner($userId, $sessionId)
+            ->where('variant_id', $variant->id)
+            ->first();
+
+        $quantity = ($cartItem->quantity ?? 0) + 1;
 
         if ($quantity > $variant->stock) {
             return back()->withErrors(['quantity' => 'Quantité demandée indisponible.']);
         }
 
-        $cart[$variant->id] = $quantity;
-        session(['cart' => $cart]);
+        if ($cartItem) {
+            $cartItem->update(['quantity' => $quantity]);
+        } else {
+            CartItem::create([
+                'user_id' => $userId,
+                'session_id' => $sessionId,
+                'variant_id' => $variant->id,
+                'quantity' => $quantity,
+            ]);
+        }
 
         return back()->with('success', 'Article ajouté au panier.');
     }
@@ -100,22 +101,43 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1|max:' . $variant->stock,
         ]);
 
-        $cart = session('cart', []);
+        [$userId, $sessionId] = $this->owner();
 
-        if (isset($cart[$variantId])) {
-            $cart[$variantId] = $request->quantity;
-            session(['cart' => $cart]);
-        }
+        CartItem::forOwner($userId, $sessionId)
+            ->where('variant_id', $variantId)
+            ->update(['quantity' => $request->quantity]);
 
         return back();
     }
 
     public function remove($variantId)
     {
-        $cart = session('cart', []);
-        unset($cart[$variantId]);
-        session(['cart' => $cart]);
+        [$userId, $sessionId] = $this->owner();
+
+        CartItem::forOwner($userId, $sessionId)
+            ->where('variant_id', $variantId)
+            ->delete();
 
         return back();
+    }
+
+    /**
+     * Détermine à qui appartient le panier courant :
+     * l'utilisateur connecté, ou l'invité via l'ID de session.
+     */
+    private function owner(): array
+    {
+        if (Auth::check()) {
+            return [Auth::id(), null];
+        }
+
+        return [null, session()->getId()];
+    }
+
+    private function cartItemsQuery()
+    {
+        [$userId, $sessionId] = $this->owner();
+
+        return CartItem::forOwner($userId, $sessionId);
     }
 }
