@@ -3,10 +3,25 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Laravel\Scout\Searchable;
 
 class Product extends Model
 {
+    use Searchable;
+
     protected $fillable = ['category_id', 'name', 'slug', 'description', 'price', 'image'];
+
+    /**
+     * Les champs envoyés à Elasticsearch pour ce produit.
+     * Seuls "name" et "description" sont utilisés pour la recherche pour l'instant.
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'name' => $this->name,
+            'description' => $this->description,
+        ];
+    }
 
     public function getRouteKeyName(): string
     {

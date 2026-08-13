@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DropController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Admin\DropController as AdminDropController;
 Route::view('/', 'home')->name('home');
 
 Route::get('/boutique', [ProductController::class, 'index'])->name('shop.index');
+Route::get('/recherche', [SearchController::class, 'index'])->name('search.index');
 
 // Authentication routes
 Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');

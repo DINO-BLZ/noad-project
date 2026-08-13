@@ -21,7 +21,9 @@
 @else
     <a href="{{ route('login') }}">Compte</a>
 @endauth
-        <a href="#">Recherche</a>
+        <form action="{{ route('search.index') }}" method="GET" class="site-header__search">
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="Rechercher..." aria-label="Rechercher un produit">
+        </form>
         <a href="{{ route('cart.index') }}">Panier</a>
 
         <button id="theme-toggle" class="theme-toggle" aria-label="Changer de thème">
@@ -139,6 +141,31 @@ html[data-theme="light"] .site-header__logo img{
     gap:1.5rem;
 }
 
+/* SEARCH */
+
+.site-header__search input{
+    width:160px;
+    padding:.5rem .8rem;
+    border:1px solid var(--border);
+    border-radius:20px;
+    background:transparent;
+    color:var(--text);
+    font-size:.8rem;
+    letter-spacing:.03em;
+    transition:.3s;
+}
+
+.site-header__search input::placeholder{
+    color:var(--text);
+    opacity:.5;
+}
+
+.site-header__search input:focus{
+    outline:none;
+    border-color:var(--accent);
+    width:200px;
+}
+
 /* THEME BUTTON */
 
 .theme-toggle{
@@ -199,40 +226,9 @@ html[data-theme="light"] .site-header__logo img{
 }
 
 @media(max-width:600px){
-.site-header__actions a{
+.site-header__actions a,
+.site-header__search{
     display:none;
 }
 }
 </style>
-
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-
-    const html = document.documentElement;
-
-    const savedTheme = localStorage.getItem("noad-theme");
-
-    if(savedTheme){
-        html.setAttribute("data-theme", savedTheme);
-    }
-
-    const toggle = document.getElementById("theme-toggle");
-
-    toggle.addEventListener("click", () => {
-
-        const current = html.getAttribute("data-theme") === "light"
-            ? "light"
-            : "dark";
-
-        const next = current === "light"
-            ? "dark"
-            : "light";
-
-        html.setAttribute("data-theme", next);
-
-        localStorage.setItem("noad-theme", next);
-
-    });
-
-});
-</script>

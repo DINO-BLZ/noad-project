@@ -115,3 +115,18 @@
     display:flex;
     justify-content:center;
 }
+.shop__search-heading{
+    text-align:center;
+    margin-bottom:2.5rem;
+    font-size:.9rem;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    opacity:.7;
+}
+
+.shop__empty{
+    grid-column:1 / -1;
+    text-align:center;
+    opacity:.6;
+    padding:3rem 0;
+}
