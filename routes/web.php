@@ -15,6 +15,7 @@ Route::view('/', 'home')->name('home');
 
 Route::get('/boutique', [ProductController::class, 'index'])->name('shop.index');
 Route::get('/recherche', [SearchController::class, 'index'])->name('search.index');
+Route::get('/recherche/suggestions', [SearchController::class, 'suggestions'])->name('search.suggestions');
 
 // Authentication routes
 Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');

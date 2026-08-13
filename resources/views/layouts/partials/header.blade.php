@@ -21,9 +21,12 @@
 @else
     <a href="{{ route('login') }}">Compte</a>
 @endauth
-        <form action="{{ route('search.index') }}" method="GET" class="site-header__search">
-            <input type="text" name="q" value="{{ request('q') }}" placeholder="Rechercher..." aria-label="Rechercher un produit">
-        </form>
+        <div class="site-header__search-wrapper">
+            <form action="{{ route('search.index') }}" method="GET" class="site-header__search">
+                <input type="text" name="q" value="{{ request('q') }}" placeholder="Rechercher..." aria-label="Rechercher un produit" autocomplete="off">
+            </form>
+            <div class="site-header__search-results"></div>
+        </div>
         <a href="{{ route('cart.index') }}">Panier</a>
 
         <button id="theme-toggle" class="theme-toggle" aria-label="Changer de thème">
@@ -143,6 +146,10 @@ html[data-theme="light"] .site-header__logo img{
 
 /* SEARCH */
 
+.site-header__search-wrapper{
+    position:relative;
+}
+
 .site-header__search input{
     width:160px;
     padding:.5rem .8rem;
@@ -164,6 +171,68 @@ html[data-theme="light"] .site-header__logo img{
     outline:none;
     border-color:var(--accent);
     width:200px;
+}
+
+.site-header__search-results{
+    display:none;
+    position:absolute;
+    top:calc(100% + .6rem);
+    right:0;
+    width:280px;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:12px;
+    overflow:hidden;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+}
+
+.site-header__search-results.is-open{
+    display:block;
+}
+
+.site-header__search-item{
+    display:flex;
+    align-items:center;
+    gap:.7rem;
+    padding:.6rem .9rem;
+    text-decoration:none;
+    color:var(--text);
+    border-bottom:1px solid var(--border);
+    transition:.2s;
+}
+
+.site-header__search-item:last-child{
+    border-bottom:none;
+}
+
+.site-header__search-item:hover{
+    background:var(--accent);
+}
+
+.site-header__search-item img{
+    width:34px;
+    height:34px;
+    object-fit:cover;
+    border-radius:6px;
+    flex-shrink:0;
+}
+
+.site-header__search-item-name{
+    flex:1;
+    font-size:.8rem;
+}
+
+.site-header__search-item-price{
+    font-size:.75rem;
+    opacity:.7;
+    white-space:nowrap;
+}
+
+.site-header__search-empty{
+    padding:.9rem;
+    font-size:.8rem;
+    opacity:.6;
+    text-align:center;
 }
 
 /* THEME BUTTON */
@@ -227,7 +296,7 @@ html[data-theme="light"] .site-header__logo img{
 
 @media(max-width:600px){
 .site-header__actions a,
-.site-header__search{
+.site-header__search-wrapper{
     display:none;
 }
 }
