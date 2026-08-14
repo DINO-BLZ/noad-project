@@ -170,10 +170,6 @@ class CartController extends Controller
         ];
     }
 
-    /**
-     * Détermine à qui appartient le panier courant :
-     * l'utilisateur connecté, ou l'invité via l'ID de session.
-     */
     private function owner(): array
     {
         if (Auth::check()) {
