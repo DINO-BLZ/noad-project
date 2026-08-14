@@ -61,4 +61,12 @@ class Product extends Model
     {
         return $this->images()->where('is_primary', true)->first();
     }
+ public function upcomingDrop()
+{
+    if ($this->relationLoaded('drops')) {
+        return $this->drops->first(fn ($drop) => $drop->isUpcoming());
+    }
+
+    return $this->drops()->upcoming()->first();
+}
 }
