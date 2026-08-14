@@ -193,12 +193,7 @@ Route::prefix('admin')
         | Orders
         */
 
-        Route::get('/commandes', [AdminOrderController::class, 'index'])
-            ->name('orders.index');
-
-        Route::get('/commandes/{order}', [AdminOrderController::class, 'show'])
-            ->name('orders.show');
-
-        Route::patch('/commandes/{order}/statut', [AdminOrderController::class, 'updateStatus'])
-            ->name('orders.update-status');
+       Route::get('/commandes', [App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders.index');
+    Route::get('/commandes/{order}', [App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');
+    Route::patch('/commandes/{order}/statut', [App\Http\Controllers\Admin\OrderController::class, 'updateStatus'])->name('orders.updateStatus');
     });

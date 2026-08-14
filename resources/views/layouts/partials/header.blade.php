@@ -29,16 +29,20 @@
 @else
     <a href="{{ route('login') }}">Compte</a>
 @endauth
-        <div class="site-header__search-wrapper">
-            <form action="{{ route('search.index') }}" method="GET" class="site-header__search">
-                <input type="text" name="q" value="{{ request('q') }}" placeholder="Rechercher..." aria-label="Rechercher un produit" autocomplete="off">
-            </form>
-            <div class="site-header__search-results"></div>
-        </div>
-        <a href="{{ route('cart.index') }}" class="site-header__cart-link">
-            Panier
-            <span class="site-header__cart-badge" id="cart-badge" @if($cartCount == 0) style="display:none;" @endif>{{ $cartCount }}</span>
-        </a>
+        @if(auth()->check() && auth()->user()->is_admin)
+            <a href="{{ route('admin.dashboard') }}" class="site-header__admin-link">Dashboard Admin</a>
+        @else
+            <div class="site-header__search-wrapper">
+                <form action="{{ route('search.index') }}" method="GET" class="site-header__search">
+                    <input type="text" name="q" value="{{ request('q') }}" placeholder="Rechercher..." aria-label="Rechercher un produit" autocomplete="off">
+                </form>
+                <div class="site-header__search-results"></div>
+            </div>
+            <a href="{{ route('cart.index') }}" class="site-header__cart-link">
+                Panier
+                <span class="site-header__cart-badge" id="cart-badge" @if($cartCount == 0) style="display:none;" @endif>{{ $cartCount }}</span>
+            </a>
+        @endif
 
         <button id="theme-toggle" class="theme-toggle" aria-label="Changer de thème">
             <span class="theme-toggle__dot"></span>
@@ -292,6 +296,16 @@ html[data-theme="light"] .site-header__logo img{
     align-items:center;
     justify-content:center;
     padding:0 4px;
+}
+
+/* ADMIN LINK */
+
+.site-header__admin-link{
+    background:var(--accent);
+    color:#fff !important;
+    padding:.5rem 1rem;
+    border-radius:20px;
+    font-size:.8rem !important;
 }
 
 /* CART DRAWER */

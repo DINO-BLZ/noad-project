@@ -13,12 +13,19 @@ class CheckoutController extends Controller
 {
     public function index()
     {
-        $cartItems = $this->cartItemsQuery()->with('variant.product')->get();
+        $cartItems = $this->cartItemsQuery()
+            ->with('variant.product')
+            ->get();
 
         $items = [];
         $total = 0;
 
         foreach ($cartItems as $cartItem) {
+            // Le variant ou le produit peut avoir été supprimé entre-temps
+            if (!$cartItem->variant || !$cartItem->variant->product) {
+                continue;
+            }
+
             $subtotal = $cartItem->variant->product->price * $cartItem->quantity;
             $total += $subtotal;
 
@@ -54,80 +61,210 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index');
         }
 
-        $order = DB::transaction(function () use ($request, $cartItems, $userId, $sessionId) {
-            $total = 0;
-            $orderItemsData = [];
+        try {
+            $order = DB::transaction(function () use (
+                $request,
+                $cartItems,
+                $userId,
+                $sessionId
+            ) {
+                $total = 0;
+                $orderItemsData = [];
 
-            foreach ($cartItems as $cartItem) {
-                // Verrou réel : la ligne est verrouillée jusqu'à la fin de la transaction
-                $variant = Variant::with('product')->lockForUpdate()->find($cartItem->variant_id);
+                foreach ($cartItems as $cartItem) {
 
-                if (!$variant) continue;
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Verrouillage du variant
+                    |--------------------------------------------------------------------------
+                    */
 
-                // Revérification du stock APRÈS le verrou (source de vérité à cet instant)
-                if ($variant->stock < $cartItem->quantity) {
-                    abort(422, "Stock insuffisant pour {$variant->product->name} ({$variant->size}).");
+                    $variant = Variant::with('product')
+                        ->lockForUpdate()
+                        ->find($cartItem->variant_id);
+
+                    if (!$variant || !$variant->product) {
+                        abort(
+                            422,
+                            "Un article de votre panier n'est plus disponible."
+                        );
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Vérification du stock APRÈS verrouillage
+                    |--------------------------------------------------------------------------
+                    */
+
+                    if ($variant->stock < $cartItem->quantity) {
+                        abort(
+                            422,
+                            "Stock insuffisant pour {$variant->product->name} ({$variant->size})."
+                        );
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Vérification du drop actif / whitelist
+                    |--------------------------------------------------------------------------
+                    */
+
+                    $activeDrop = $variant->product->activeDrop();
+
+                    if ($activeDrop) {
+                        if (
+                            !Auth::check() ||
+                            !Auth::user()->isWhitelistedForDrop($activeDrop)
+                        ) {
+                            abort(
+                                403,
+                                "Vous n'êtes pas autorisé à acheter ce produit de drop."
+                            );
+                        }
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Vérification d'un drop à venir
+                    |--------------------------------------------------------------------------
+                    */
+
+                    $upcomingDrop = $variant->product->upcomingDrop();
+
+                    if ($upcomingDrop) {
+                        abort(
+                            403,
+                            "Ce produit fait partie d'un drop à venir et n'est pas encore disponible à l'achat."
+                        );
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Calcul du prix
+                    |--------------------------------------------------------------------------
+                    */
+
+                    $price = $variant->product->price;
+                    $subtotal = $price * $cartItem->quantity;
+
+                    $total += $subtotal;
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Préparation de la ligne de commande
+                    |--------------------------------------------------------------------------
+                    */
+
+                    $orderItemsData[] = [
+                        'variant_id' => $variant->id,
+                        'quantity' => $cartItem->quantity,
+
+                        // Prix figé au moment de la commande
+                        'price' => $price,
+
+                        // Snapshot des informations du variant
+                        'variant_sku' => $variant->sku,
+                        'variant_size' => $variant->size,
+                        'variant_color' => $variant->color,
+
+                        // Snapshot du nom du produit
+                        'product_name' => $variant->product->name,
+                    ];
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Décrément du stock
+                    |--------------------------------------------------------------------------
+                    |
+                    | Le variant est verrouillé par lockForUpdate().
+                    | Le stock reste donc protégé contre les achats concurrents.
+                    |
+                    */
+
+                    $variant->decrement(
+                        'stock',
+                        $cartItem->quantity
+                    );
                 }
 
-                // Vérification whitelist : bloque au checkout, pas seulement au panier
-                $activeDrop = $variant->product->activeDrop();
-                if ($activeDrop && (!auth()->check() || !auth()->user()->isWhitelistedForDrop($activeDrop))) {
-                    abort(403, "Vous n'êtes pas autorisé à acheter ce produit de drop.");
+                /*
+                |--------------------------------------------------------------------------
+                | Création de la commande
+                |--------------------------------------------------------------------------
+                */
+
+                $order = Order::create([
+                    'user_id' => Auth::id(),
+                    'full_name' => $request->full_name,
+                    'phone' => $request->phone,
+                    'address' => $request->address,
+                    'wilaya' => $request->wilaya,
+                    'payment_method' => $request->payment_method,
+                    'status' => 'pending',
+                    'total' => $total,
+                ]);
+
+                /*
+                |--------------------------------------------------------------------------
+                | Création des lignes de commande
+                |--------------------------------------------------------------------------
+                */
+
+                foreach ($orderItemsData as $item) {
+                    $order->items()->create($item);
                 }
 
-                // Un produit rattaché à un drop à venir n'est pas encore en vente
-                $upcomingDrop = $variant->product->upcomingDrop();
-                if ($upcomingDrop) {
-                    abort(403, "Ce produit fait partie d'un drop à venir et n'est pas encore disponible à l'achat.");
-                }
+                /*
+                |--------------------------------------------------------------------------
+                | Suppression du panier
+                |--------------------------------------------------------------------------
+                |
+                | Tout est encore dans la transaction.
+                | Si une erreur survient avant le COMMIT,
+                | le stock, la commande et le panier sont rollbackés.
+                |
+                */
 
-                $subtotal = $variant->product->price * $cartItem->quantity;
-                $total += $subtotal;
+                CartItem::forOwner($userId, $sessionId)->delete();
 
-                $orderItemsData[] = [
-                    'variant_id' => $variant->id,
-                    'quantity' => $cartItem->quantity,
-                    'price' => $variant->product->price,
-                    'variant_sku' => $variant->sku,
-                    'variant_size' => $variant->size,
-                    'variant_color' => $variant->color,
-                    'product_name' => $variant->product->name,
-                ];
+                return $order;
+            });
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            /*
+            |--------------------------------------------------------------------------
+            | Erreurs métier : stock, whitelist, drop à venir...
+            |--------------------------------------------------------------------------
+            */
 
-                // Décrément immédiat, toujours dans le verrou
-                $variant->decrement('stock', $cartItem->quantity);
-            }
+            return back()
+                ->withErrors([
+                    'checkout' => $e->getMessage(),
+                ])
+                ->withInput();
+        }
 
-            $order = Order::create([
-                'user_id' => auth()->id(),
-                'full_name' => $request->full_name,
-                'phone' => $request->phone,
-                'address' => $request->address,
-                'wilaya' => $request->wilaya,
-                'payment_method' => $request->payment_method,
-                'status' => 'pending',
-                'total' => $total,
-            ]);
-
-            foreach ($orderItemsData as $item) {
-                $order->items()->create($item);
-            }
-
-            // Panier vidé une fois la commande créée, toujours dans la transaction
-            CartItem::forOwner($userId, $sessionId)->delete();
-
-            return $order;
-        });
-
-        return redirect()->route('checkout.success', $order->id);
+        return redirect()->route(
+            'checkout.success',
+            $order->id
+        );
     }
 
     public function success(Order $order)
     {
-        // Propriété : seul le propriétaire (ou un admin) peut voir cette commande
-        if ($order->user_id !== auth()->id() && !(auth()->check() && auth()->user()->is_admin)) {
-            abort(403);
-        }
+        /*
+        |--------------------------------------------------------------------------
+        | Protection de la commande
+        |--------------------------------------------------------------------------
+        |
+        | Seul le propriétaire ou un administrateur
+        | peut consulter la page de succès.
+        |
+        */
+
+      if (
+    $order->user_id !== Auth::id() &&
+    (!Auth::check() || !Auth::user()->is_admin)
+) {
 
         return view('checkout.success', compact('order'));
     }
@@ -135,16 +272,25 @@ class CheckoutController extends Controller
     private function owner(): array
     {
         if (Auth::check()) {
-            return [Auth::id(), null];
+            return [
+                Auth::id(),
+                null,
+            ];
         }
 
-        return [null, session()->getId()];
+        return [
+            null,
+            session()->getId(),
+        ];
     }
 
     private function cartItemsQuery()
     {
         [$userId, $sessionId] = $this->owner();
 
-        return CartItem::forOwner($userId, $sessionId);
+        return CartItem::forOwner(
+            $userId,
+            $sessionId
+        );
     }
 }

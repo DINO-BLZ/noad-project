@@ -31,8 +31,12 @@ class CartController extends Controller
         return view('cart.index', compact('items', 'total'));
     }
 
-    public function add(Request $request, Product $product)
+   public function add(Request $request, Product $product)
     {
+        if (Auth::check() && Auth::user()->is_admin) {
+            return response()->json(['message' => 'Les comptes administrateurs ne peuvent pas effectuer d\'achats.'], 403);
+        }
+
         $request->validate([
             'variant_id' => 'required|exists:variants,id',
         ]);

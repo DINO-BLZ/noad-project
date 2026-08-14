@@ -1,16 +1,9 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('content')
 <div class="admin-dashboard">
 
-    <div class="admin-dashboard__header">
-        <h1>Tableau de bord</h1>
-        <nav class="admin-nav">
-            <a href="{{ route('admin.dashboard') }}" class="is-active">Dashboard</a>
-            <a href="{{ route('admin.products.index') }}">Produits</a>
-            <a href="{{ route('admin.drops.index') }}">Drops</a>
-        </nav>
-    </div>
+    <h1 class="admin-dashboard__title">Tableau de bord</h1>
 
     <div class="kpi-grid">
         <div class="kpi-card">
