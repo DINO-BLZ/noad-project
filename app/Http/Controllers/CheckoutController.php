@@ -261,10 +261,12 @@ class CheckoutController extends Controller
         |
         */
 
-      if (
-    $order->user_id !== Auth::id() &&
-    (!Auth::check() || !Auth::user()->is_admin)
-) {
+        if (
+            $order->user_id !== Auth::id() &&
+            (!Auth::check() || !Auth::user()->is_admin)
+        ) {
+            abort(403);
+        }
 
         return view('checkout.success', compact('order'));
     }

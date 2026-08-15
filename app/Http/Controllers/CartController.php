@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Variant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CartController extends Controller
 {
@@ -31,7 +32,7 @@ class CartController extends Controller
         return view('cart.index', compact('items', 'total'));
     }
 
-   public function add(Request $request, Product $product)
+    public function add(Request $request, Product $product)
     {
         if (Auth::check() && Auth::user()->is_admin) {
             return response()->json(['message' => 'Les comptes administrateurs ne peuvent pas effectuer d\'achats.'], 403);
@@ -41,60 +42,72 @@ class CartController extends Controller
             'variant_id' => 'required|exists:variants,id',
         ]);
 
-        $variant = Variant::findOrFail($request->variant_id);
-
-        if ($variant->product_id !== $product->id) {
-            return response()->json(['message' => 'Cette variante ne correspond pas au produit sélectionné.'], 422);
-        }
-
-        if ($variant->stock <= 0) {
-            return response()->json(['message' => 'Cette taille est épuisée.'], 422);
-        }
-
-        $activeDrop = $product->drops()->active()->first();
-
-        if ($activeDrop) {
-            if (Auth::guest()) {
-                return response()->json(['message' => 'Connectez-vous pour acheter un produit de drop.'], 422);
-            }
-
-            $user = Auth::user();
-
-            if (! $user instanceof \App\Models\User || ! $user->isWhitelistedForDrop($activeDrop)) {
-                return response()->json(['message' => "Ce produit fait partie d'un drop privé. Faites une demande de whitelist pour y accéder."], 422);
-            }
-        }
-
-        $upcomingDrop = $product->drops()->upcoming()->first();
-
-        if ($upcomingDrop) {
-            return response()->json(['message' => "Ce produit fait partie d'un drop à venir et n'est pas encore disponible à l'achat."], 422);
-        }
-
         [$userId, $sessionId] = $this->owner();
 
-        $cartItem = CartItem::forOwner($userId, $sessionId)
-            ->where('variant_id', $variant->id)
-            ->first();
+        try {
+            $summary = DB::transaction(function () use ($request, $product, $userId, $sessionId) {
+                // Verrou sur la variante : bloque toute autre requête concurrente
+                // sur ce même article jusqu'à la fin de cette transaction.
+                $variant = Variant::with('product')->lockForUpdate()->findOrFail($request->variant_id);
 
-        $quantity = ($cartItem->quantity ?? 0) + 1;
+                if ($variant->product_id !== $product->id) {
+                    abort(422, 'Cette variante ne correspond pas au produit sélectionné.');
+                }
 
-        if ($quantity > $variant->stock) {
-            return response()->json(['message' => 'Quantité demandée indisponible.'], 422);
+                if ($variant->stock <= 0) {
+                    abort(422, 'Cette taille est épuisée.');
+                }
+
+                $activeDrop = $variant->product->drops()->active()->first();
+
+                if ($activeDrop) {
+                    if (Auth::guest()) {
+                        abort(422, 'Connectez-vous pour acheter un produit de drop.');
+                    }
+
+                    $user = Auth::user();
+
+                    if (! $user instanceof \App\Models\User || ! $user->isWhitelistedForDrop($activeDrop)) {
+                        abort(422, "Ce produit fait partie d'un drop privé. Faites une demande de whitelist pour y accéder.");
+                    }
+                }
+
+                $upcomingDrop = $variant->product->drops()->upcoming()->first();
+
+                if ($upcomingDrop) {
+                    abort(422, "Ce produit fait partie d'un drop à venir et n'est pas encore disponible à l'achat.");
+                }
+
+                // Verrou aussi sur la ligne de panier existante, si elle existe déjà
+                $cartItem = CartItem::forOwner($userId, $sessionId)
+                    ->where('variant_id', $variant->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                $quantity = ($cartItem->quantity ?? 0) + 1;
+
+                if ($quantity > $variant->stock) {
+                    abort(422, 'Quantité demandée indisponible.');
+                }
+
+                if ($cartItem) {
+                    $cartItem->update(['quantity' => $quantity]);
+                } else {
+                    CartItem::create([
+                        'user_id' => $userId,
+                        'session_id' => $sessionId,
+                        'variant_id' => $variant->id,
+                        'quantity' => $quantity,
+                    ]);
+                }
+
+                return $this->cartSummary();
+            });
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
         }
 
-        if ($cartItem) {
-            $cartItem->update(['quantity' => $quantity]);
-        } else {
-            CartItem::create([
-                'user_id' => $userId,
-                'session_id' => $sessionId,
-                'variant_id' => $variant->id,
-                'quantity' => $quantity,
-            ]);
-        }
-
-        return response()->json($this->cartSummary());
+        return response()->json($summary);
     }
 
     public function update(Request $request, $variantId)
