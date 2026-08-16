@@ -24,6 +24,15 @@ class DashboardController extends Controller
             ->with('product')
             ->get();
 
+        $topProducts = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.status', '!=', 'cancelled')
+            ->select('order_items.product_name', DB::raw('SUM(order_items.quantity) as total_sold'))
+            ->groupBy('order_items.product_name')
+            ->orderByDesc('total_sold')
+            ->take(5)
+            ->get();
+
         $recentOrders = Order::latest()->take(5)->get();
 
         $salesByDay = Order::where('created_at', '>=', now()->subDays(7))
@@ -40,6 +49,7 @@ class DashboardController extends Controller
             'totalUsers',
             'totalProducts',
             'lowStockVariants',
+            'topProducts',
             'recentOrders',
             'salesByDay'
         ));

@@ -22,7 +22,7 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 |--------------------------------------------------------------------------
 */
 
-Route::view('/', 'home')->name('home');
+Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
 Route::get('/boutique', [ProductController::class, 'index'])
     ->name('shop.index');
