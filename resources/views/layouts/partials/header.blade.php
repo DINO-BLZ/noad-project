@@ -18,7 +18,8 @@
     </a>
 
     <div class="site-header__actions">
-        @auth
+@auth
+    <a href="{{ route('whitelist.index') }}">Mes whitelists</a>
     <a href="{{ route('logout') }}"
        onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
         Déconnexion

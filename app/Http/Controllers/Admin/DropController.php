@@ -36,6 +36,7 @@ class DropController extends Controller
             'end_date' => 'required|date|after:start_date',
             'status' => 'required|in:upcoming,active,ended',
             'products' => 'array',
+            'max_whitelist_slots' => 'nullable|integer|min:0',
             'products.*' => 'exists:products,id',
             'new_products' => 'array',
             'new_products.*.name' => 'nullable|string|max:255',
@@ -141,6 +142,7 @@ class DropController extends Controller
             'end_date' => 'required|date|after:start_date',
             'status' => 'required|in:upcoming,active,ended',
             'products' => 'array',
+            'max_whitelist_slots' => 'nullable|integer|min:0',
             'products.*' => 'exists:products,id',
             'new_products' => 'array',
             'new_products.*.name' => 'nullable|string|max:255',
@@ -219,6 +221,10 @@ class DropController extends Controller
 
     public function approveWhitelist(Drop $drop, $whitelistId)
     {
+        if (! $drop->hasWhitelistSlotsAvailable()) {
+            return back()->withErrors(['whitelist' => 'Toutes les places de whitelist pour ce drop sont déjà attribuées.']);
+        }
+
         $drop->whitelists()->where('id', $whitelistId)->update(['status' => 'approved']);
 
         return back()->with('success', 'Demande approuvée.');

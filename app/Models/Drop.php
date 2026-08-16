@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Drop extends Model
 {
-    protected $fillable = ['name', 'slug', 'description', 'start_date', 'end_date', 'status'];
+    protected $fillable = ['name', 'slug', 'description', 'start_date', 'end_date', 'status', 'max_whitelist_slots'];
 
     protected $casts = [
         'start_date' => 'datetime',
@@ -60,4 +60,12 @@ class Drop extends Model
     {
         return $this->status === 'ended' || $this->end_date->isPast();
     }
+    public function hasWhitelistSlotsAvailable(): bool
+{
+    if (is_null($this->max_whitelist_slots)) {
+        return true; // pas de limite définie
+    }
+
+    return $this->approvedWhitelists()->count() < $this->max_whitelist_slots;
+}
 }

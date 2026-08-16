@@ -21,6 +21,7 @@
                 <a href="{{ route('admin.products.index') }}" class="{{ request()->routeIs('admin.products.*') ? 'is-active' : '' }}">Produits</a>
                 <a href="{{ route('admin.drops.index') }}" class="{{ request()->routeIs('admin.drops.*') ? 'is-active' : '' }}">Drops</a>
                 <a href="{{ route('admin.orders.index') }}" class="{{ request()->routeIs('admin.orders.*') ? 'is-active' : '' }}">Commandes</a>
+                <a href="{{ route('admin.whitelist.index') }}" class="{{ request()->routeIs('admin.whitelist.*') ? 'is-active' : '' }}">Whitelist</a>
             </nav>
             <form action="{{ route('logout') }}" method="POST" class="admin-sidebar__logout">
                 @csrf

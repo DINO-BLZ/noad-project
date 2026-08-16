@@ -8,6 +8,8 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DropController;
 use App\Http\Controllers\DropRequestController;
+use App\Http\Controllers\WhitelistController;
+use App\Http\Controllers\Admin\WhitelistController as AdminWhitelistController;
 
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
@@ -76,7 +78,7 @@ Route::delete('/panier/{variantId}', [CartController::class, 'remove'])
 
 /*
 |--------------------------------------------------------------------------
-| Checkout
+| Checkout & compte (auth requis)
 |--------------------------------------------------------------------------
 */
 
@@ -90,6 +92,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/commande/succes/{order}', [CheckoutController::class, 'success'])
         ->name('checkout.success');
+
+    Route::get('/mes-demandes-whitelist', [WhitelistController::class, 'index'])
+        ->name('whitelist.index');
 });
 
 
@@ -188,12 +193,20 @@ Route::prefix('admin')
             [AdminDropController::class, 'rejectWhitelist']
         )->name('drops.whitelist.reject');
 
+        Route::get('/whitelist', [AdminWhitelistController::class, 'index'])
+            ->name('whitelist.index');
+
 
         /*
         | Orders
         */
 
-       Route::get('/commandes', [App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders.index');
-    Route::get('/commandes/{order}', [App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');
-    Route::patch('/commandes/{order}/statut', [App\Http\Controllers\Admin\OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+        Route::get('/commandes', [AdminOrderController::class, 'index'])
+            ->name('orders.index');
+
+        Route::get('/commandes/{order}', [AdminOrderController::class, 'show'])
+            ->name('orders.show');
+
+        Route::patch('/commandes/{order}/statut', [AdminOrderController::class, 'updateStatus'])
+            ->name('orders.updateStatus');
     });
