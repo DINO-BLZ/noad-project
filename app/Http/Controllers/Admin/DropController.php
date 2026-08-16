@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use App\Mail\WhitelistStatusMail;
+use Illuminate\Support\Facades\Mail;
 
 class DropController extends Controller
 {
@@ -219,20 +221,24 @@ class DropController extends Controller
         return redirect()->route('admin.drops.index')->with('success', 'Drop supprimé.');
     }
 
-    public function approveWhitelist(Drop $drop, $whitelistId)
+   public function approveWhitelist(Drop $drop, $whitelistId)
     {
-        if (! $drop->hasWhitelistSlotsAvailable()) {
-            return back()->withErrors(['whitelist' => 'Toutes les places de whitelist pour ce drop sont déjà attribuées.']);
-        }
+        $whitelist = $drop->whitelists()->with('user')->findOrFail($whitelistId);
+        $whitelist->update(['status' => 'approved']);
+        $whitelist->setRelation('drop', $drop);
 
-        $drop->whitelists()->where('id', $whitelistId)->update(['status' => 'approved']);
+        Mail::to($whitelist->user->email)->send(new WhitelistStatusMail($whitelist));
 
         return back()->with('success', 'Demande approuvée.');
     }
 
     public function rejectWhitelist(Drop $drop, $whitelistId)
     {
-        $drop->whitelists()->where('id', $whitelistId)->update(['status' => 'rejected']);
+        $whitelist = $drop->whitelists()->with('user')->findOrFail($whitelistId);
+        $whitelist->update(['status' => 'rejected']);
+        $whitelist->setRelation('drop', $drop);
+
+        Mail::to($whitelist->user->email)->send(new WhitelistStatusMail($whitelist));
 
         return back()->with('success', 'Demande refusée.');
     }

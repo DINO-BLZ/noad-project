@@ -11,7 +11,6 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $categories = Category::all();
-
         $products = Product::with([
                 'variants',
                 'category',
@@ -22,14 +21,13 @@ class ProductController extends Controller
             })
             ->latest()
             ->paginate(12);
-
         return view('shop.index', compact('products', 'categories'));
     }
 
     public function show(Product $product)
     {
-        $product->load('variants', 'category', 'drops');
+        $product->load('variants', 'category', 'drops', 'images');
 
         return view('products.show', compact('product'));
-    }
+    }                                   
 }

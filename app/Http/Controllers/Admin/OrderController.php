@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\Request;
+use App\Mail\OrderStatusUpdatedMail;
+use Illuminate\Support\Facades\Mail;
 
 class OrderController extends Controller
 {
@@ -33,6 +35,11 @@ class OrderController extends Controller
         ]);
 
         $order->update(['status' => $request->status]);
+        $order->loadMissing('user');
+
+        if ($order->user) {
+            Mail::to($order->user->email)->send(new OrderStatusUpdatedMail($order));
+        }
 
         return back()->with('success', 'Statut de la commande mis à jour.');
     }

@@ -190,4 +190,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
         });
     }
+    // --- Galerie produit ---
+    const thumbnails = document.querySelectorAll('.product__thumbnail');
+    const mainImage = document.getElementById('product-main-image');
+
+    thumbnails.forEach((thumb) => {
+        thumb.addEventListener('click', () => {
+            mainImage.src = thumb.dataset.full;
+            thumbnails.forEach((t) => t.classList.remove('is-active'));
+            thumb.classList.add('is-active');
+        });
+    });
 });

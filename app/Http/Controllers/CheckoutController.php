@@ -8,6 +8,8 @@ use App\Models\Variant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Mail\OrderConfirmationMail;
+use Illuminate\Support\Facades\Mail;
 
 class CheckoutController extends Controller
 {
@@ -229,18 +231,28 @@ class CheckoutController extends Controller
 
                 return $order;
             });
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
-            /*
-            |--------------------------------------------------------------------------
-            | Erreurs métier : stock, whitelist, drop à venir...
-            |--------------------------------------------------------------------------
-            */
 
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return back()
                 ->withErrors([
                     'checkout' => $e->getMessage(),
                 ])
                 ->withInput();
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Email de confirmation
+        |--------------------------------------------------------------------------
+        |
+        | On envoie le mail uniquement si l'utilisateur est connecté
+        | et possède une adresse email.
+        |
+        */
+
+        if (Auth::check() && Auth::user()->email) {
+            Mail::to(Auth::user()->email)
+                ->send(new OrderConfirmationMail($order));
         }
 
         return redirect()->route(

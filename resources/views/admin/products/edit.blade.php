@@ -31,22 +31,50 @@
             <textarea name="description" rows="4">{{ old('description', $product->description) }}</textarea>
         </label>
 
-        <label>Photo actuelle</label>
+        <label>Photo de couverture actuelle</label>
         <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" style="width:120px;">
 
-        <label>Remplacer la photo (optionnel)
+        <label>Remplacer la photo de couverture (optionnel)
             <input type="file" name="image" accept="image/*">
+        </label>
+
+        <label>Galerie photo</label>
+        <div class="gallery-grid">
+            @foreach($product->images as $image)
+                <div class="gallery-item">
+                    <img src="{{ asset('storage/' . $image->path) }}" alt="">
+                    <label class="gallery-item__primary">
+                        <input type="radio" name="primary_image" value="{{ $image->id }}" {{ $image->is_primary ? 'checked' : '' }}>
+                        Principale
+                    </label>
+                    <label class="gallery-item__remove">
+                        <input type="checkbox" name="remove_images[]" value="{{ $image->id }}">
+                        Supprimer
+                    </label>
+                </div>
+            @endforeach
+        </div>
+
+        <label>Ajouter des photos à la galerie (plusieurs possibles)
+            <input type="file" name="images[]" accept="image/*" multiple>
         </label>
 
         <label>Tailles disponibles et stock</label>
         <div id="sizes-list">
             @foreach($product->variants as $index => $variant)
                 <div class="size-row">
+                    <input type="hidden" name="variants[{{ $index }}][id]" value="{{ $variant->id }}">
                     <label>Taille
-                        <input type="text" name="sizes[{{ $index }}][size]" value="{{ $variant->size }}" required>
+                        <input type="text" name="variants[{{ $index }}][size]" value="{{ $variant->size }}" required>
                     </label>
                     <label>Stock
-                        <input type="number" name="sizes[{{ $index }}][stock]" value="{{ $variant->stock }}" min="0" required>
+                        <input type="number" name="variants[{{ $index }}][stock]" value="{{ $variant->stock }}" min="0" required>
+                    </label>
+                    <label>Couleur (optionnel)
+                        <input type="text" name="variants[{{ $index }}][color]" value="{{ $variant->color }}">
+                    </label>
+                    <label>SKU (optionnel)
+                        <input type="text" name="variants[{{ $index }}][sku]" value="{{ $variant->sku }}">
                     </label>
                     <button type="button" class="size-row__remove">Retirer</button>
                 </div>
@@ -114,9 +142,46 @@
     color:var(--text);
 }
 
+.gallery-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(110px, 1fr));
+    gap:1rem;
+}
+
+.gallery-item{
+    border:1px solid var(--border);
+    padding:.6rem;
+    display:flex;
+    flex-direction:column;
+    gap:.4rem;
+    align-items:center;
+}
+
+.gallery-item img{
+    width:100%;
+    height:90px;
+    object-fit:cover;
+    border-radius:4px;
+}
+
+.gallery-item__primary,
+.gallery-item__remove{
+    flex-direction:row !important;
+    align-items:center;
+    gap:.4rem !important;
+    font-size:.65rem !important;
+    text-transform:none !important;
+}
+
+.gallery-item__primary input,
+.gallery-item__remove input{
+    width:auto;
+    padding:0;
+}
+
 .size-row{
     display:grid;
-    grid-template-columns:1fr 1fr auto;
+    grid-template-columns:1fr 1fr 1fr 1fr auto;
     gap:.8rem;
     align-items:end;
     border:1px solid var(--border);
@@ -184,10 +249,16 @@ document.addEventListener('DOMContentLoaded', () => {
         row.className = 'size-row';
         row.innerHTML = `
             <label>Taille
-                <input type="text" name="sizes[${sizeIndex}][size]" placeholder="S, M, L, 42..." required>
+                <input type="text" name="variants[${sizeIndex}][size]" placeholder="S, M, L, 42..." required>
             </label>
             <label>Stock
-                <input type="number" name="sizes[${sizeIndex}][stock]" min="0" value="1" required>
+                <input type="number" name="variants[${sizeIndex}][stock]" min="0" value="1" required>
+            </label>
+            <label>Couleur (optionnel)
+                <input type="text" name="variants[${sizeIndex}][color]">
+            </label>
+            <label>SKU (optionnel)
+                <input type="text" name="variants[${sizeIndex}][sku]">
             </label>
             <button type="button" class="size-row__remove">Retirer</button>
         `;

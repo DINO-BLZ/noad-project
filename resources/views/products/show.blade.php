@@ -3,8 +3,19 @@
 @section('content')
 <div class="product">
 
-    <div class="product__image">
-       <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}">
+    <div class="product__gallery">
+        <div class="product__image">
+           <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" id="product-main-image">
+        </div>
+
+        @if($product->images->count() > 0)
+            <div class="product__thumbnails">
+                <img src="{{ asset('storage/' . $product->image) }}" alt="" class="product__thumbnail is-active" data-full="{{ asset('storage/' . $product->image) }}">
+                @foreach($product->images->sortByDesc('is_primary')->sortBy('position') as $image)
+                    <img src="{{ asset('storage/' . $image->path) }}" alt="" class="product__thumbnail" data-full="{{ asset('storage/' . $image->path) }}">
+                @endforeach
+            </div>
+        @endif
     </div>
 
     <div class="product__info">
