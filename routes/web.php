@@ -56,6 +56,18 @@ Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class, 's
 
 Route::post('/register', [App\Http\Controllers\Auth\RegisterController::class, 'register']);
 
+Route::get('/mot-de-passe-oublie', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'showLinkRequestForm'])
+    ->name('password.request');
+
+Route::post('/mot-de-passe-oublie', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'sendResetLinkEmail'])
+    ->name('password.email');
+
+Route::get('/reinitialiser-mot-de-passe/{token}', [App\Http\Controllers\Auth\ResetPasswordController::class, 'showResetForm'])
+    ->name('password.reset');
+
+Route::post('/reinitialiser-mot-de-passe', [App\Http\Controllers\Auth\ResetPasswordController::class, 'reset'])
+    ->name('password.update');
+
 
 /*
 |--------------------------------------------------------------------------

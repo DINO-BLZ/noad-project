@@ -1,22 +1,26 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('content')
 <div class="auth">
     <div class="auth__card">
-        <h1 class="auth__title">Connexion</h1>
+        <h1 class="auth__title">Mot de passe oublié</h1>
 
-        <form method="POST" action="{{ route('login') }}" class="auth__form">
+        <p class="auth__hint">
+            Indiquez votre adresse email, nous vous enverrons un lien pour choisir un nouveau mot de passe.
+        </p>
+
+        <form method="POST" action="{{ route('password.email') }}" class="auth__form">
             @csrf
 
             <label>Email
                 <input type="email" name="email" value="{{ old('email') }}" required autofocus>
             </label>
 
-            <label>Mot de passe
-                <input type="password" name="password" required>
-            </label>
-
-            <a href="{{ route('password.request') }}" class="auth__forgot">Mot de passe oublié ?</a>
+            @if (session('success'))
+                <div class="auth__success">
+                    <p>{{ session('success') }}</p>
+                </div>
+            @endif
 
             @if($errors->any())
                 <div class="auth__errors">
@@ -26,11 +30,11 @@
                 </div>
             @endif
 
-            <button type="submit" class="auth__submit">Se connecter</button>
+            <button type="submit" class="auth__submit">Envoyer le lien</button>
         </form>
 
         <p class="auth__switch">
-            Pas encore de compte ? <a href="{{ route('register') }}">S'inscrire</a>
+            <a href="{{ route('login') }}">Retour à la connexion</a>
         </p>
     </div>
 </div>
@@ -54,8 +58,15 @@
     font-weight:900;
     text-transform:uppercase;
     letter-spacing:.03em;
-    margin-bottom:2rem;
+    margin-bottom:.8rem;
     text-align:center;
+}
+
+.auth__hint{
+    font-size:.85rem;
+    opacity:.7;
+    text-align:center;
+    margin-bottom:1.5rem;
 }
 
 .auth__form{
@@ -89,15 +100,6 @@
     border-color:var(--accent);
 }
 
-.auth__forgot{
-    align-self:flex-end;
-    font-size:.8rem;
-    color:var(--accent);
-    text-decoration:none;
-    font-weight:600;
-    margin-top:-.6rem;
-}
-
 .auth__errors{
     background:rgba(176,46,38,.1);
     border:1px solid var(--accent);
@@ -108,6 +110,18 @@
 
 .auth__errors p{
     margin:.2rem 0;
+}
+
+.auth__success{
+    background:rgba(46,176,80,.1);
+    border:1px solid #2eb050;
+    color:#2eb050;
+    padding:.8rem 1rem;
+    font-size:.8rem;
+}
+
+.auth__success p{
+    margin:0;
 }
 
 .auth__submit{

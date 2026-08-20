@@ -8,15 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('drops', function (Blueprint $table) {
-            $table->unsignedInteger('max_whitelist_slots')->nullable()->after('status');
+        Schema::table('orders', function (Blueprint $table) {
+            $table->index('status');
+            $table->index('created_at');
         });
     }
 
     public function down(): void
     {
-        Schema::table('drops', function (Blueprint $table) {
-            $table->dropColumn('max_whitelist_slots');
+        Schema::table('orders', function (Blueprint $table) {
+            $table->dropIndex(['status']);
+            $table->dropIndex(['created_at']);
         });
     }
 };

@@ -221,8 +221,12 @@ class DropController extends Controller
         return redirect()->route('admin.drops.index')->with('success', 'Drop supprimé.');
     }
 
-   public function approveWhitelist(Drop $drop, $whitelistId)
+    public function approveWhitelist(Drop $drop, $whitelistId)
     {
+        if (! $drop->hasWhitelistSlotsAvailable()) {
+            return back()->withErrors(['whitelist' => 'Toutes les places de whitelist pour ce drop sont déjà attribuées.']);
+        }
+
         $whitelist = $drop->whitelists()->with('user')->findOrFail($whitelistId);
         $whitelist->update(['status' => 'approved']);
         $whitelist->setRelation('drop', $drop);

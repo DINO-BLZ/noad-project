@@ -1,22 +1,26 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('content')
 <div class="auth">
     <div class="auth__card">
-        <h1 class="auth__title">Connexion</h1>
+        <h1 class="auth__title">Nouveau mot de passe</h1>
 
-        <form method="POST" action="{{ route('login') }}" class="auth__form">
+        <form method="POST" action="{{ route('password.update') }}" class="auth__form">
             @csrf
 
+            <input type="hidden" name="token" value="{{ $token }}">
+
             <label>Email
-                <input type="email" name="email" value="{{ old('email') }}" required autofocus>
+                <input type="email" name="email" value="{{ old('email', $email) }}" required autofocus>
             </label>
 
-            <label>Mot de passe
+            <label>Nouveau mot de passe
                 <input type="password" name="password" required>
             </label>
 
-            <a href="{{ route('password.request') }}" class="auth__forgot">Mot de passe oublié ?</a>
+            <label>Confirmer le mot de passe
+                <input type="password" name="password_confirmation" required>
+            </label>
 
             @if($errors->any())
                 <div class="auth__errors">
@@ -26,11 +30,11 @@
                 </div>
             @endif
 
-            <button type="submit" class="auth__submit">Se connecter</button>
+            <button type="submit" class="auth__submit">Réinitialiser</button>
         </form>
 
         <p class="auth__switch">
-            Pas encore de compte ? <a href="{{ route('register') }}">S'inscrire</a>
+            <a href="{{ route('login') }}">Retour à la connexion</a>
         </p>
     </div>
 </div>
@@ -87,15 +91,6 @@
 .auth__form input:focus{
     outline:none;
     border-color:var(--accent);
-}
-
-.auth__forgot{
-    align-self:flex-end;
-    font-size:.8rem;
-    color:var(--accent);
-    text-decoration:none;
-    font-weight:600;
-    margin-top:-.6rem;
 }
 
 .auth__errors{
