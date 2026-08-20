@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Order;
-use Illuminate\Http\Request;
 use App\Mail\OrderStatusUpdatedMail;
+use App\Models\Order;
+use App\Models\Variant;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
 class OrderController extends Controller
@@ -34,7 +36,31 @@ class OrderController extends Controller
             'status' => 'required|in:pending,paid,shipped,cancelled',
         ]);
 
-        $order->update(['status' => $request->status]);
+        $newStatus = $request->status;
+        $wasAlreadyCancelled = $order->status === 'cancelled';
+
+        DB::transaction(function () use ($order, $newStatus, $wasAlreadyCancelled) {
+            // On ne recrédite le stock que si on PASSE à "cancelled"
+            // (et pas si la commande était déjà annulée avant).
+            if ($newStatus === 'cancelled' && ! $wasAlreadyCancelled) {
+                $order->load('items');
+
+                foreach ($order->items as $item) {
+                    if (! $item->variant_id) {
+                        continue;
+                    }
+
+                    // Verrou pour éviter une course avec un achat concurrent
+                    // sur la même variante pendant le réapprovisionnement.
+                    Variant::where('id', $item->variant_id)
+                        ->lockForUpdate()
+                        ->increment('stock', $item->quantity);
+                }
+            }
+
+            $order->update(['status' => $newStatus]);
+        });
+
         $order->loadMissing('user');
 
         if ($order->user) {
