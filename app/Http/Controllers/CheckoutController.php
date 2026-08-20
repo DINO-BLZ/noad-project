@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\Variant;
-use Illuminate\Http\Request;
+use App\Http\Requests\CheckoutRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Mail\OrderConfirmationMail;
@@ -45,15 +45,8 @@ class CheckoutController extends Controller
         return view('checkout.index', compact('items', 'total'));
     }
 
-    public function store(Request $request)
-    {
-        $request->validate([
-            'full_name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'address' => 'required|string|max:255',
-            'wilaya' => 'required|string|max:100',
-            'payment_method' => 'required|in:cod,cib',
-        ]);
+   public function store(CheckoutRequest $request)
+{
 
         [$userId, $sessionId] = $this->owner();
 

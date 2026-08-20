@@ -11,7 +11,8 @@ use App\Models\ProductImage;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Http\Request;
+use App\Http\Requests\Admin\StoreProductRequest;
+use App\Http\Requests\Admin\UpdateProductRequest;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
@@ -30,17 +31,9 @@ class ProductController extends Controller
         return view('admin.products.create', compact('categories'));
     }
 
-    public function store(Request $request)
-    {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'category_id' => 'required|exists:categories,id',
-            'description' => 'nullable|string',
-            'image' => 'required|image|max:4096',
-            'sizes' => 'required|array|min:1',
-            'sizes.*.stock' => 'required|integer|min:0',
-        ]);
+    public function store(StoreProductRequest $request)
+{
+    $data = $request->validated();
 
         $data['slug'] = Str::slug($data['name']) . '-' . uniqid();
         $data['image'] = $request->file('image')->store('products', 'public');
@@ -68,27 +61,9 @@ class ProductController extends Controller
         return view('admin.products.edit', compact('product', 'categories'));
     }
 
-    public function update(Request $request, Product $product)
-    {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'category_id' => 'required|exists:categories,id',
-            'description' => 'nullable|string',
-            'image' => 'nullable|image|max:4096',
-            'variants' => 'nullable|array',
-            'variants.*.id' => 'nullable|integer|exists:variants,id',
-            'variants.*.size' => 'required_with:variants|string|max:50',
-            'variants.*.stock' => 'required_with:variants|integer|min:0',
-            'variants.*.sku' => 'nullable|string',
-            'variants.*.color' => 'nullable|string|max:50',
-            'images' => 'nullable|array',
-            'images.*' => 'nullable|image|max:4096',
-            'remove_images' => 'nullable|array',
-            'remove_images.*' => 'integer',
-            'primary_image' => 'nullable|string',
-        ]);
-
+public function update(UpdateProductRequest $request, Product $product)
+{
+    $data = $request->validated();
         if ($request->hasFile('image')) {
             $data['image'] = $request->file('image')->store('products', 'public');
         }

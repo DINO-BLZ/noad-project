@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\OrderStatusUpdatedMail;
 use App\Models\Order;
 use App\Models\Variant;
+use App\Http\Requests\Admin\UpdateOrderStatusRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -30,14 +31,12 @@ class OrderController extends Controller
         return view('admin.orders.show', compact('order'));
     }
 
-    public function updateStatus(Request $request, Order $order)
+      public function updateStatus(UpdateOrderStatusRequest $request, Order $order)
     {
-        $request->validate([
-            'status' => 'required|in:pending,paid,shipped,cancelled',
-        ]);
-
-        $newStatus = $request->status;
+        $newStatus = $request->validated()['status'];
         $wasAlreadyCancelled = $order->status === 'cancelled';
+
+        DB::transaction(function () use ($order, $newStatus, $wasAlreadyCancelled) {
 
         DB::transaction(function () use ($order, $newStatus, $wasAlreadyCancelled) {
             // On ne recrédite le stock que si on PASSE à "cancelled"

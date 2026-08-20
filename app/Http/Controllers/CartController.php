@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\Variant;
-use Illuminate\Http\Request;
+use App\Http\Requests\AddToCartRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -32,17 +32,13 @@ class CartController extends Controller
         return view('cart.index', compact('items', 'total'));
     }
 
-    public function add(Request $request, Product $product)
-    {
-        if (Auth::check() && Auth::user()->is_admin) {
-            return response()->json(['message' => 'Les comptes administrateurs ne peuvent pas effectuer d\'achats.'], 403);
-        }
+public function add(AddToCartRequest $request, Product $product)
+{
+    if (Auth::check() && Auth::user()->is_admin) {
+        return response()->json(['message' => 'Les comptes administrateurs ne peuvent pas effectuer d\'achats.'], 403);
+    }
 
-        $request->validate([
-            'variant_id' => 'required|exists:variants,id',
-        ]);
-
-        [$userId, $sessionId] = $this->owner();
+    [$userId, $sessionId] = $this->owner();
 
         try {
             $summary = DB::transaction(function () use ($request, $product, $userId, $sessionId) {

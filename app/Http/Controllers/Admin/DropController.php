@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use App\Mail\WhitelistStatusMail;
 use Illuminate\Support\Facades\Mail;
+use App\Http\Requests\Admin\DropRequest;
 
 class DropController extends Controller
 {
@@ -29,28 +30,9 @@ class DropController extends Controller
         return view('admin.drops.create', compact('products', 'categories'));
     }
 
-    public function store(Request $request)
-    {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'status' => 'required|in:upcoming,active,ended',
-            'products' => 'array',
-            'max_whitelist_slots' => 'nullable|integer|min:0',
-            'products.*' => 'exists:products,id',
-            'new_products' => 'array',
-            'new_products.*.name' => 'nullable|string|max:255',
-            'new_products.*.price' => 'nullable|numeric|min:0',
-            'new_products.*.image' => 'nullable|image|max:4096',
-            'new_products.*.category_id' => 'nullable|exists:categories,id',
-            'new_products.*.sizes' => 'nullable|array',
-            'new_products.*.sizes.*.size' => 'nullable|string|max:10',
-            'new_products.*.sizes.*.stock' => 'nullable|integer|min:0',
-            'new_products.*.sizes.*.sku' => 'nullable|string|max:50',
-            'new_products.*.sizes.*.color' => 'nullable|string|max:50',
-        ]);
+   public function store(DropRequest $request)
+{
+    $data = $request->validated();
 
         $data['slug'] = Str::slug($data['name']) . '-' . uniqid();
 
@@ -135,29 +117,9 @@ class DropController extends Controller
         return view('admin.drops.edit', compact('drop', 'products', 'categories', 'whitelistRequests'));
     }
 
-    public function update(Request $request, Drop $drop)
-    {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'status' => 'required|in:upcoming,active,ended',
-            'products' => 'array',
-            'max_whitelist_slots' => 'nullable|integer|min:0',
-            'products.*' => 'exists:products,id',
-            'new_products' => 'array',
-            'new_products.*.name' => 'nullable|string|max:255',
-            'new_products.*.price' => 'nullable|numeric|min:0',
-            'new_products.*.image' => 'nullable|image|max:4096',
-            'new_products.*.category_id' => 'nullable|exists:categories,id',
-            'new_products.*.sizes' => 'nullable|array',
-            'new_products.*.sizes.*.size' => 'nullable|string|max:10',
-            'new_products.*.sizes.*.stock' => 'nullable|integer|min:0',
-            'new_products.*.sizes.*.sku' => 'nullable|string|max:50',
-            'new_products.*.sizes.*.color' => 'nullable|string|max:50',
-        ]);
-
+   public function update(DropRequest $request, Drop $drop)
+{
+    $data = $request->validated();
         DB::transaction(function () use ($request, $data, $drop) {
             $drop->update($data);
 
