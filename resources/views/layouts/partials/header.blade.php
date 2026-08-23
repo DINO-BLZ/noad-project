@@ -1,4 +1,4 @@
-﻿<header class="site-header">
+<header class="site-header">
 
     @php
         if (auth()->check()) {
