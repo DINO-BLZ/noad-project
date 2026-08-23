@@ -36,9 +36,7 @@ class OrderController extends Controller
         $newStatus = $request->validated()['status'];
         $wasAlreadyCancelled = $order->status === 'cancelled';
 
-        DB::transaction(function () use ($order, $newStatus, $wasAlreadyCancelled) {
-
-        DB::transaction(function () use ($order, $newStatus, $wasAlreadyCancelled) {
+               DB::transaction(function () use ($order, $newStatus, $wasAlreadyCancelled)  {
             // On ne recrédite le stock que si on PASSE à "cancelled"
             // (et pas si la commande était déjà annulée avant).
             if ($newStatus === 'cancelled' && ! $wasAlreadyCancelled) {
