@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\DropController as AdminDropController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -166,6 +167,23 @@ Route::prefix('admin')
 
         Route::delete('/produits/{product}', [AdminProductController::class, 'destroy'])
             ->name('products.destroy');
+
+
+        /*
+        | Categories
+        */
+
+        Route::get('/categories', [AdminCategoryController::class, 'index'])
+            ->name('categories.index');
+
+        Route::post('/categories', [AdminCategoryController::class, 'store'])
+            ->name('categories.store');
+
+        Route::put('/categories/{category}', [AdminCategoryController::class, 'update'])
+            ->name('categories.update');
+
+        Route::delete('/categories/{category}', [AdminCategoryController::class, 'destroy'])
+            ->name('categories.destroy');
 
 
         /*
