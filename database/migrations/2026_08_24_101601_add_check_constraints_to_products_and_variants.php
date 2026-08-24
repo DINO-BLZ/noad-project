@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
@@ -8,7 +8,7 @@ return new class extends Migration
     public function up(): void
     {
         if (DB::getDriverName() !== 'mysql') {
-            return;
+            return; // SQLite ne supporte pas l'ajout de CHECK via ALTER TABLE
         }
 
         DB::statement('ALTER TABLE products ADD CONSTRAINT chk_products_price_positive CHECK (price >= 0)');
