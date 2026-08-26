@@ -6,6 +6,7 @@ use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\Variant;
 use App\Http\Requests\AddToCartRequest;
+use App\Http\Requests\UpdateCartItemRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -32,13 +33,13 @@ class CartController extends Controller
         return view('cart.index', compact('items', 'total'));
     }
 
-public function add(AddToCartRequest $request, Product $product)
-{
-    if (Auth::check() && Auth::user()->is_admin) {
-        return response()->json(['message' => 'Les comptes administrateurs ne peuvent pas effectuer d\'achats.'], 403);
-    }
+    public function add(AddToCartRequest $request, Product $product)
+    {
+        if (Auth::check() && Auth::user()->is_admin) {
+            return response()->json(['message' => 'Les comptes administrateurs ne peuvent pas effectuer d\'achats.'], 403);
+        }
 
-    [$userId, $sessionId] = $this->owner();
+        [$userId, $sessionId] = $this->owner();
 
         try {
             $summary = DB::transaction(function () use ($request, $product, $userId, $sessionId) {
@@ -106,13 +107,9 @@ public function add(AddToCartRequest $request, Product $product)
         return response()->json($summary);
     }
 
-    public function update(Request $request, $variantId)
+    public function update(UpdateCartItemRequest $request, $variantId)
     {
         $variant = Variant::findOrFail($variantId);
-
-        $request->validate([
-            'quantity' => 'required|integer|min:1|max:' . $variant->stock,
-        ]);
 
         [$userId, $sessionId] = $this->owner();
 
