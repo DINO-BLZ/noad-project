@@ -1,6 +1,3 @@
-cat > <database>
-<migrations>
-<NOAD></NOAD>.php << 'EOF'
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -25,4 +22,3 @@ return new class extends Migration
         });
     }
 };
-EOF
