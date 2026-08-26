@@ -3,17 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\Variant;
-use App\Models\OrderItem;
-use App\Models\ProductImage;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\DB;
 use App\Http\Requests\Admin\StoreProductRequest;
 use App\Http\Requests\Admin\UpdateProductRequest;
+use App\Models\Category;
+use App\Models\OrderItem;
+use App\Models\Product;
+use App\Models\Variant;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
@@ -32,10 +31,10 @@ class ProductController extends Controller
     }
 
     public function store(StoreProductRequest $request)
-{
-    $data = $request->validated();
+    {
+        $data = $request->validated();
 
-        $data['slug'] = Str::slug($data['name']) . '-' . uniqid();
+        $data['slug'] = Str::slug($data['name']).'-'.uniqid();
         $data['image'] = $request->file('image')->store('products', 'public');
 
         $sizes = $data['sizes'];
@@ -61,9 +60,9 @@ class ProductController extends Controller
         return view('admin.products.edit', compact('product', 'categories'));
     }
 
-public function update(UpdateProductRequest $request, Product $product)
-{
-    $data = $request->validated();
+    public function update(UpdateProductRequest $request, Product $product)
+    {
+        $data = $request->validated();
         if ($request->hasFile('image')) {
             $data['image'] = $request->file('image')->store('products', 'public');
         }
@@ -78,7 +77,7 @@ public function update(UpdateProductRequest $request, Product $product)
                 if (isset($v['id']) && $v['id'] && $existing->has($v['id'])) {
                     $variant = $existing->get($v['id']);
 
-                    if (!empty($v['sku']) && $v['sku'] !== $variant->sku && \App\Models\Variant::where('sku', $v['sku'])->exists()) {
+                    if (! empty($v['sku']) && $v['sku'] !== $variant->sku && Variant::where('sku', $v['sku'])->exists()) {
                         throw ValidationException::withMessages(['variants' => ["SKU {$v['sku']} déjà utilisé."]]);
                     }
 
@@ -90,9 +89,11 @@ public function update(UpdateProductRequest $request, Product $product)
                     ]);
                     $kept[] = $variant->id;
                 } else {
-                    if (empty($v['size'])) continue;
+                    if (empty($v['size'])) {
+                        continue;
+                    }
 
-                    if (!empty($v['sku']) && \App\Models\Variant::where('sku', $v['sku'])->exists()) {
+                    if (! empty($v['sku']) && Variant::where('sku', $v['sku'])->exists()) {
                         throw ValidationException::withMessages(['variants' => ["SKU {$v['sku']} déjà utilisé."]]);
                     }
 
@@ -109,7 +110,9 @@ public function update(UpdateProductRequest $request, Product $product)
             $toDelete = $existing->keys()->diff($kept);
             foreach ($toDelete as $variantId) {
                 $hasOrders = OrderItem::where('variant_id', $variantId)->exists();
-                if ($hasOrders) continue;
+                if ($hasOrders) {
+                    continue;
+                }
                 Variant::find($variantId)?->delete();
             }
 
@@ -138,7 +141,7 @@ public function update(UpdateProductRequest $request, Product $product)
 
             if ($primary = $request->input('primary_image')) {
                 $product->images()->update(['is_primary' => false]);
-                if (!str_starts_with($primary, 'new_')) {
+                if (! str_starts_with($primary, 'new_')) {
                     $img = $product->images()->find($primary);
                     if ($img) {
                         $img->is_primary = true;

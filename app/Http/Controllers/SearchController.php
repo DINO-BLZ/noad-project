@@ -41,9 +41,9 @@ class SearchController extends Controller
         return response()->json(
             $products->map(fn ($product) => [
                 'name' => $product->name,
-                'price' => number_format($product->price, 0) . ' DA',
+                'price' => number_format($product->price, 0).' DA',
                 'url' => route('products.show', $product->slug),
-                'image' => $product->image ? asset('storage/' . $product->image) : null,
+                'image' => $product->image ? asset('storage/'.$product->image) : null,
             ])
         );
     }

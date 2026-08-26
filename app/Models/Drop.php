@@ -42,7 +42,7 @@ class Drop extends Model
     {
         return $query->where(function ($q) {
             $q->where('status', 'upcoming')
-              ->orWhere('start_date', '>', now());
+                ->orWhere('start_date', '>', now());
         });
     }
 
@@ -60,12 +60,13 @@ class Drop extends Model
     {
         return $this->status === 'ended' || $this->end_date->isPast();
     }
-    public function hasWhitelistSlotsAvailable(): bool
-{
-    if (is_null($this->max_whitelist_slots)) {
-        return true; // pas de limite définie
-    }
 
-    return $this->approvedWhitelists()->count() < $this->max_whitelist_slots;
-}
+    public function hasWhitelistSlotsAvailable(): bool
+    {
+        if (is_null($this->max_whitelist_slots)) {
+            return true; // pas de limite définie
+        }
+
+        return $this->approvedWhitelists()->count() < $this->max_whitelist_slots;
+    }
 }

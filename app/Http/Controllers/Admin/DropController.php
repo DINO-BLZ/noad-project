@@ -3,15 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\DropRequest;
+use App\Mail\WhitelistStatusMail;
+use App\Models\Category;
 use App\Models\Drop;
 use App\Models\Product;
-use Illuminate\Http\Request;
+use App\Models\Variant;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use App\Mail\WhitelistStatusMail;
-use Illuminate\Support\Facades\Mail;
-use App\Http\Requests\Admin\DropRequest;
 
 class DropController extends Controller
 {
@@ -25,34 +26,34 @@ class DropController extends Controller
     public function create()
     {
         $products = Product::all();
-        $categories = \App\Models\Category::all();
+        $categories = Category::all();
 
         return view('admin.drops.create', compact('products', 'categories'));
     }
 
-   public function store(DropRequest $request)
-{
-    $data = $request->validated();
+    public function store(DropRequest $request)
+    {
+        $data = $request->validated();
 
-        $data['slug'] = Str::slug($data['name']) . '-' . uniqid();
+        $data['slug'] = Str::slug($data['name']).'-'.uniqid();
 
         // Pré-validation des SKU fournis pour les nouveaux produits
         $skus = [];
         foreach ($request->input('new_products', []) as $npIndex => $np) {
             foreach ($np['sizes'] ?? [] as $sizeData) {
-                if (!empty($sizeData['sku'])) {
+                if (! empty($sizeData['sku'])) {
                     $skus[] = $sizeData['sku'];
                 }
             }
         }
 
-        if (!empty($skus)) {
+        if (! empty($skus)) {
             $duplicates = array_diff_assoc($skus, array_unique($skus));
-            if (!empty($duplicates)) {
-                throw ValidationException::withMessages(['new_products' => ['Doublon de SKU dans les nouveaux produits : ' . implode(', ', array_unique($duplicates))]]);
+            if (! empty($duplicates)) {
+                throw ValidationException::withMessages(['new_products' => ['Doublon de SKU dans les nouveaux produits : '.implode(', ', array_unique($duplicates))]]);
             }
 
-            if (\App\Models\Variant::whereIn('sku', $skus)->exists()) {
+            if (Variant::whereIn('sku', $skus)->exists()) {
                 throw ValidationException::withMessages(['new_products' => ['Un des SKU fournis est déjà utilisé.']]);
             }
         }
@@ -74,7 +75,7 @@ class DropController extends Controller
 
                 $product = Product::create([
                     'name' => $newProduct['name'],
-                    'slug' => Str::slug($newProduct['name']) . '-' . uniqid(),
+                    'slug' => Str::slug($newProduct['name']).'-'.uniqid(),
                     'price' => $newProduct['price'],
                     'image' => $imagePath,
                     'category_id' => $newProduct['category_id'] ?? null,
@@ -84,7 +85,7 @@ class DropController extends Controller
                 $hasValidSize = false;
 
                 foreach ($sizes as $sizeData) {
-                    if (!empty($sizeData['size']) && isset($sizeData['stock'])) {
+                    if (! empty($sizeData['size']) && isset($sizeData['stock'])) {
                         $product->variants()->create([
                             'size' => $sizeData['size'],
                             'stock' => $sizeData['stock'],
@@ -95,7 +96,7 @@ class DropController extends Controller
                     }
                 }
 
-                if (!$hasValidSize) {
+                if (! $hasValidSize) {
                     $product->variants()->create(['size' => 'Unique', 'stock' => 1]);
                 }
 
@@ -111,15 +112,15 @@ class DropController extends Controller
     public function edit(Drop $drop)
     {
         $products = Product::all();
-        $categories = \App\Models\Category::all();
+        $categories = Category::all();
         $whitelistRequests = $drop->whitelists()->with('user')->latest()->get();
 
         return view('admin.drops.edit', compact('drop', 'products', 'categories', 'whitelistRequests'));
     }
 
-   public function update(DropRequest $request, Drop $drop)
-{
-    $data = $request->validated();
+    public function update(DropRequest $request, Drop $drop)
+    {
+        $data = $request->validated();
         DB::transaction(function () use ($request, $data, $drop) {
             $drop->update($data);
 
@@ -137,7 +138,7 @@ class DropController extends Controller
 
                 $product = Product::create([
                     'name' => $newProduct['name'],
-                    'slug' => Str::slug($newProduct['name']) . '-' . uniqid(),
+                    'slug' => Str::slug($newProduct['name']).'-'.uniqid(),
                     'price' => $newProduct['price'],
                     'image' => $imagePath,
                     'category_id' => $newProduct['category_id'] ?? null,
@@ -147,10 +148,10 @@ class DropController extends Controller
                 $hasValidSize = false;
 
                 foreach ($sizes as $sizeData) {
-                    if (!empty($sizeData['size']) && isset($sizeData['stock'])) {
+                    if (! empty($sizeData['size']) && isset($sizeData['stock'])) {
                         // SKU uniqueness check
-                        if (!empty($sizeData['sku']) && \App\Models\Variant::where('sku', $sizeData['sku'])->exists()) {
-                            throw \Illuminate\Validation\ValidationException::withMessages(['new_products.'.$index.'.sizes' => ["SKU {$sizeData['sku']} déjà utilisé."]]);
+                        if (! empty($sizeData['sku']) && Variant::where('sku', $sizeData['sku'])->exists()) {
+                            throw ValidationException::withMessages(['new_products.'.$index.'.sizes' => ["SKU {$sizeData['sku']} déjà utilisé."]]);
                         }
 
                         $product->variants()->create([
@@ -163,7 +164,7 @@ class DropController extends Controller
                     }
                 }
 
-                if (!$hasValidSize) {
+                if (! $hasValidSize) {
                     $product->variants()->create(['size' => 'Unique', 'stock' => 1]);
                 }
 

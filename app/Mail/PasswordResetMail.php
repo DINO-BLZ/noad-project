@@ -26,7 +26,7 @@ class PasswordResetMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-                       subject: 'Réinitialisation de votre mot de passe — Noad',
+            subject: 'Réinitialisation de votre mot de passe — Noad',
         );
     }
 

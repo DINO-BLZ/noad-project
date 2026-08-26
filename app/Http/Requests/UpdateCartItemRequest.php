@@ -17,7 +17,7 @@ class UpdateCartItemRequest extends FormRequest
         $variant = Variant::findOrFail($this->route('variantId'));
 
         return [
-            'quantity' => 'required|integer|min:1|max:' . $variant->stock,
+            'quantity' => 'required|integer|min:1|max:'.$variant->stock,
         ];
     }
 }

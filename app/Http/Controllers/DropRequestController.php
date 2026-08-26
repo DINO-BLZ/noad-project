@@ -27,6 +27,7 @@ class DropRequestController extends Controller
         if ($whitelist->exists && $whitelist->status === 'rejected') {
             $whitelist->status = 'pending';
             $whitelist->save();
+
             return back()->with('success', 'Votre nouvelle demande a été envoyée.');
         }
 

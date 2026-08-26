@@ -23,9 +23,9 @@ class WhitelistStatusMail extends Mailable
         $approved = $this->whitelist->status === 'approved';
 
         return new Envelope(
-                       subject: $approved
-                ? "Votre demande de whitelist a été approuvée — Noad"
-                : "Votre demande de whitelist a été refusée — Noad",
+            subject: $approved
+                ? 'Votre demande de whitelist a été approuvée — Noad'
+                : 'Votre demande de whitelist a été refusée — Noad',
         );
     }
 

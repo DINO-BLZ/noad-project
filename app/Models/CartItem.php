@@ -30,6 +30,7 @@ class CartItem extends Model
 
         return $query->whereNull('user_id')->where('session_id', $sessionId);
     }
+
     /**
      * Fusionne le panier invité (par session) dans le panier de l'utilisateur
      * qui vient de se connecter ou de s'inscrire. Si l'utilisateur avait déjà

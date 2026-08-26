@@ -2,12 +2,13 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
-use App\Models\User;
+use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\User;
 use App\Models\Variant;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class CheckoutSnapshotsTest extends TestCase
 {
@@ -34,7 +35,12 @@ class CheckoutSnapshotsTest extends TestCase
             'color' => 'Blue',
         ]);
 
-        session(['cart' => [$variant->id => 2]]);
+        CartItem::create([
+            'user_id' => $user->id,
+            'session_id' => null,
+            'variant_id' => $variant->id,
+            'quantity' => 2,
+        ]);
 
         $response = $this->actingAs($user)->post(route('checkout.store'), [
             'full_name' => 'John Doe',

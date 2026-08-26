@@ -37,7 +37,7 @@ class DashboardController extends Controller
 
         $salesByDay = Order::where('created_at', '>=', now()->subDays(7))
             ->where('status', '!=', 'cancelled')
-            ->select(DB::raw("date(created_at) as day"), DB::raw('sum(total) as total'))
+            ->select(DB::raw('date(created_at) as day'), DB::raw('sum(total) as total'))
             ->groupBy('day')
             ->orderBy('day')
             ->get();

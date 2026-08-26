@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CartItem;
-use App\Models\Product;
-use App\Models\Variant;
 use App\Http\Requests\AddToCartRequest;
 use App\Http\Requests\UpdateCartItemRequest;
+use App\Models\CartItem;
+use App\Models\Product;
+use App\Models\User;
+use App\Models\Variant;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class CartController extends Controller
 {
@@ -64,7 +66,7 @@ class CartController extends Controller
 
                     $user = Auth::user();
 
-                    if (! $user instanceof \App\Models\User || ! $user->isWhitelistedForDrop($activeDrop)) {
+                    if (! $user instanceof User || ! $user->isWhitelistedForDrop($activeDrop)) {
                         abort(422, "Ce produit fait partie d'un drop privé. Faites une demande de whitelist pour y accéder.");
                     }
                 }
@@ -100,7 +102,7 @@ class CartController extends Controller
 
                 return $this->cartSummary();
             });
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+        } catch (HttpException $e) {
             return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
         }
 
@@ -121,7 +123,7 @@ class CartController extends Controller
         $summary = $this->cartSummary();
 
         return response()->json([
-            'subtotal' => number_format($subtotal, 0) . ' DA',
+            'subtotal' => number_format($subtotal, 0).' DA',
             'total' => $summary['total'],
             'count' => $summary['count'],
         ]);
@@ -166,16 +168,16 @@ class CartController extends Controller
                 'name' => $cartItem->variant->product->name,
                 'size' => $cartItem->variant->size,
                 'quantity' => $cartItem->quantity,
-                'subtotal' => number_format($subtotal, 0) . ' DA',
+                'subtotal' => number_format($subtotal, 0).' DA',
                 'image' => $cartItem->variant->product->image
-                    ? asset('storage/' . $cartItem->variant->product->image)
+                    ? asset('storage/'.$cartItem->variant->product->image)
                     : asset('images/placeholder.png'),
             ];
         }
 
         return [
             'items' => $items,
-            'total' => number_format($total, 0) . ' DA',
+            'total' => number_format($total, 0).' DA',
             'count' => $count,
         ];
     }

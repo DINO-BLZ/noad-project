@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CheckoutRequest;
+use App\Mail\OrderConfirmationMail;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\Variant;
-use App\Http\Requests\CheckoutRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Mail\OrderConfirmationMail;
 use Illuminate\Support\Facades\Mail;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class CheckoutController extends Controller
 {
@@ -24,7 +25,7 @@ class CheckoutController extends Controller
 
         foreach ($cartItems as $cartItem) {
             // Le variant ou le produit peut avoir été supprimé entre-temps
-            if (!$cartItem->variant || !$cartItem->variant->product) {
+            if (! $cartItem->variant || ! $cartItem->variant->product) {
                 continue;
             }
 
@@ -45,8 +46,8 @@ class CheckoutController extends Controller
         return view('checkout.index', compact('items', 'total'));
     }
 
-   public function store(CheckoutRequest $request)
-{
+    public function store(CheckoutRequest $request)
+    {
 
         [$userId, $sessionId] = $this->owner();
 
@@ -78,7 +79,7 @@ class CheckoutController extends Controller
                         ->lockForUpdate()
                         ->find($cartItem->variant_id);
 
-                    if (!$variant || !$variant->product) {
+                    if (! $variant || ! $variant->product) {
                         abort(
                             422,
                             "Un article de votre panier n'est plus disponible."
@@ -108,8 +109,8 @@ class CheckoutController extends Controller
 
                     if ($activeDrop) {
                         if (
-                            !Auth::check() ||
-                            !Auth::user()->isWhitelistedForDrop($activeDrop)
+                            ! Auth::check() ||
+                            ! Auth::user()->isWhitelistedForDrop($activeDrop)
                         ) {
                             abort(
                                 403,
@@ -225,7 +226,7 @@ class CheckoutController extends Controller
                 return $order;
             });
 
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+        } catch (HttpException $e) {
             return back()
                 ->withErrors([
                     'checkout' => $e->getMessage(),
@@ -268,7 +269,7 @@ class CheckoutController extends Controller
 
         if (
             $order->user_id !== Auth::id() &&
-            (!Auth::check() || !Auth::user()->is_admin)
+            (! Auth::check() || ! Auth::user()->is_admin)
         ) {
             abort(403);
         }

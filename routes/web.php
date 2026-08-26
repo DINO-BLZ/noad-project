@@ -1,21 +1,24 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\SearchController;
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DropController as AdminDropController;
+use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\WhitelistController as AdminWhitelistController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DropController;
 use App\Http\Controllers\DropRequestController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\WhitelistController;
-use App\Http\Controllers\Admin\WhitelistController as AdminWhitelistController;
-
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\ProductController as AdminProductController;
-use App\Http\Controllers\Admin\DropController as AdminDropController;
-use App\Http\Controllers\Admin\OrderController as AdminOrderController;
-use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,7 +26,7 @@ use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/boutique', [ProductController::class, 'index'])
     ->name('shop.index');
@@ -37,38 +40,36 @@ Route::get('/recherche', [SearchController::class, 'index'])
 Route::get('/recherche/suggestions', [SearchController::class, 'suggestions'])
     ->name('search.suggestions');
 
-
 /*
 |--------------------------------------------------------------------------
 | Authentication
 |--------------------------------------------------------------------------
 */
 
-Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])
+Route::get('/login', [LoginController::class, 'showLoginForm'])
     ->name('login');
 
-Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login']);
+Route::post('/login', [LoginController::class, 'login']);
 
-Route::post('/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])
+Route::post('/logout', [LoginController::class, 'logout'])
     ->name('logout');
 
-Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])
+Route::get('/register', [RegisterController::class, 'showRegistrationForm'])
     ->name('register');
 
-Route::post('/register', [App\Http\Controllers\Auth\RegisterController::class, 'register']);
+Route::post('/register', [RegisterController::class, 'register']);
 
-Route::get('/mot-de-passe-oublie', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'showLinkRequestForm'])
+Route::get('/mot-de-passe-oublie', [ForgotPasswordController::class, 'showLinkRequestForm'])
     ->name('password.request');
 
-Route::post('/mot-de-passe-oublie', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'sendResetLinkEmail'])
+Route::post('/mot-de-passe-oublie', [ForgotPasswordController::class, 'sendResetLinkEmail'])
     ->name('password.email');
 
-Route::get('/reinitialiser-mot-de-passe/{token}', [App\Http\Controllers\Auth\ResetPasswordController::class, 'showResetForm'])
+Route::get('/reinitialiser-mot-de-passe/{token}', [ResetPasswordController::class, 'showResetForm'])
     ->name('password.reset');
 
-Route::post('/reinitialiser-mot-de-passe', [App\Http\Controllers\Auth\ResetPasswordController::class, 'reset'])
+Route::post('/reinitialiser-mot-de-passe', [ResetPasswordController::class, 'reset'])
     ->name('password.update');
-
 
 /*
 |--------------------------------------------------------------------------
@@ -87,7 +88,6 @@ Route::patch('/panier/{variantId}', [CartController::class, 'update'])
 
 Route::delete('/panier/{variantId}', [CartController::class, 'remove'])
     ->name('cart.remove');
-
 
 /*
 |--------------------------------------------------------------------------
@@ -110,7 +110,6 @@ Route::middleware('auth')->group(function () {
         ->name('whitelist.index');
 });
 
-
 /*
 |--------------------------------------------------------------------------
 | Drops
@@ -130,7 +129,6 @@ Route::middleware('auth')->group(function () {
     )->name('drops.request-whitelist');
 
 });
-
 
 /*
 |--------------------------------------------------------------------------
@@ -168,7 +166,6 @@ Route::prefix('admin')
         Route::delete('/produits/{product}', [AdminProductController::class, 'destroy'])
             ->name('products.destroy');
 
-
         /*
         | Categories
         */
@@ -184,7 +181,6 @@ Route::prefix('admin')
 
         Route::delete('/categories/{category}', [AdminCategoryController::class, 'destroy'])
             ->name('categories.destroy');
-
 
         /*
         | Drops
@@ -208,7 +204,6 @@ Route::prefix('admin')
         Route::delete('/drops/{drop}', [AdminDropController::class, 'destroy'])
             ->name('drops.destroy');
 
-
         /*
         | Whitelist
         */
@@ -225,7 +220,6 @@ Route::prefix('admin')
 
         Route::get('/whitelist', [AdminWhitelistController::class, 'index'])
             ->name('whitelist.index');
-
 
         /*
         | Orders

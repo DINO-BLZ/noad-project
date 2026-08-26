@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\ProductImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
-use App\Models\Product;
-use App\Models\ProductImage;
-use App\Models\Category;
 
 class ProductImageDeletionTest extends TestCase
 {
