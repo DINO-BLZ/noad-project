@@ -1,4 +1,4 @@
-<header class="site-header">
+﻿<header class="site-header">
 
     @php
         if (auth()->check()) {
@@ -8,9 +8,11 @@
         }
     @endphp
 
-    <nav class="site-header__nav">
-        <a href="{{ route('shop.index') }}">Boutique</a>
-        <a href="{{ route('drops.index') }}">Drops</a>
+        <nav class="site-header__nav">
+        @unless(auth()->check() && auth()->user()->is_admin)
+            <a href="{{ route('shop.index') }}">Boutique</a>
+            <a href="{{ route('drops.index') }}">Drops</a>
+        @endunless
     </nav>
 
     <a href="/" class="site-header__logo">
