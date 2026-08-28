@@ -25,6 +25,10 @@ class CategoryController extends Controller
 
         $data['slug'] = Str::slug($data['name']);
 
+        if (Category::where('slug', $data['slug'])->exists()) {
+            return back()->withErrors(['name' => 'Ce nom donne un identifiant (slug) déjà utilisé par une autre catégorie.'])->withInput();
+        }
+
         Category::create($data);
 
         return redirect()->route('admin.categories.index')->with('success', 'Catégorie créée.');
@@ -37,6 +41,10 @@ class CategoryController extends Controller
         ]);
 
         $data['slug'] = Str::slug($data['name']);
+
+        if (Category::where('slug', $data['slug'])->where('id', '!=', $category->id)->exists()) {
+            return back()->withErrors(['name' => 'Ce nom donne un identifiant (slug) déjà utilisé par une autre catégorie.'])->withInput();
+        }
 
         $category->update($data);
 

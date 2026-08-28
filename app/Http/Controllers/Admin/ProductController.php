@@ -72,6 +72,16 @@ class ProductController extends Controller
 
             $existing = $product->variants()->get()->keyBy('id');
             $kept = [];
+            $seen = [];
+foreach ($request->input('variants', []) as $v) {
+    $signature = ($v['size'] ?? '').'|'.($v['color'] ?? '');
+    if (in_array($signature, $seen, true)) {
+        throw ValidationException::withMessages([
+            'variants' => ['Deux variantes ont la même combinaison taille + couleur.'],
+        ]);
+    }
+    $seen[] = $signature;
+}
 
             foreach ($request->input('variants', []) as $v) {
                 if (isset($v['id']) && $v['id'] && $existing->has($v['id'])) {

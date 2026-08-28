@@ -49,7 +49,10 @@ Route::get('/recherche/suggestions', [SearchController::class, 'suggestions'])
 Route::get('/login', [LoginController::class, 'showLoginForm'])
     ->name('login');
 
-Route::post('/login', [LoginController::class, 'login']);
+Route::middleware('throttle:5,1')->group(function () {
+    Route::post('/login', [LoginController::class, 'login']);
+    Route::post('/register', [RegisterController::class, 'register']);
+});
 
 Route::post('/logout', [LoginController::class, 'logout'])
     ->name('logout');
@@ -57,12 +60,11 @@ Route::post('/logout', [LoginController::class, 'logout'])
 Route::get('/register', [RegisterController::class, 'showRegistrationForm'])
     ->name('register');
 
-Route::post('/register', [RegisterController::class, 'register']);
-
 Route::get('/mot-de-passe-oublie', [ForgotPasswordController::class, 'showLinkRequestForm'])
     ->name('password.request');
 
 Route::post('/mot-de-passe-oublie', [ForgotPasswordController::class, 'sendResetLinkEmail'])
+    ->middleware('throttle:3,1')
     ->name('password.email');
 
 Route::get('/reinitialiser-mot-de-passe/{token}', [ResetPasswordController::class, 'showResetForm'])
