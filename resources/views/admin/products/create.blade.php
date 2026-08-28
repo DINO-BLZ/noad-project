@@ -1,228 +1,404 @@
 @extends('layouts.admin')
 
 @section('content')
+
 <div class="admin-form-page">
 
-    <h1>Créer un produit</h1>
+    <div class="admin-form-header">
+        <div>
+            <span class="admin-form-eyebrow">Administration</span>
+            <h1>Créer un produit</h1>
+            <p>
+                Ajoutez un produit, ses informations et ses variantes.
+            </p>
+        </div>
+    </div>
 
-    <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" class="admin-form">
+    @if ($errors->any())
+        <div class="admin-form__errors">
+            <strong>
+                {{ $errors->count() }}
+                erreur(s) à corriger
+            </strong>
+
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form
+        action="{{ route('admin.products.store') }}"
+        method="POST"
+        enctype="multipart/form-data"
+        class="admin-form"
+    >
+
         @csrf
 
-        <label>Nom du produit
-            <input type="text" name="name" value="{{ old('name') }}" required>
-        </label>
+        {{-- Informations générales --}}
+        <section class="form-section">
 
-        <label>Catégorie
-            <select name="category_id" id="category_id" required>
-                @foreach($categories as $category)
-                    <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
-                        {{ $category->name }}
-                    </option>
-                @endforeach
-            </select>
-        </label>
-
-        <label>Prix (DA)
-            <input type="number" name="price" step="0.01" value="{{ old('price') }}" required>
-        </label>
-
-        <label>Description
-            <textarea name="description" rows="4">{{ old('description') }}</textarea>
-        </label>
-
-        <label>Photo du produit
-            <input type="file" name="image" accept="image/*" required>
-        </label>
-
-        <label>Tailles / Pointures disponibles et stock</label>
-        <div class="sizes-grid" id="sizes-grid"></div>
-
-        @if($errors->any())
-            <div class="admin-form__errors">
-                @foreach($errors->all() as $error)
-                    <p>{{ $error }}</p>
-                @endforeach
+            <div class="form-section__header">
+                <h2>Informations générales</h2>
+                <span>01</span>
             </div>
-        @endif
 
-        <button type="submit" class="admin-btn">Enregistrer le produit</button>
+            <div class="form-grid">
+
+                <label class="form-field">
+                    <span>Nom du produit</span>
+
+                    <input
+                        type="text"
+                        name="name"
+                        value="{{ old('name') }}"
+                        placeholder="Ex : Nike Air Max"
+                        required
+                    >
+                </label>
+
+                <label class="form-field">
+                    <span>Catégorie</span>
+
+                    <select
+                        name="category_id"
+                        id="category_id"
+                        required
+                    >
+                        <option value="">
+                            Sélectionner une catégorie
+                        </option>
+
+                        @foreach ($categories as $category)
+                            <option
+                                value="{{ $category->id }}"
+                                data-type="{{ $category->type ?? 'clothing' }}"
+                                @selected(
+                                    old('category_id') == $category->id
+                                )
+                            >
+                                {{ $category->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </label>
+
+            </div>
+
+            <label class="form-field">
+                <span>Prix (DA)</span>
+
+                <input
+                    type="number"
+                    name="price"
+                    value="{{ old('price') }}"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    required
+                >
+            </label>
+
+            <label class="form-field">
+                <span>Description</span>
+
+                <textarea
+                    name="description"
+                    rows="5"
+                    placeholder="Description du produit..."
+                >{{ old('description') }}</textarea>
+            </label>
+
+        </section>
+
+        {{-- Image --}}
+        <section class="form-section">
+
+            <div class="form-section__header">
+                <h2>Image principale</h2>
+                <span>02</span>
+            </div>
+
+            <label class="upload-zone">
+
+                <input
+                    type="file"
+                    name="image"
+                    id="image"
+                    accept="image/jpeg,image/png,image/webp"
+                    required
+                >
+
+                <div>
+                    <strong>Choisir une image</strong>
+                    <small>
+                        JPG, PNG ou WebP — maximum 5 Mo
+                    </small>
+                </div>
+
+            </label>
+
+            <div id="image-preview"></div>
+
+        </section>
+
+        {{-- Variantes --}}
+        <section class="form-section">
+
+            <div class="form-section__header">
+                <div>
+                    <h2>Variantes & stock</h2>
+                    <p>
+                        Sélectionnez les tailles disponibles.
+                    </p>
+                </div>
+
+                <span>03</span>
+            </div>
+
+            <div
+                id="sizes-grid"
+                class="sizes-grid"
+            ></div>
+
+        </section>
+
+        <div class="form-actions">
+
+            <a
+                href="{{ route('admin.products.index') }}"
+                class="admin-btn admin-btn--secondary"
+            >
+                Annuler
+            </a>
+
+            <button
+                type="submit"
+                class="admin-btn"
+            >
+                Créer le produit
+            </button>
+
+        </div>
+
     </form>
 
 </div>
 
-<style>
-.admin-form-page{
-    padding:3rem;
-    max-width:600px;
-    margin:0 auto;
-}
+@endsection
 
-.admin-form-page h1{
-    font-size:1.6rem;
-    font-weight:900;
-    text-transform:uppercase;
-    margin-bottom:2rem;
-}
-
-.admin-form{
-    display:flex;
-    flex-direction:column;
-    gap:1.2rem;
-}
-
-.admin-form label{
-    display:flex;
-    flex-direction:column;
-    gap:.4rem;
-    font-size:.75rem;
-    font-weight:600;
-    text-transform:uppercase;
-    letter-spacing:.05em;
-    opacity:.8;
-}
-
-.admin-form input,
-.admin-form select,
-.admin-form textarea{
-    background:transparent;
-    border:1px solid var(--border);
-    color:var(--text);
-    padding:.8rem;
-    font-family:inherit;
-    font-size:.9rem;
-    width:100%;
-    box-sizing:border-box;
-}
-
-.admin-form select option{
-    background:var(--bg);
-    color:var(--text);
-}
-
-.sizes-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));
-    gap:.8rem;
-    border:1px solid var(--border);
-    padding:1rem;
-}
-
-.size-toggle{
-    display:flex;
-    flex-direction:column;
-    gap:.5rem;
-    border:1px solid var(--border);
-    padding:.8rem;
-}
-
-.size-toggle__checkbox{
-    flex-direction:row !important;
-    align-items:center;
-    gap:.5rem !important;
-    text-transform:none !important;
-    font-size:.9rem !important;
-    font-weight:700 !important;
-    opacity:1 !important;
-    cursor:pointer;
-}
-
-.size-toggle__checkbox input[type="checkbox"]{
-    width:auto;
-}
-
-.size-stock-input{
-    padding:.5rem !important;
-    font-size:.85rem !important;
-}
-
-.size-stock-input:disabled{
-    opacity:.3;
-    cursor:not-allowed;
-}
-
-.admin-form__errors{
-    background:rgba(176,46,38,.1);
-    border:1px solid var(--accent);
-    color:var(--accent);
-    padding:.8rem 1rem;
-    font-size:.8rem;
-}
-
-.admin-btn{
-    background:var(--accent);
-    color:#fff;
-    border:none;
-    padding:1rem;
-    font-weight:700;
-    text-transform:uppercase;
-    letter-spacing:.05em;
-    cursor:pointer;
-}
-</style>
+@push('scripts')
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const clothingSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-    const shoeSizes = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'];
-    const shoeCategoryNames = ['chaussure', 'running'];
 
-    const categorySelect = document.getElementById('category_id');
-    const grid = document.getElementById('sizes-grid');
+    const categorySelect =
+        document.getElementById('category_id');
+
+    const grid =
+        document.getElementById('sizes-grid');
+
+    const imageInput =
+        document.getElementById('image');
+
+    const imagePreview =
+        document.getElementById('image-preview');
+
+   const oldSizes = {{ Js::from(old('sizes', [])) }};
+
+    const sizeSets = {
+        clothing: [
+            'XS',
+            'S',
+            'M',
+            'L',
+            'XL',
+            'XXL'
+        ],
+
+        shoes: [
+            '36',
+            '37',
+            '38',
+            '39',
+            '40',
+            '41',
+            '42',
+            '43',
+            '44',
+            '45',
+            '46'
+        ],
+
+        accessories: []
+    };
 
     function renderSizes() {
-        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
-        const categoryName = (selectedOption?.textContent || '').trim().toLowerCase();
-        const isShoe = shoeCategoryNames.some(name => categoryName.includes(name));
-        const sizes = isShoe ? shoeSizes : clothingSizes;
+
+        const option =
+            categorySelect.options[
+                categorySelect.selectedIndex
+            ];
+
+        const type =
+            option?.dataset.type ?? 'clothing';
+
+        const sizes =
+            sizeSets[type] ?? sizeSets.clothing;
 
         grid.innerHTML = '';
 
-        sizes.forEach(size => {
-            const div = document.createElement('div');
-            div.className = 'size-toggle';
-            div.innerHTML = `
-                <label class="size-toggle__checkbox">
-                    <input type="checkbox" class="size-checkbox" data-size="${size}">
-                    ${size}
-                </label>
-                <input type="number"
-                       name="sizes[${size}][stock]"
-                       class="size-stock-input"
-                       data-size="${size}"
-                       min="0"
-                       value="1"
-                       placeholder="Stock"
-                       disabled>
+        if (!sizes.length) {
+
+            grid.innerHTML = `
+                <div class="sizes-empty">
+                    Ce produit ne possède pas de tailles.
+                </div>
             `;
-            grid.appendChild(div);
+
+            return;
+        }
+
+        sizes.forEach(size => {
+
+            const oldVariant =
+                oldSizes[size] ?? null;
+
+            const checked =
+                oldVariant !== null;
+
+            const stock =
+                oldVariant?.stock ?? '';
+
+            const wrapper =
+                document.createElement('div');
+
+            wrapper.className = 'size-toggle';
+
+            wrapper.innerHTML = `
+                <label class="size-toggle__checkbox">
+
+                    <input
+                        type="checkbox"
+                        class="size-checkbox"
+                        data-size="${size}"
+                        ${checked ? 'checked' : ''}
+                    >
+
+                    <span>${size}</span>
+
+                </label>
+
+                <input
+                    type="number"
+                    name="sizes[${size}][stock]"
+                    class="size-stock-input"
+                    data-size="${size}"
+                    min="0"
+                    max="1000000"
+                    value="${stock}"
+                    placeholder="Stock"
+                    ${checked ? '' : 'disabled'}
+                >
+            `;
+
+            grid.appendChild(wrapper);
         });
 
-        attachCheckboxListeners();
+        bindCheckboxes();
     }
 
-    function attachCheckboxListeners() {
-        document.querySelectorAll('.size-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', () => {
-                const size = checkbox.dataset.size;
-                const stockInput = document.querySelector(`.size-stock-input[data-size="${size}"]`);
-                stockInput.disabled = !checkbox.checked;
-                if (!checkbox.checked) {
-                    stockInput.value = '';
-                } else if (!stockInput.value) {
-                    stockInput.value = 1;
-                }
+    function bindCheckboxes() {
+
+        document
+            .querySelectorAll('.size-checkbox')
+            .forEach(checkbox => {
+
+                checkbox.addEventListener(
+                    'change',
+                    () => {
+
+                        const size =
+                            checkbox.dataset.size;
+
+                        const input =
+                            document.querySelector(
+                                `.size-stock-input[data-size="${size}"]`
+                            );
+
+                        input.disabled =
+                            !checkbox.checked;
+
+                        if (checkbox.checked) {
+
+                            if (!input.value) {
+                                input.value = 1;
+                            }
+
+                        } else {
+
+                            input.value = '';
+                        }
+                    }
+                );
             });
-        });
     }
 
-    categorySelect.addEventListener('change', renderSizes);
+    categorySelect.addEventListener(
+        'change',
+        renderSizes
+    );
+
+    imageInput.addEventListener(
+        'change',
+        () => {
+
+            const file =
+                imageInput.files[0];
+
+            imagePreview.innerHTML = '';
+
+            if (!file) {
+                return;
+            }
+
+            const image =
+                document.createElement('img');
+
+            image.src =
+                URL.createObjectURL(file);
+
+            image.alt =
+                'Aperçu du produit';
+
+            image.className =
+                'image-preview';
+
+            imagePreview.appendChild(image);
+        }
+    );
+
+    document
+        .querySelector('.admin-form')
+        .addEventListener('submit', () => {
+
+            document
+                .querySelectorAll(
+                    '.size-stock-input:disabled'
+                )
+                .forEach(input => {
+
+                    input.removeAttribute('name');
+
+                });
+        });
+
     renderSizes();
 
-    document.querySelector('.admin-form').addEventListener('submit', () => {
-        document.querySelectorAll('.size-stock-input:disabled').forEach(input => {
-            input.removeAttribute('name');
-        });
-    });
 });
 </script>
-@endsection
+
+@endpush

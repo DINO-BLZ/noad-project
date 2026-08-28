@@ -38,6 +38,7 @@ Route::get('/recherche', [SearchController::class, 'index'])
     ->name('search.index');
 
 Route::get('/recherche/suggestions', [SearchController::class, 'suggestions'])
+    ->middleware('throttle:30,1')
     ->name('search.suggestions');
 
 /*
@@ -83,6 +84,7 @@ Route::get('/panier', [CartController::class, 'index'])
     ->name('cart.index');
 
 Route::post('/panier/ajouter/{product}', [CartController::class, 'add'])
+    ->middleware('throttle:20,1')
     ->name('cart.add');
 
 Route::patch('/panier/{variantId}', [CartController::class, 'update'])
