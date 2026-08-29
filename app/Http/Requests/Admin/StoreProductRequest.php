@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreProductRequest extends FormRequest
 {
@@ -118,6 +119,9 @@ class StoreProductRequest extends FormRequest
 
             'sizes.*.stock.min' =>
                 'Le stock ne peut pas être négatif.',
+
+            'sizes.*.stock.max' =>
+                'Le stock ne peut pas dépasser 1 000 000.',
         ];
     }
 }

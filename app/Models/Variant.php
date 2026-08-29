@@ -9,7 +9,9 @@ class Variant extends Model
 {
     protected $fillable = [
         'product_id',
+        'sku',
         'size',
+        'color',
         'stock',
     ];
 
@@ -29,6 +31,12 @@ class Variant extends Model
 
     public function decreaseStock(int $quantity): void
     {
+        if ($quantity <= 0) {
+            throw new \InvalidArgumentException(
+                'La quantité doit être supérieure à zéro.'
+            );
+        }
+
         if ($quantity > $this->stock) {
             throw new \RuntimeException(
                 'Stock insuffisant.'

@@ -135,7 +135,7 @@
                 <div>
                     <strong>Choisir une image</strong>
                     <small>
-                        JPG, PNG ou WebP — maximum 5 Mo
+                        JPG, PNG ou WebP — maximum 4 Mo
                     </small>
                 </div>
 

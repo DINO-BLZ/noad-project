@@ -6,8 +6,6 @@ use App\Actions\Products\CreateProductAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreProductRequest;
 use App\Models\Category;
-use App\Models\Product;
-
 
 class ProductController extends Controller
 {

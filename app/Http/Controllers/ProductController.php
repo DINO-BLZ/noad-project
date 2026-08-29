@@ -1,3 +1,4 @@
+```php
 <?php
 
 namespace App\Http\Controllers;
@@ -10,25 +11,51 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $categories = Category::all();
-        $products = Product::with([
-            'variants',
-            'category',
-            'drops' => fn ($query) => $query->active(),
-        ])
-            ->when($request->category, function ($query, $categorySlug) {
-                $query->whereHas('category', fn ($q) => $q->where('slug', $categorySlug));
-            })
-            ->latest()
-            ->paginate(12);
+        $categories = Category::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug']);
 
-        return view('shop.index', compact('products', 'categories'));
+        $products = Product::query()
+            ->with([
+                'variants',
+                'category',
+                'drops' => fn ($query) => $query->active(),
+            ])
+            ->when(
+                $request->filled('category'),
+                function ($query) use ($request) {
+                    $query->whereHas(
+                        'category',
+                        fn ($q) => $q->where(
+                            'slug',
+                            $request->category
+                        )
+                    );
+                }
+            )
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
+
+        return view(
+            'shop.index',
+            compact('products', 'categories')
+        );
     }
 
     public function show(Product $product)
     {
-        $product->load('variants', 'category', 'drops', 'images');
+        $product->load([
+            'variants',
+            'category',
+            'drops',
+            'images',
+        ]);
 
-        return view('products.show', compact('product'));
+        return view(
+            'products.show',
+            compact('product')
+        );
     }
 }
+```
