@@ -8,9 +8,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Laravel\Scout\Searchable;
 
 class Product extends Model
 {
+    use Searchable;
+
     protected $fillable = [
         'name',
         'category_id',
@@ -79,5 +82,43 @@ class Product extends Model
             ->where('start_date', '>', now())
             ->orderBy('start_date')
             ->first();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Scout / Elasticsearch
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Nom de l'index Elasticsearch utilisé pour ce modèle.
+     */
+    public function searchableAs(): string
+    {
+        return 'products_index';
+    }
+
+    /**
+     * Données envoyées à Elasticsearch à chaque indexation.
+     * On inclut le nom de catégorie pour permettre une recherche
+     * du type "chaussures nike" sans jointure côté ES.
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'name' => $this->name,
+            'description' => $this->description,
+            'category' => $this->category?->name,
+            'price' => (float) $this->price,
+        ];
+    }
+
+    /**
+     * N'indexe que les produits rattachés à une catégorie valide
+     * (évite d'indexer un produit en cours de création incomplète).
+     */
+    public function shouldBeSearchable(): bool
+    {
+        return $this->category_id !== null;
     }
 }
