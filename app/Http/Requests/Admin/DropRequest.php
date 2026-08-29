@@ -8,7 +8,8 @@ class DropRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return auth()->check()
+            && (bool) auth()->user()->is_admin;
     }
 
     public function rules(): array
