@@ -3,13 +3,13 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreProductRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->check() && auth()->user()->is_admin;
+        return auth()->check()
+            && (bool) auth()->user()->is_admin;
     }
 
     public function rules(): array
@@ -32,7 +32,7 @@ class StoreProductRequest extends FormRequest
                 'required',
                 'numeric',
                 'min:0',
-                'max:999999999',
+                'max:999999999.99',
             ],
 
             'description' => [
@@ -45,15 +45,17 @@ class StoreProductRequest extends FormRequest
                 'required',
                 'image',
                 'mimes:jpg,jpeg,png,webp',
-                'max:5120',
+                'max:4096',
             ],
 
             'sizes' => [
-                'nullable',
+                'required',
                 'array',
+                'min:1',
             ],
 
             'sizes.*' => [
+                'required',
                 'array',
             ],
 
@@ -69,21 +71,53 @@ class StoreProductRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'Le nom du produit est obligatoire.',
-            'category_id.required' => 'La catégorie est obligatoire.',
-            'category_id.exists' => 'La catégorie sélectionnée est invalide.',
+            'name.required' =>
+                'Le nom du produit est obligatoire.',
 
-            'price.required' => 'Le prix est obligatoire.',
-            'price.numeric' => 'Le prix doit être un nombre.',
-            'price.min' => 'Le prix ne peut pas être négatif.',
+            'name.min' =>
+                'Le nom doit contenir au moins 2 caractères.',
 
-            'image.required' => 'Une image est obligatoire.',
-            'image.image' => 'Le fichier doit être une image.',
-            'image.max' => 'L’image ne doit pas dépasser 5 Mo.',
+            'category_id.required' =>
+                'Veuillez sélectionner une catégorie.',
 
-            'sizes.*.stock.required' => 'Le stock est obligatoire.',
-            'sizes.*.stock.integer' => 'Le stock doit être un nombre entier.',
-            'sizes.*.stock.min' => 'Le stock ne peut pas être négatif.',
+            'category_id.exists' =>
+                'La catégorie sélectionnée est invalide.',
+
+            'price.required' =>
+                'Le prix est obligatoire.',
+
+            'price.numeric' =>
+                'Le prix doit être un nombre.',
+
+            'price.min' =>
+                'Le prix ne peut pas être négatif.',
+
+            'image.required' =>
+                'Une image est obligatoire.',
+
+            'image.image' =>
+                'Le fichier doit être une image.',
+
+            'image.mimes' =>
+                'L’image doit être au format JPG, JPEG, PNG ou WebP.',
+
+            'image.max' =>
+                'L’image ne doit pas dépasser 4 Mo.',
+
+            'sizes.required' =>
+                'Sélectionnez au moins une taille.',
+
+            'sizes.min' =>
+                'Sélectionnez au moins une taille.',
+
+            'sizes.*.stock.required' =>
+                'Le stock est obligatoire.',
+
+            'sizes.*.stock.integer' =>
+                'Le stock doit être un nombre entier.',
+
+            'sizes.*.stock.min' =>
+                'Le stock ne peut pas être négatif.',
         ];
     }
 }
