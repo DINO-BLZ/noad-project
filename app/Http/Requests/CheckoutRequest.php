@@ -18,7 +18,7 @@ class CheckoutRequest extends FormRequest
             'phone' => 'required|string|max:20',
             'address' => 'required|string|max:255',
             'wilaya' => 'required|string|max:100',
-            'payment_method' => 'required|in:cod,cib',
+            'payment_method' => 'required|in:cod',
         ];
     }
 }

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Scout\Searchable;
 
 class Product extends Model
@@ -120,5 +121,22 @@ class Product extends Model
     public function shouldBeSearchable(): bool
     {
         return $this->category_id !== null;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Nettoyage des fichiers
+    |--------------------------------------------------------------------------
+    */
+
+    protected static function booted()
+    {
+        static::deleting(function (Product $product) {
+            $product->images->each->delete();
+
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+        });
     }
 }

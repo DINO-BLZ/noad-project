@@ -65,54 +65,79 @@ class ProductController extends Controller
         return view('admin.products.edit', compact('product', 'categories'));
     }
 
-    public function update(UpdateProductRequest $request, Product $product)
-    {
+    public function update(
+        UpdateProductRequest $request,
+        Product $product
+    ) {
         $data = $request->validated();
 
         /*
         |--------------------------------------------------------------------------
-        | Pré-validation des variantes (avant toute écriture)
+        | Pré-validation des variantes
         |--------------------------------------------------------------------------
         |
-        | La base impose une contrainte unique (product_id, size, color) et une
-        | contrainte unique globale sur sku. On vérifie tout ça en amont pour
-        | renvoyer une erreur de validation propre plutôt qu'un crash SQL.
+        | Vérification des doublons taille/couleur et des SKU présents
+        | plusieurs fois dans le formulaire avant toute écriture.
+        |
         */
+
         $variantsInput = $data['variants'] ?? [];
         $seenCombos = [];
         $submittedSkus = [];
 
         foreach ($variantsInput as $variantData) {
-            $combo = ($variantData['size'] ?? '').'|'.($variantData['color'] ?? '');
+            $combo = ($variantData['size'] ?? '')
+                . '|'
+                . ($variantData['color'] ?? '');
 
             if (isset($seenCombos[$combo])) {
                 throw ValidationException::withMessages([
-                    'variants' => ["La combinaison taille/couleur \"{$variantData['size']}\" est en double."],
+                    'variants' => [
+                        "La combinaison taille/couleur \"{$variantData['size']}\" est en double."
+                    ],
                 ]);
             }
+
             $seenCombos[$combo] = true;
 
-            if (! empty($variantData['sku'])) {
+            if (!empty($variantData['sku'])) {
                 $submittedSkus[] = $variantData['sku'];
             }
         }
 
         if (count($submittedSkus) !== count(array_unique($submittedSkus))) {
             throw ValidationException::withMessages([
-                'variants' => ['Un même SKU est utilisé plusieurs fois dans le formulaire.'],
+                'variants' => [
+                    'Un même SKU est utilisé plusieurs fois dans le formulaire.'
+                ],
             ]);
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Mise à jour
+        |--------------------------------------------------------------------------
+        */
+
         $newImagePath = null;
+        $newGalleryPaths = [];
 
         try {
-            DB::transaction(function () use ($request, $product, $data, $variantsInput, $submittedSkus, &$newImagePath) {
+            DB::transaction(function () use (
+                $request,
+                $product,
+                $data,
+                $variantsInput,
+                &$newImagePath,
+                &$newGalleryPaths
+            ) {
 
                 /*
-                |----------------------------------------------------------------
-                | Champs de base
-                |----------------------------------------------------------------
+                |--------------------------------------------------------------------------
+                | Informations principales du produit
+                |--------------------------------------------------------------------------
                 */
+
                 $product->update([
                     'name' => $data['name'],
                     'price' => $data['price'],
@@ -121,40 +146,68 @@ class ProductController extends Controller
                 ]);
 
                 /*
-                |----------------------------------------------------------------
-                | Remplacement de l'image de couverture
-                |----------------------------------------------------------------
+                |--------------------------------------------------------------------------
+                | Image de couverture
+                |--------------------------------------------------------------------------
                 */
+
                 if ($request->hasFile('image')) {
                     $oldImage = $product->image;
 
-                    $newImagePath = $request->file('image')->store('products', 'public');
-                    $product->update(['image' => $newImagePath]);
+                    $newImagePath = $request
+                        ->file('image')
+                        ->store('products', 'public');
 
+                    $product->update([
+                        'image' => $newImagePath,
+                    ]);
+
+                    /*
+                    | L'ancien fichier est supprimé seulement après
+                    | la mise à jour du produit.
+                    */
                     if ($oldImage) {
                         Storage::disk('public')->delete($oldImage);
                     }
                 }
 
                 /*
-                |----------------------------------------------------------------
-                | Variantes : mise à jour des existantes + création des nouvelles
-                |----------------------------------------------------------------
+                |--------------------------------------------------------------------------
+                | Variantes
+                |--------------------------------------------------------------------------
                 */
+
                 foreach ($variantsInput as $variantData) {
                     $sku = $variantData['sku'] ?? null;
 
-                    if (! empty($variantData['id'])) {
+                    /*
+                    | Mise à jour d'une variante existante
+                    */
+                    if (!empty($variantData['id'])) {
                         $variant = Variant::where('product_id', $product->id)
                             ->find($variantData['id']);
 
-                        if (! $variant) {
+                        /*
+                        | Si la variante n'appartient pas au produit,
+                        | on l'ignore.
+                        */
+                        if (!$variant) {
                             continue;
                         }
 
-                        if ($sku && Variant::where('sku', $sku)->where('id', '!=', $variant->id)->exists()) {
+                        /*
+                        | Vérification du SKU
+                        */
+                        if (
+                            $sku &&
+                            Variant::where('sku', $sku)
+                                ->where('id', '!=', $variant->id)
+                                ->exists()
+                        ) {
                             throw ValidationException::withMessages([
-                                'variants' => ["Le SKU \"{$sku}\" est déjà utilisé par une autre variante."],
+                                'variants' => [
+                                    "Le SKU \"{$sku}\" est déjà utilisé par une autre variante."
+                                ],
                             ]);
                         }
 
@@ -164,10 +217,20 @@ class ProductController extends Controller
                             'color' => $variantData['color'] ?? null,
                             'sku' => $sku,
                         ]);
-                    } else {
-                        if ($sku && Variant::where('sku', $sku)->exists()) {
+                    }
+
+                    /*
+                    | Création d'une nouvelle variante
+                    */
+                    else {
+                        if (
+                            $sku &&
+                            Variant::where('sku', $sku)->exists()
+                        ) {
                             throw ValidationException::withMessages([
-                                'variants' => ["Le SKU \"{$sku}\" est déjà utilisé par une autre variante."],
+                                'variants' => [
+                                    "Le SKU \"{$sku}\" est déjà utilisé par une autre variante."
+                                ],
                             ]);
                         }
 
@@ -181,14 +244,11 @@ class ProductController extends Controller
                 }
 
                 /*
-                |----------------------------------------------------------------
-                | Galerie : suppression des images cochées
-                |----------------------------------------------------------------
-                |
-                | ->delete() sur chaque modèle (et non une suppression en masse)
-                | pour déclencher l'événement booted() qui nettoie le fichier
-                | sur le disque.
+                |--------------------------------------------------------------------------
+                | Suppression des images de galerie
+                |--------------------------------------------------------------------------
                 */
+
                 foreach ($data['remove_images'] ?? [] as $imageId) {
                     ProductImage::where('product_id', $product->id)
                         ->find($imageId)
@@ -196,66 +256,103 @@ class ProductController extends Controller
                 }
 
                 /*
-                |----------------------------------------------------------------
-                | Galerie : ajout des nouvelles images
-                |----------------------------------------------------------------
+                |--------------------------------------------------------------------------
+                | Ajout des nouvelles images de galerie
+                |--------------------------------------------------------------------------
                 */
+
                 $position = $product->images()->max('position') ?? 0;
 
                 foreach ($request->file('images', []) as $file) {
                     $position++;
 
+                    $path = $file->store('products', 'public');
+
+                    /*
+                    | On garde une trace des fichiers créés.
+                    | Si la transaction échoue, ils seront supprimés.
+                    */
+                    $newGalleryPaths[] = $path;
+
                     $product->images()->create([
-                        'path' => $file->store('products', 'public'),
+                        'path' => $path,
                         'position' => $position,
                     ]);
                 }
 
                 /*
-                |----------------------------------------------------------------
-                | Galerie : image principale
-                |----------------------------------------------------------------
+                |--------------------------------------------------------------------------
+                | Image principale de la galerie
+                |--------------------------------------------------------------------------
                 */
-                if (! empty($data['primary_image'])) {
-                    $product->images()->update(['is_primary' => false]);
+
+                if (!empty($data['primary_image'])) {
+                    $product->images()
+                        ->update([
+                            'is_primary' => false,
+                        ]);
 
                     $product->images()
                         ->where('id', $data['primary_image'])
-                        ->update(['is_primary' => true]);
+                        ->update([
+                            'is_primary' => true,
+                        ]);
                 }
             });
-        } catch (ValidationException $e) {
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Gestion du rollback
+        |--------------------------------------------------------------------------
+        |
+        | On intercepte \Throwable (et pas seulement ValidationException) pour
+        | garantir le nettoyage des fichiers même en cas d'erreur imprévue
+        | (contrainte SQL, erreur de connexion, etc.).
+        |
+        */
+
+        catch (\Throwable $e) {
+            /*
+            | Suppression de la nouvelle image de couverture
+            */
             if ($newImagePath) {
                 Storage::disk('public')->delete($newImagePath);
+            }
+
+            /*
+            | Suppression des nouvelles images de galerie
+            */
+            foreach ($newGalleryPaths as $path) {
+                Storage::disk('public')->delete($path);
             }
 
             throw $e;
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Succès
+        |--------------------------------------------------------------------------
+        */
+
         return redirect()
             ->route('admin.products.index')
-            ->with('success', "Le produit {$product->name} a été mis à jour.");
+            ->with(
+                'success',
+                "Le produit {$product->name} a été mis à jour."
+            );
     }
 
     public function destroy(Product $product)
     {
-        DB::transaction(function () use ($product) {
-            // ->delete() modèle par modèle pour déclencher le nettoyage
-            // des fichiers sur le disque (voir ProductImage::booted()).
-            $product->images->each->delete();
-
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
-            }
-
-            // Les variantes sont supprimées en cascade au niveau base
-            // (cascadeOnDelete). Les commandes passées conservent leur
-            // historique via les champs "snapshot" sur order_items.
-            $product->delete();
-        });
+        $product->delete();
 
         return redirect()
             ->route('admin.products.index')
-            ->with('success', 'Produit supprimé.');
+            ->with(
+                'success',
+                'Produit supprimé.'
+            );
     }
 }
