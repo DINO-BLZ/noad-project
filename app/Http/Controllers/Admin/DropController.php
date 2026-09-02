@@ -33,6 +33,8 @@ class DropController extends Controller
 
     public function store(DropRequest $request)
     {
+        $this->authorize('create', Drop::class);
+
         $data = $request->validated();
 
         $data['slug'] = Str::slug($data['name']).'-'.uniqid();
@@ -57,6 +59,8 @@ class DropController extends Controller
                 throw ValidationException::withMessages(['new_products' => ['Un des SKU fournis est déjà utilisé.']]);
             }
         }
+
+        $this->validateNewProductSizeColorCombinations($request->input('new_products', []));
 
         DB::transaction(function () use ($request, $data) {
             $drop = Drop::create($data);
@@ -120,7 +124,11 @@ class DropController extends Controller
 
     public function update(DropRequest $request, Drop $drop)
     {
+        $this->authorize('update', $drop);
+
         $data = $request->validated();
+        $this->validateNewProductSizeColorCombinations($request->input('new_products', []));
+
         DB::transaction(function () use ($request, $data, $drop) {
             $drop->update($data);
 
@@ -179,6 +187,8 @@ class DropController extends Controller
 
     public function destroy(Drop $drop)
     {
+        $this->authorize('delete', $drop);
+
         $drop->delete();
 
         return redirect()->route('admin.drops.index')->with('success', 'Drop supprimé.');
@@ -186,13 +196,26 @@ class DropController extends Controller
 
     public function approveWhitelist(Drop $drop, $whitelistId)
     {
-        if (! $drop->hasWhitelistSlotsAvailable()) {
+        $whitelist = $drop->whitelists()->with('user')->findOrFail($whitelistId);
+        $this->authorize('approve', $whitelist);
+
+        $whitelist = DB::transaction(function () use ($drop, $whitelist) {
+            $lockedDrop = Drop::query()->lockForUpdate()->findOrFail($drop->id);
+
+            if (! $lockedDrop->hasWhitelistSlotsAvailable()) {
+                return null;
+            }
+
+            $lockedWhitelist = $lockedDrop->whitelists()->with('user')->findOrFail($whitelist->id);
+            $lockedWhitelist->update(['status' => 'approved']);
+            $lockedWhitelist->setRelation('drop', $lockedDrop);
+
+            return $lockedWhitelist;
+        });
+
+        if (! $whitelist) {
             return back()->withErrors(['whitelist' => 'Toutes les places de whitelist pour ce drop sont déjà attribuées.']);
         }
-
-        $whitelist = $drop->whitelists()->with('user')->findOrFail($whitelistId);
-        $whitelist->update(['status' => 'approved']);
-        $whitelist->setRelation('drop', $drop);
 
         Mail::to($whitelist->user->email)->send(new WhitelistStatusMail($whitelist));
 
@@ -202,11 +225,38 @@ class DropController extends Controller
     public function rejectWhitelist(Drop $drop, $whitelistId)
     {
         $whitelist = $drop->whitelists()->with('user')->findOrFail($whitelistId);
+        $this->authorize('reject', $whitelist);
+
         $whitelist->update(['status' => 'rejected']);
         $whitelist->setRelation('drop', $drop);
 
         Mail::to($whitelist->user->email)->send(new WhitelistStatusMail($whitelist));
 
         return back()->with('success', 'Demande refusée.');
+    }
+
+    private function validateNewProductSizeColorCombinations(array $newProducts): void
+    {
+        foreach ($newProducts as $productIndex => $newProduct) {
+            $seenCombinations = [];
+
+            foreach ($newProduct['sizes'] ?? [] as $sizeData) {
+                if (empty($sizeData['size']) || ! isset($sizeData['stock'])) {
+                    continue;
+                }
+
+                $combination = ($sizeData['size'] ?? '').'|'.($sizeData['color'] ?? '');
+
+                if (isset($seenCombinations[$combination])) {
+                    throw ValidationException::withMessages([
+                        'new_products.'.$productIndex.'.sizes' => [
+                            'La combinaison taille/couleur "'.($sizeData['size'] ?? '').' / '.($sizeData['color'] ?? '').'" est en double.',
+                        ],
+                    ]);
+                }
+
+                $seenCombinations[$combination] = true;
+            }
+        }
     }
 }

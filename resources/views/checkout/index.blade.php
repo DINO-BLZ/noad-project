@@ -10,6 +10,7 @@
 
     <form action="{{ route('checkout.store') }}" method="POST" class="checkout__form">
         @csrf
+        <input type="hidden" name="checkout_token" value="{{ old('checkout_token', (string) \Illuminate\Support\Str::uuid()) }}">
 
         <label>
             Nom complet

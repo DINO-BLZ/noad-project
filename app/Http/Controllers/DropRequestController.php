@@ -10,6 +10,7 @@ class DropRequestController extends Controller
     public function store(Request $request, Drop $drop)
     {
         $user = $request->user();
+        $this->authorize('request', $drop);
 
         $whitelist = $user->dropWhitelists()->firstOrNew([
             'drop_id' => $drop->id,

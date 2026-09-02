@@ -61,6 +61,13 @@ class Drop extends Model
         return $this->status === 'ended' || $this->end_date->isPast();
     }
 
+    public function isSoldOut(): bool
+    {
+        $productIds = $this->products()->pluck('products.id');
+
+        return Variant::whereIn('product_id', $productIds)->sum('stock') === 0;
+    }
+
     public function hasWhitelistSlotsAvailable(): bool
     {
         if (is_null($this->max_whitelist_slots)) {

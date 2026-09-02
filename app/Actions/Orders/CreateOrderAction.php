@@ -6,15 +6,25 @@ use App\Enums\OrderStatus;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\Variant;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class CreateOrderAction
 {
-    public function execute(array $data, ?int $userId, ?string $sessionId): Order
+    public function execute(array $data, ?int $userId, ?string $sessionId, ?string $checkoutToken = null): Order
     {
-        return DB::transaction(function () use ($data, $userId, $sessionId) {
+        try {
+            return DB::transaction(function () use ($data, $userId, $sessionId, $checkoutToken) {
+                if ($checkoutToken) {
+                    $existingOrder = Order::where('checkout_token', $checkoutToken)->first();
+
+                    if ($existingOrder) {
+                        return $existingOrder->fresh(['items']);
+                    }
+                }
+
             $cartItems = $this->withRowLock(
                 CartItem::forOwner($userId, $sessionId)->with('variant.product')
             )->get();
@@ -77,6 +87,7 @@ class CreateOrderAction
                 'wilaya' => $data['wilaya'],
                 'payment_method' => $data['payment_method'],
                 'status' => OrderStatus::Pending,
+                'checkout_token' => $checkoutToken,
                 'total' => $total,
             ]);
 
@@ -87,7 +98,18 @@ class CreateOrderAction
             CartItem::forOwner($userId, $sessionId)->delete();
 
             return $order->fresh(['items']);
-        });
+            });
+        } catch (QueryException $exception) {
+            if ($checkoutToken && $exception->getCode() === '23000') {
+                $existingOrder = Order::where('checkout_token', $checkoutToken)->first();
+
+                if ($existingOrder) {
+                    return $existingOrder->fresh(['items']);
+                }
+            }
+
+            throw $exception;
+        }
     }
 
     protected function withRowLock($query)

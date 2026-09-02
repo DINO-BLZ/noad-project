@@ -41,6 +41,8 @@ class ProductController extends Controller
         StoreProductRequest $request,
         CreateProductAction $createProduct
     ) {
+        $this->authorize('create', Product::class);
+
         $product = $createProduct->execute(
             $request->validated(),
             $request->file('image')
@@ -69,6 +71,8 @@ class ProductController extends Controller
         UpdateProductRequest $request,
         Product $product
     ) {
+        $this->authorize('update', $product);
+
         $data = $request->validated();
 
         /*
@@ -346,6 +350,8 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
+        $this->authorize('delete', $product);
+
         $product->delete();
 
         return redirect()

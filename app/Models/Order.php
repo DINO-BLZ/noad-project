@@ -9,7 +9,7 @@ class Order extends Model
 {
     protected $fillable = [
         'user_id', 'full_name', 'phone', 'address', 'wilaya',
-        'payment_method', 'status', 'total',
+        'payment_method', 'status', 'total', 'checkout_token',
     ];
 
     protected function casts(): array

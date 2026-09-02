@@ -9,6 +9,7 @@ use App\Models\CartItem;
 use App\Models\Order;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class CheckoutController extends Controller
@@ -47,13 +48,26 @@ class CheckoutController extends Controller
     public function store(CheckoutRequest $request, CreateOrderAction $createOrderAction)
     {
         [$userId, $sessionId] = $this->owner();
+        $data = $request->validated();
+        $checkoutToken = $data['checkout_token'] ?? null;
+
+        if ($checkoutToken) {
+            $existingOrder = Order::where('user_id', $userId)
+                ->where('checkout_token', $checkoutToken)
+                ->first();
+
+            if ($existingOrder) {
+                return redirect()->route('checkout.success', $existingOrder->id);
+            }
+        }
 
         if (CartItem::forOwner($userId, $sessionId)->count() === 0) {
             return redirect()->route('cart.index');
         }
 
         try {
-            $order = $createOrderAction->execute($request->validated(), $userId, $sessionId);
+            $checkoutToken ??= (string) Str::uuid();
+            $order = $createOrderAction->execute($data, $userId, $sessionId, $checkoutToken);
         } catch (HttpException $e) {
             return back()
                 ->withErrors([
@@ -72,22 +86,7 @@ class CheckoutController extends Controller
 
     public function success(Order $order)
     {
-        /*
-        |--------------------------------------------------------------------------
-        | Protection de la commande
-        |--------------------------------------------------------------------------
-        |
-        | Seul le propriétaire ou un administrateur
-        | peut consulter la page de succès.
-        |
-        */
-
-        if (
-            $order->user_id !== Auth::id() &&
-            (! Auth::check() || ! Auth::user()->is_admin)
-        ) {
-            abort(403);
-        }
+        $this->authorize('view', $order);
 
         return view('checkout.success', compact('order'));
     }

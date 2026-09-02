@@ -19,6 +19,8 @@ class CategoryController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('create', Category::class);
+
         $data = $request->validate([
             'name' => 'required|string|max:255|unique:categories,name',
         ]);
@@ -36,6 +38,8 @@ class CategoryController extends Controller
 
     public function update(Request $request, Category $category)
     {
+        $this->authorize('update', $category);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('categories', 'name')->ignore($category->id)],
         ]);
@@ -53,6 +57,8 @@ class CategoryController extends Controller
 
     public function destroy(Category $category)
     {
+        $this->authorize('delete', $category);
+
         if ($category->products()->exists()) {
             return back()->withErrors(['category' => 'Impossible de supprimer : des produits sont encore rattachés à cette catégorie.']);
         }

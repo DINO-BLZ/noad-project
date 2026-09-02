@@ -14,6 +14,7 @@ class CheckoutRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'checkout_token' => 'nullable|uuid',
             'full_name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
             'address' => 'required|string|max:255',

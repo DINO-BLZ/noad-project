@@ -284,6 +284,47 @@ class CheckoutStockConcurrencyTest extends TestCase
         $this->assertEquals(8, $variant->stock);
     }
 
+    public function test_repeated_checkout_submission_with_same_token_returns_same_order(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::create(['name' => 'Test', 'slug' => 'checkout-idempotent']);
+        $product = Product::create([
+            'name' => 'T-shirt',
+            'slug' => 'tshirt-checkout-idempotent',
+            'price' => 25.00,
+            'category_id' => $category->id,
+        ]);
+        $variant = Variant::create([
+            'product_id' => $product->id,
+            'size' => 'M',
+            'stock' => 2,
+            'sku' => 'SKU-CHECKOUT-IDEMPOTENT',
+            'color' => 'Blue',
+        ]);
+        CartItem::create([
+            'user_id' => $user->id,
+            'variant_id' => $variant->id,
+            'quantity' => 1,
+        ]);
+
+        $payload = [
+            'checkout_token' => '11111111-1111-4111-8111-111111111111',
+            'full_name' => 'John Doe',
+            'phone' => '123456789',
+            'address' => '123 Main',
+            'wilaya' => 'Algiers',
+            'payment_method' => 'cod',
+        ];
+
+        $firstResponse = $this->actingAs($user)->post(route('checkout.store'), $payload);
+        $secondResponse = $this->actingAs($user)->post(route('checkout.store'), $payload);
+
+        $firstResponse->assertRedirect();
+        $secondResponse->assertRedirect($firstResponse->headers->get('Location'));
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertSame(1, $variant->fresh()->stock);
+    }
+
     public function test_checkout_with_empty_cart_redirects_without_creating_order()
     {
         $user = User::factory()->create();
