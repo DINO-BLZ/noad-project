@@ -14,6 +14,7 @@
         <a href="{{ route('admin.orders.index', ['status' => 'pending']) }}" class="{{ request('status') === 'pending' ? 'is-active' : '' }}">En attente</a>
         <a href="{{ route('admin.orders.index', ['status' => 'paid']) }}" class="{{ request('status') === 'paid' ? 'is-active' : '' }}">Payées</a>
         <a href="{{ route('admin.orders.index', ['status' => 'shipped']) }}" class="{{ request('status') === 'shipped' ? 'is-active' : '' }}">Expédiées</a>
+        <a href="{{ route('admin.orders.index', ['status' => 'delivered']) }}" class="{{ request('status') === 'delivered' ? 'is-active' : '' }}">Livrées</a>
         <a href="{{ route('admin.orders.index', ['status' => 'cancelled']) }}" class="{{ request('status') === 'cancelled' ? 'is-active' : '' }}">Annulées</a>
     </div>
 
@@ -35,7 +36,7 @@
                     <td>{{ $order->full_name }}</td>
                     <td>{{ number_format($order->total, 0) }} DA</td>
                     <td>{{ $order->payment_method === 'cod' ? 'Livraison' : 'CIB' }}</td>
-                    <td><span class="order-status order-status--{{ $order->status }}">{{ ucfirst($order->status) }}</span></td>
+                    <td><span class="order-status order-status--{{ $order->status->value }}">{{ ucfirst($order->status->value) }}</span></td>
                     <td>{{ $order->created_at->format('d/m/Y H:i') }}</td>
                 </tr>
             @empty

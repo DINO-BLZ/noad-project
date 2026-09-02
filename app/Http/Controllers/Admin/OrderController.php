@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Orders\CancelOrderAction;
+use App\Actions\Orders\OrderStatusTransitionService;
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateOrderStatusRequest;
 use App\Mail\OrderStatusUpdatedMail;
 use App\Models\Order;
-use App\Models\Variant;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use LogicException;
 
 class OrderController extends Controller
 {
@@ -31,32 +33,22 @@ class OrderController extends Controller
         return view('admin.orders.show', compact('order'));
     }
 
-    public function updateStatus(UpdateOrderStatusRequest $request, Order $order)
+    public function updateStatus(
+        UpdateOrderStatusRequest $request,
+        Order $order,
+        OrderStatusTransitionService $transitionService,
+        CancelOrderAction $cancelOrder
+    )
     {
-        $newStatus = $request->validated()['status'];
-        $wasAlreadyCancelled = $order->status === 'cancelled';
+        $newStatus = OrderStatus::from($request->validated()['status']);
 
-        DB::transaction(function () use ($order, $newStatus, $wasAlreadyCancelled) {
-            // On ne recrédite le stock que si on PASSE à "cancelled"
-            // (et pas si la commande était déjà annulée avant).
-            if ($newStatus === 'cancelled' && ! $wasAlreadyCancelled) {
-                $order->load('items');
-
-                foreach ($order->items as $item) {
-                    if (! $item->variant_id) {
-                        continue;
-                    }
-
-                    // Verrou pour éviter une course avec un achat concurrent
-                    // sur la même variante pendant le réapprovisionnement.
-                    Variant::where('id', $item->variant_id)
-                        ->lockForUpdate()
-                        ->increment('stock', $item->quantity);
-                }
-            }
-
-            $order->update(['status' => $newStatus]);
-        });
+        try {
+            $order = $newStatus === OrderStatus::Cancelled
+                ? $cancelOrder->execute($order)
+                : $transitionService->transition($order, $newStatus);
+        } catch (LogicException $exception) {
+            return back()->withErrors(['status' => $exception->getMessage()])->withInput();
+        }
 
         $order->loadMissing('user');
 

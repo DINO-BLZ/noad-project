@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
@@ -13,9 +14,9 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $totalRevenue = Order::where('status', '!=', 'cancelled')->sum('total');
+        $totalRevenue = Order::where('status', '!=', OrderStatus::Cancelled->value)->sum('total');
         $totalOrders = Order::count();
-        $pendingOrders = Order::where('status', 'pending')->count();
+        $pendingOrders = Order::where('status', OrderStatus::Pending->value)->count();
         $totalUsers = User::count();
         $totalProducts = Product::count();
 
@@ -26,7 +27,7 @@ class DashboardController extends Controller
 
         $topProducts = DB::table('order_items')
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
-            ->where('orders.status', '!=', 'cancelled')
+            ->where('orders.status', '!=', OrderStatus::Cancelled->value)
             ->select('order_items.product_name', DB::raw('SUM(order_items.quantity) as total_sold'))
             ->groupBy('order_items.product_name')
             ->orderByDesc('total_sold')
@@ -36,7 +37,7 @@ class DashboardController extends Controller
         $recentOrders = Order::latest()->take(5)->get();
 
         $salesByDay = Order::where('created_at', '>=', now()->subDays(7))
-            ->where('status', '!=', 'cancelled')
+            ->where('status', '!=', OrderStatus::Cancelled->value)
             ->select(DB::raw('date(created_at) as day'), DB::raw('sum(total) as total'))
             ->groupBy('day')
             ->orderBy('day')

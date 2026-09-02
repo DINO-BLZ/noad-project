@@ -52,7 +52,7 @@
                 <div class="order-row">
                     <span>#{{ $order->id }} — {{ $order->full_name }}</span>
                     <span>{{ number_format($order->total, 0) }} DA</span>
-                    <span class="order-status order-status--{{ $order->status }}">{{ ucfirst($order->status) }}</span>
+                    <span class="order-status order-status--{{ $order->status->value }}">{{ ucfirst($order->status->value) }}</span>
                 </div>
             @empty
                 <p class="admin-panel__empty">Aucune commande pour le moment.</p>
@@ -248,6 +248,7 @@
 .order-status--pending{ color:#e0a800; border-color:#e0a800; }
 .order-status--paid{ color:#2ecc71; border-color:#2ecc71; }
 .order-status--shipped{ color:#3498db; border-color:#3498db; }
+.order-status--delivered{ color:#8e44ad; border-color:#8e44ad; }
 .order-status--cancelled{ color:var(--accent); border-color:var(--accent); }
 
 .stock-warning{

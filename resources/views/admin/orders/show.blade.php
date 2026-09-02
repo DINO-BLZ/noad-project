@@ -32,10 +32,11 @@
                 @csrf
                 @method('PATCH')
                 <select name="status">
-                    <option value="pending" {{ $order->status === 'pending' ? 'selected' : '' }}>En attente</option>
-                    <option value="paid" {{ $order->status === 'paid' ? 'selected' : '' }}>Payée</option>
-                    <option value="shipped" {{ $order->status === 'shipped' ? 'selected' : '' }}>Expédiée</option>
-                    <option value="cancelled" {{ $order->status === 'cancelled' ? 'selected' : '' }}>Annulée</option>
+                    <option value="pending" {{ $order->status->value === 'pending' ? 'selected' : '' }}>En attente</option>
+                    <option value="paid" {{ $order->status->value === 'paid' ? 'selected' : '' }}>Payée</option>
+                    <option value="shipped" {{ $order->status->value === 'shipped' ? 'selected' : '' }}>Expédiée</option>
+                    <option value="delivered" {{ $order->status->value === 'delivered' ? 'selected' : '' }}>Livrée</option>
+                    <option value="cancelled" {{ $order->status->value === 'cancelled' ? 'selected' : '' }}>Annulée</option>
                 </select>
                 <button type="submit">Mettre à jour</button>
             </form>

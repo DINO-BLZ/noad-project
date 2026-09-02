@@ -47,7 +47,8 @@ class CartController extends Controller
             $summary = DB::transaction(function () use ($request, $product, $userId, $sessionId) {
                 // Verrou sur la variante : bloque toute autre requête concurrente
                 // sur ce même article jusqu'à la fin de cette transaction.
-                $variant = Variant::with('product')->lockForUpdate()->findOrFail($request->variant_id);
+                $variant = $this->withRowLock(Variant::with('product'))
+                    ->findOrFail($request->variant_id);
 
                 if ($variant->product_id !== $product->id) {
                     abort(422, 'Cette variante ne correspond pas au produit sélectionné.');
@@ -78,10 +79,9 @@ class CartController extends Controller
                 }
 
                 // Verrou aussi sur la ligne de panier existante, si elle existe déjà
-                $cartItem = CartItem::forOwner($userId, $sessionId)
-                    ->where('variant_id', $variant->id)
-                    ->lockForUpdate()
-                    ->first();
+                $cartItem = $this->withRowLock(
+                    CartItem::forOwner($userId, $sessionId)->where('variant_id', $variant->id)
+                )->first();
 
                 $quantity = ($cartItem->quantity ?? 0) + 1;
 
@@ -111,22 +111,49 @@ class CartController extends Controller
 
     public function update(UpdateCartItemRequest $request, $variantId)
     {
-        $variant = Variant::findOrFail($variantId);
+        try {
+            $summary = DB::transaction(function () use ($request, $variantId) {
+                $variant = $this->withRowLock(Variant::with('product'))
+                    ->findOrFail($variantId);
 
-        [$userId, $sessionId] = $this->owner();
+                if (! $variant->product) {
+                    abort(404, 'Produit introuvable pour cette variante.');
+                }
 
-        CartItem::forOwner($userId, $sessionId)
-            ->where('variant_id', $variantId)
-            ->update(['quantity' => $request->quantity]);
+                [$userId, $sessionId] = $this->owner();
 
-        $subtotal = $variant->product->price * $request->quantity;
-        $summary = $this->cartSummary();
+                $cartItem = $this->withRowLock(
+                    CartItem::forOwner($userId, $sessionId)->where('variant_id', $variant->id)
+                )->first();
 
-        return response()->json([
-            'subtotal' => number_format($subtotal, 0).' DA',
-            'total' => $summary['total'],
-            'count' => $summary['count'],
-        ]);
+                if (! $cartItem) {
+                    abort(403, 'Vous ne pouvez pas modifier le panier d\'un autre utilisateur.');
+                }
+
+                if (Auth::check() && $cartItem->user_id !== Auth::id()) {
+                    abort(403, 'Vous ne pouvez pas modifier le panier d\'un autre utilisateur.');
+                }
+
+                if ($request->quantity > $variant->stock) {
+                    abort(422, 'Quantité demandée indisponible.');
+                }
+
+                $cartItem->update(['quantity' => $request->quantity]);
+
+                $subtotal = $variant->product->price * $request->quantity;
+                $summary = $this->cartSummary();
+
+                return [
+                    'subtotal' => number_format($subtotal, 0).' DA',
+                    'total' => $summary['total'],
+                    'count' => $summary['count'],
+                ];
+            });
+        } catch (HttpException $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+        }
+
+        return response()->json($summary);
     }
 
     public function remove($variantId)
@@ -196,5 +223,14 @@ class CartController extends Controller
         [$userId, $sessionId] = $this->owner();
 
         return CartItem::forOwner($userId, $sessionId);
+    }
+
+    private function withRowLock($query)
+    {
+        if (config('database.default') === 'sqlite') {
+            return $query;
+        }
+
+        return $query->lockForUpdate();
     }
 }

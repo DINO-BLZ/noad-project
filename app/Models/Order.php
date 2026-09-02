@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\OrderStatus;
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
@@ -10,6 +11,13 @@ class Order extends Model
         'user_id', 'full_name', 'phone', 'address', 'wilaya',
         'payment_method', 'status', 'total',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'status' => OrderStatus::class,
+        ];
+    }
 
     public function items()
     {

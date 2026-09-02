@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('address');
             $table->string('wilaya');
             $table->enum('payment_method', ['cod', 'cib']);
-            $table->enum('status', ['pending', 'paid', 'shipped', 'cancelled'])->default('pending');
+            $table->enum('status', ['pending', 'paid', 'shipped', 'delivered', 'cancelled'])->default('pending');
             $table->decimal('total', 10, 2);
             $table->timestamps();
         });
