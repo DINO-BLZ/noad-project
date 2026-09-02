@@ -72,7 +72,7 @@ class CreateProductAction
         while (
             Product::where('slug', $slug)->exists()
         ) {
-            $slug = $base . '-' . $counter;
+            $slug = $base.'-'.$counter;
             $counter++;
         }
 

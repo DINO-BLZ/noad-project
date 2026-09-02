@@ -9,7 +9,6 @@ use App\Models\Product;
 use App\Models\User;
 use App\Models\Variant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class CheckoutStockConcurrencyTest extends TestCase

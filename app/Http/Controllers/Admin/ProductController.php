@@ -91,20 +91,20 @@ class ProductController extends Controller
 
         foreach ($variantsInput as $variantData) {
             $combo = ($variantData['size'] ?? '')
-                . '|'
-                . ($variantData['color'] ?? '');
+                .'|'
+                .($variantData['color'] ?? '');
 
             if (isset($seenCombos[$combo])) {
                 throw ValidationException::withMessages([
                     'variants' => [
-                        "La combinaison taille/couleur \"{$variantData['size']}\" est en double."
+                        "La combinaison taille/couleur \"{$variantData['size']}\" est en double.",
                     ],
                 ]);
             }
 
             $seenCombos[$combo] = true;
 
-            if (!empty($variantData['sku'])) {
+            if (! empty($variantData['sku'])) {
                 $submittedSkus[] = $variantData['sku'];
             }
         }
@@ -112,7 +112,7 @@ class ProductController extends Controller
         if (count($submittedSkus) !== count(array_unique($submittedSkus))) {
             throw ValidationException::withMessages([
                 'variants' => [
-                    'Un même SKU est utilisé plusieurs fois dans le formulaire.'
+                    'Un même SKU est utilisé plusieurs fois dans le formulaire.',
                 ],
             ]);
         }
@@ -187,7 +187,7 @@ class ProductController extends Controller
                     /*
                     | Mise à jour d'une variante existante
                     */
-                    if (!empty($variantData['id'])) {
+                    if (! empty($variantData['id'])) {
                         $variant = Variant::where('product_id', $product->id)
                             ->find($variantData['id']);
 
@@ -195,7 +195,7 @@ class ProductController extends Controller
                         | Si la variante n'appartient pas au produit,
                         | on l'ignore.
                         */
-                        if (!$variant) {
+                        if (! $variant) {
                             continue;
                         }
 
@@ -210,7 +210,7 @@ class ProductController extends Controller
                         ) {
                             throw ValidationException::withMessages([
                                 'variants' => [
-                                    "Le SKU \"{$sku}\" est déjà utilisé par une autre variante."
+                                    "Le SKU \"{$sku}\" est déjà utilisé par une autre variante.",
                                 ],
                             ]);
                         }
@@ -233,7 +233,7 @@ class ProductController extends Controller
                         ) {
                             throw ValidationException::withMessages([
                                 'variants' => [
-                                    "Le SKU \"{$sku}\" est déjà utilisé par une autre variante."
+                                    "Le SKU \"{$sku}\" est déjà utilisé par une autre variante.",
                                 ],
                             ]);
                         }
@@ -290,7 +290,7 @@ class ProductController extends Controller
                 |--------------------------------------------------------------------------
                 */
 
-                if (!empty($data['primary_image'])) {
+                if (! empty($data['primary_image'])) {
                     $product->images()
                         ->update([
                             'is_primary' => false,

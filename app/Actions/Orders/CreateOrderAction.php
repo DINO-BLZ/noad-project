@@ -9,7 +9,6 @@ use App\Models\Variant;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class CreateOrderAction
 {
@@ -25,79 +24,79 @@ class CreateOrderAction
                     }
                 }
 
-            $cartItems = $this->withRowLock(
-                CartItem::forOwner($userId, $sessionId)->with('variant.product')
-            )->get();
+                $cartItems = $this->withRowLock(
+                    CartItem::forOwner($userId, $sessionId)->with('variant.product')
+                )->get();
 
-            if ($cartItems->isEmpty()) {
-                abort(422, 'Votre panier est vide.');
-            }
-
-            $total = 0;
-            $orderItemsData = [];
-
-            foreach ($cartItems as $cartItem) {
-                $variant = $this->withRowLock(Variant::with('product'))
-                    ->find($cartItem->variant_id);
-
-                if (! $variant || ! $variant->product) {
-                    abort(422, "Un article de votre panier n'est plus disponible.");
+                if ($cartItems->isEmpty()) {
+                    abort(422, 'Votre panier est vide.');
                 }
 
-                if ($variant->stock < $cartItem->quantity) {
-                    abort(422, "Stock insuffisant pour {$variant->product->name} ({$variant->size}).");
-                }
+                $total = 0;
+                $orderItemsData = [];
 
-                $activeDrop = $variant->product->activeDrop();
+                foreach ($cartItems as $cartItem) {
+                    $variant = $this->withRowLock(Variant::with('product'))
+                        ->find($cartItem->variant_id);
 
-                if ($activeDrop) {
-                    if (! Auth::check() || ! Auth::user()->isWhitelistedForDrop($activeDrop)) {
-                        abort(403, "Vous n'êtes pas autorisé à acheter ce produit de drop.");
+                    if (! $variant || ! $variant->product) {
+                        abort(422, "Un article de votre panier n'est plus disponible.");
                     }
+
+                    if ($variant->stock < $cartItem->quantity) {
+                        abort(422, "Stock insuffisant pour {$variant->product->name} ({$variant->size}).");
+                    }
+
+                    $activeDrop = $variant->product->activeDrop();
+
+                    if ($activeDrop) {
+                        if (! Auth::check() || ! Auth::user()->isWhitelistedForDrop($activeDrop)) {
+                            abort(403, "Vous n'êtes pas autorisé à acheter ce produit de drop.");
+                        }
+                    }
+
+                    $upcomingDrop = $variant->product->upcomingDrop();
+
+                    if ($upcomingDrop) {
+                        abort(403, "Ce produit fait partie d'un drop à venir et n'est pas encore disponible à l'achat.");
+                    }
+
+                    $price = $variant->product->price;
+                    $subtotal = $price * $cartItem->quantity;
+                    $total += $subtotal;
+
+                    $orderItemsData[] = [
+                        'variant_id' => $variant->id,
+                        'quantity' => $cartItem->quantity,
+                        'price' => $price,
+                        'variant_sku' => $variant->sku,
+                        'variant_size' => $variant->size,
+                        'variant_color' => $variant->color,
+                        'product_name' => $variant->product->name,
+                    ];
+
+                    $variant->decrement('stock', $cartItem->quantity);
                 }
 
-                $upcomingDrop = $variant->product->upcomingDrop();
+                $order = Order::create([
+                    'user_id' => $userId,
+                    'full_name' => $data['full_name'],
+                    'phone' => $data['phone'],
+                    'address' => $data['address'],
+                    'wilaya' => $data['wilaya'],
+                    'payment_method' => $data['payment_method'],
+                    'status' => OrderStatus::Pending,
+                    'checkout_token' => $checkoutToken,
+                    'total' => $total,
+                ]);
 
-                if ($upcomingDrop) {
-                    abort(403, "Ce produit fait partie d'un drop à venir et n'est pas encore disponible à l'achat.");
+                foreach ($orderItemsData as $item) {
+                    $order->items()->create($item);
                 }
 
-                $price = $variant->product->price;
-                $subtotal = $price * $cartItem->quantity;
-                $total += $subtotal;
+                CartItem::forOwner($userId, $sessionId)->delete();
 
-                $orderItemsData[] = [
-                    'variant_id' => $variant->id,
-                    'quantity' => $cartItem->quantity,
-                    'price' => $price,
-                    'variant_sku' => $variant->sku,
-                    'variant_size' => $variant->size,
-                    'variant_color' => $variant->color,
-                    'product_name' => $variant->product->name,
-                ];
-
-                $variant->decrement('stock', $cartItem->quantity);
-            }
-
-            $order = Order::create([
-                'user_id' => $userId,
-                'full_name' => $data['full_name'],
-                'phone' => $data['phone'],
-                'address' => $data['address'],
-                'wilaya' => $data['wilaya'],
-                'payment_method' => $data['payment_method'],
-                'status' => OrderStatus::Pending,
-                'checkout_token' => $checkoutToken,
-                'total' => $total,
-            ]);
-
-            foreach ($orderItemsData as $item) {
-                $order->items()->create($item);
-            }
-
-            CartItem::forOwner($userId, $sessionId)->delete();
-
-            return $order->fresh(['items']);
+                return $order->fresh(['items']);
             });
         } catch (QueryException $exception) {
             if ($checkoutToken && $exception->getCode() === '23000') {

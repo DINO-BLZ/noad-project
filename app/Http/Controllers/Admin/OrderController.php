@@ -38,8 +38,7 @@ class OrderController extends Controller
         Order $order,
         OrderStatusTransitionService $transitionService,
         CancelOrderAction $cancelOrder
-    )
-    {
+    ) {
         $newStatus = OrderStatus::from($request->validated()['status']);
 
         try {

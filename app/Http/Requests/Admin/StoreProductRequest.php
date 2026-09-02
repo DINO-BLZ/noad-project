@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreProductRequest extends FormRequest
 {
@@ -72,56 +71,39 @@ class StoreProductRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' =>
-                'Le nom du produit est obligatoire.',
+            'name.required' => 'Le nom du produit est obligatoire.',
 
-            'name.min' =>
-                'Le nom doit contenir au moins 2 caractères.',
+            'name.min' => 'Le nom doit contenir au moins 2 caractères.',
 
-            'category_id.required' =>
-                'Veuillez sélectionner une catégorie.',
+            'category_id.required' => 'Veuillez sélectionner une catégorie.',
 
-            'category_id.exists' =>
-                'La catégorie sélectionnée est invalide.',
+            'category_id.exists' => 'La catégorie sélectionnée est invalide.',
 
-            'price.required' =>
-                'Le prix est obligatoire.',
+            'price.required' => 'Le prix est obligatoire.',
 
-            'price.numeric' =>
-                'Le prix doit être un nombre.',
+            'price.numeric' => 'Le prix doit être un nombre.',
 
-            'price.min' =>
-                'Le prix ne peut pas être négatif.',
+            'price.min' => 'Le prix ne peut pas être négatif.',
 
-            'image.required' =>
-                'Une image est obligatoire.',
+            'image.required' => 'Une image est obligatoire.',
 
-            'image.image' =>
-                'Le fichier doit être une image.',
+            'image.image' => 'Le fichier doit être une image.',
 
-            'image.mimes' =>
-                'L’image doit être au format JPG, JPEG, PNG ou WebP.',
+            'image.mimes' => 'L’image doit être au format JPG, JPEG, PNG ou WebP.',
 
-            'image.max' =>
-                'L’image ne doit pas dépasser 4 Mo.',
+            'image.max' => 'L’image ne doit pas dépasser 4 Mo.',
 
-            'sizes.required' =>
-                'Sélectionnez au moins une taille.',
+            'sizes.required' => 'Sélectionnez au moins une taille.',
 
-            'sizes.min' =>
-                'Sélectionnez au moins une taille.',
+            'sizes.min' => 'Sélectionnez au moins une taille.',
 
-            'sizes.*.stock.required' =>
-                'Le stock est obligatoire.',
+            'sizes.*.stock.required' => 'Le stock est obligatoire.',
 
-            'sizes.*.stock.integer' =>
-                'Le stock doit être un nombre entier.',
+            'sizes.*.stock.integer' => 'Le stock doit être un nombre entier.',
 
-            'sizes.*.stock.min' =>
-                'Le stock ne peut pas être négatif.',
+            'sizes.*.stock.min' => 'Le stock ne peut pas être négatif.',
 
-            'sizes.*.stock.max' =>
-                'Le stock ne peut pas dépasser 1 000 000.',
+            'sizes.*.stock.max' => 'Le stock ne peut pas dépasser 1 000 000.',
         ];
     }
 }
