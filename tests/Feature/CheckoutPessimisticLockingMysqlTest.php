@@ -5,13 +5,10 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Variant;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class CheckoutPessimisticLockingMysqlTest extends TestCase
 {
-    use RefreshDatabase;
-
     protected function setUp(): void
     {
         parent::setUp();
@@ -27,11 +24,17 @@ class CheckoutPessimisticLockingMysqlTest extends TestCase
 
     public function test_variant_row_lock_blocks_second_transaction(): void
     {
-        $category = Category::create(['name' => 'Test', 'slug' => 'mysql-lock']);
+        // Pas de RefreshDatabase ici : ce test a besoin que les lignes créées
+        // soient réellement validées (commit) en base, pour que les deux
+        // connexions PDO brutes ci-dessous puissent se bloquer l'une l'autre
+        // comme dans un vrai scénario de checkout concurrent. RefreshDatabase
+        // enveloppe chaque test dans une transaction jamais commit, ce qui
+        // ferait bloquer $pdoA sur son propre verrou dès la première requête.
+        $category = Category::create(['name' => 'Test', 'slug' => 'mysql-lock-'.uniqid()]);
 
         $product = Product::create([
             'name' => 'T-shirt',
-            'slug' => 'tshirt-mysql-lock',
+            'slug' => 'tshirt-mysql-lock-'.uniqid(),
             'price' => 25.00,
             'category_id' => $category->id,
         ]);
@@ -40,7 +43,7 @@ class CheckoutPessimisticLockingMysqlTest extends TestCase
             'product_id' => $product->id,
             'size' => 'M',
             'stock' => 1,
-            'sku' => 'SKU-MYSQL-LOCK',
+            'sku' => 'SKU-MYSQL-LOCK-'.uniqid(),
             'color' => 'Blue',
         ]);
 
@@ -74,21 +77,23 @@ class CheckoutPessimisticLockingMysqlTest extends TestCase
             ]
         );
 
-        $pdoA->beginTransaction();
-        $pdoA->query('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED');
-        $pdoA->query("SELECT * FROM variants WHERE id = {$variant->id} FOR UPDATE");
-
-        $pdoB->beginTransaction();
-        $pdoB->query('SET SESSION innodb_lock_wait_timeout = 1');
-
         try {
-            $pdoB->query("SELECT * FROM variants WHERE id = {$variant->id} FOR UPDATE");
-            $this->fail('The second transaction should have been blocked by the row lock.');
-        } catch (\PDOException $e) {
-            $this->assertTrue(
-                str_contains($e->getMessage(), 'Lock wait timeout exceeded') || str_contains($e->getMessage(), 'Deadlock found'),
-                'Expected a MySQL lock timeout or deadlock when the same row is locked by another transaction.'
-            );
+            $pdoA->beginTransaction();
+            $pdoA->query('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED');
+            $pdoA->query("SELECT * FROM variants WHERE id = {$variant->id} FOR UPDATE");
+
+            $pdoB->beginTransaction();
+            $pdoB->query('SET SESSION innodb_lock_wait_timeout = 1');
+
+            try {
+                $pdoB->query("SELECT * FROM variants WHERE id = {$variant->id} FOR UPDATE");
+                $this->fail('The second transaction should have been blocked by the row lock.');
+            } catch (\PDOException $e) {
+                $this->assertTrue(
+                    str_contains($e->getMessage(), 'Lock wait timeout exceeded') || str_contains($e->getMessage(), 'Deadlock found'),
+                    'Expected a MySQL lock timeout or deadlock when the same row is locked by another transaction.'
+                );
+            }
         } finally {
             try {
                 $pdoA->rollBack();
@@ -101,6 +106,12 @@ class CheckoutPessimisticLockingMysqlTest extends TestCase
             } catch (\Throwable $e) {
                 // no-op: transaction may already be closed by the DB.
             }
+
+            // Nettoyage manuel : comme on n'utilise pas RefreshDatabase,
+            // il faut supprimer nous-mêmes ce qu'on a créé.
+            Variant::where('id', $variant->id)->delete();
+            Product::where('id', $product->id)->delete();
+            Category::where('id', $category->id)->delete();
         }
     }
 }
