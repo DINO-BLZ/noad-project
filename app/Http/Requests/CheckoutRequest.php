@@ -19,6 +19,11 @@ class CheckoutRequest extends FormRequest
             'phone' => 'required|string|max:20',
             'address' => 'required|string|max:255',
             'wilaya' => 'required|string|max:100',
+            // Paiement par carte CIB/Edahabia temporairement désactivé :
+            // l'intégration SATIM (certification + coûts) n'est pas encore
+            // budgétée. La colonne DB et les vues gardent volontairement
+            // le support de 'cib' pour éviter de tout refaire une fois
+            // le paiement carte activé.
             'payment_method' => 'required|in:cod',
         ];
     }

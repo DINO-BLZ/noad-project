@@ -52,6 +52,8 @@
             >
         </label>
 
+        {{-- Paiement CIB/Edahabia désactivé temporairement (intégration SATIM
+             pas encore budgétée). Voir CheckoutRequest::rules() pour le détail. --}}
         <div class="checkout__payment">
             <label class="payment-option">
                 <input
