@@ -3,6 +3,7 @@
 namespace App\Actions\Orders;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Order;
 use Illuminate\Support\Facades\DB;
 use LogicException;
@@ -27,7 +28,15 @@ class OrderStatusTransitionService
                 ));
             }
 
-            $lockedOrder->update(['status' => $newStatus]);
+            $attributes = ['status' => $newStatus];
+
+            // Paiement à la livraison (COD) : l'argent n'est encaissé
+            // qu'au moment où le livreur remet la commande.
+            if ($newStatus === OrderStatus::Delivered) {
+                $attributes['payment_status'] = PaymentStatus::Paid;
+            }
+
+            $lockedOrder->update($attributes);
 
             return $lockedOrder->refresh();
         });

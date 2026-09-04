@@ -3,6 +3,7 @@
 namespace App\Actions\Orders;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\Variant;
 use Illuminate\Support\Facades\DB;
@@ -37,7 +38,16 @@ class CancelOrderAction
                 }
             }
 
-            $lockedOrder->update(['status' => OrderStatus::Cancelled]);
+            $attributes = ['status' => OrderStatus::Cancelled];
+
+            // Si l'argent avait déjà été encaissé (ex: évolution future
+            // permettant d'annuler après livraison), il doit être marqué
+            // comme remboursé plutôt que de rester "payé".
+            if ($lockedOrder->payment_status === PaymentStatus::Paid) {
+                $attributes['payment_status'] = PaymentStatus::Refunded;
+            }
+
+            $lockedOrder->update($attributes);
 
             return $lockedOrder->refresh();
         });

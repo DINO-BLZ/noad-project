@@ -1,4 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
+    function escapeHtml(value) {
+        const div = document.createElement("div");
+        div.textContent = value ?? "";
+        return div.innerHTML;
+    }
+
     const html = document.documentElement;
     const savedTheme = localStorage.getItem("noad-theme");
 
@@ -43,10 +49,10 @@ document.addEventListener("DOMContentLoaded", () => {
                             searchResults.innerHTML = '<p class="site-header__search-empty">Aucun résultat</p>';
                         } else {
                             searchResults.innerHTML = products.map((product) => `
-                                <a href="${product.url}" class="site-header__search-item">
-                                    ${product.image ? `<img src="${product.image}" alt="">` : ""}
-                                    <span class="site-header__search-item-name">${product.name}</span>
-                                    <span class="site-header__search-item-price">${product.price}</span>
+                                <a href="${escapeHtml(product.url)}" class="site-header__search-item">
+                                    ${product.image ? `<img src="${escapeHtml(product.image)}" alt="">` : ""}
+                                    <span class="site-header__search-item-name">${escapeHtml(product.name)}</span>
+                                    <span class="site-header__search-item-price">${escapeHtml(product.price)}</span>
                                 </a>
                             `).join("");
                         }
@@ -142,12 +148,12 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             cartDrawerItems.innerHTML = data.items.map((item) => `
                 <div class="cart-drawer__item">
-                    <img src="${item.image}" alt="">
+                    <img src="${escapeHtml(item.image)}" alt="">
                     <div class="cart-drawer__item-info">
-                        <p class="cart-drawer__item-name">${item.name}</p>
-                        <p>Taille : ${item.size} · Qté : ${item.quantity}</p>
+                        <p class="cart-drawer__item-name">${escapeHtml(item.name)}</p>
+                        <p>Taille : ${escapeHtml(item.size)} · Qté : ${escapeHtml(item.quantity)}</p>
                     </div>
-                    <span class="cart-drawer__item-subtotal">${item.subtotal}</span>
+                    <span class="cart-drawer__item-subtotal">${escapeHtml(item.subtotal)}</span>
                 </div>
             `).join("");
         }
