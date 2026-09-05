@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\Variant;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -36,75 +37,17 @@ class DropController extends Controller
         $this->authorize('create', Drop::class);
 
         $data = $request->validated();
-
         $data['slug'] = Str::slug($data['name']).'-'.uniqid();
 
-        // Pré-validation des SKU fournis pour les nouveaux produits
-        $skus = [];
-        foreach ($request->input('new_products', []) as $npIndex => $np) {
-            foreach ($np['sizes'] ?? [] as $sizeData) {
-                if (! empty($sizeData['sku'])) {
-                    $skus[] = $sizeData['sku'];
-                }
-            }
-        }
+        $validatedNewProducts = $this->prepareNewProducts($request->input('new_products', []));
 
-        if (! empty($skus)) {
-            $duplicates = array_diff_assoc($skus, array_unique($skus));
-            if (! empty($duplicates)) {
-                throw ValidationException::withMessages(['new_products' => ['Doublon de SKU dans les nouveaux produits : '.implode(', ', array_unique($duplicates))]]);
-            }
-
-            if (Variant::whereIn('sku', $skus)->exists()) {
-                throw ValidationException::withMessages(['new_products' => ['Un des SKU fournis est déjà utilisé.']]);
-            }
-        }
-
-        $this->validateNewProductSizeColorCombinations($request->input('new_products', []));
-
-        DB::transaction(function () use ($request, $data) {
+        DB::transaction(function () use ($request, $data, $validatedNewProducts) {
             $drop = Drop::create($data);
 
             $productIds = $request->input('products', []);
 
-            foreach ($request->input('new_products', []) as $index => $newProduct) {
-                if (empty($newProduct['name']) || empty($newProduct['price'])) {
-                    continue;
-                }
-
-                $imagePath = null;
-                if ($request->hasFile("new_products.$index.image")) {
-                    $imagePath = $request->file("new_products.$index.image")->store('products', 'public');
-                }
-
-                $product = Product::create([
-                    'name' => $newProduct['name'],
-                    'slug' => Str::slug($newProduct['name']).'-'.uniqid(),
-                    'price' => $newProduct['price'],
-                    'image' => $imagePath,
-                    'category_id' => $newProduct['category_id'] ?? null,
-                ]);
-
-                $sizes = $newProduct['sizes'] ?? [];
-                $hasValidSize = false;
-
-                foreach ($sizes as $sizeData) {
-                    if (! empty($sizeData['size']) && isset($sizeData['stock'])) {
-                        $product->variants()->create([
-                            'size' => $sizeData['size'],
-                            'stock' => $sizeData['stock'],
-                            'sku' => $sizeData['sku'] ?? null,
-                            'color' => $sizeData['color'] ?? null,
-                        ]);
-                        $hasValidSize = true;
-                    }
-                }
-
-                if (! $hasValidSize) {
-                    $product->variants()->create(['size' => 'Unique', 'stock' => 1]);
-                }
-
-                $productIds[] = $product->id;
+            foreach ($validatedNewProducts as $index => $newProduct) {
+                $productIds[] = $this->createProductFromNewProductData($request, $index, $newProduct);
             }
 
             $drop->products()->sync($productIds);
@@ -127,56 +70,15 @@ class DropController extends Controller
         $this->authorize('update', $drop);
 
         $data = $request->validated();
-        $this->validateNewProductSizeColorCombinations($request->input('new_products', []));
+        $validatedNewProducts = $this->prepareNewProducts($request->input('new_products', []));
 
-        DB::transaction(function () use ($request, $data, $drop) {
+        DB::transaction(function () use ($request, $data, $drop, $validatedNewProducts) {
             $drop->update($data);
 
             $productIds = $request->input('products', []);
 
-            foreach ($request->input('new_products', []) as $index => $newProduct) {
-                if (empty($newProduct['name']) || empty($newProduct['price'])) {
-                    continue;
-                }
-
-                $imagePath = null;
-                if ($request->hasFile("new_products.$index.image")) {
-                    $imagePath = $request->file("new_products.$index.image")->store('products', 'public');
-                }
-
-                $product = Product::create([
-                    'name' => $newProduct['name'],
-                    'slug' => Str::slug($newProduct['name']).'-'.uniqid(),
-                    'price' => $newProduct['price'],
-                    'image' => $imagePath,
-                    'category_id' => $newProduct['category_id'] ?? null,
-                ]);
-
-                $sizes = $newProduct['sizes'] ?? [];
-                $hasValidSize = false;
-
-                foreach ($sizes as $sizeData) {
-                    if (! empty($sizeData['size']) && isset($sizeData['stock'])) {
-                        // SKU uniqueness check
-                        if (! empty($sizeData['sku']) && Variant::where('sku', $sizeData['sku'])->exists()) {
-                            throw ValidationException::withMessages(['new_products.'.$index.'.sizes' => ["SKU {$sizeData['sku']} déjà utilisé."]]);
-                        }
-
-                        $product->variants()->create([
-                            'size' => $sizeData['size'],
-                            'stock' => $sizeData['stock'],
-                            'sku' => $sizeData['sku'] ?? null,
-                            'color' => $sizeData['color'] ?? null,
-                        ]);
-                        $hasValidSize = true;
-                    }
-                }
-
-                if (! $hasValidSize) {
-                    $product->variants()->create(['size' => 'Unique', 'stock' => 1]);
-                }
-
-                $productIds[] = $product->id;
+            foreach ($validatedNewProducts as $index => $newProduct) {
+                $productIds[] = $this->createProductFromNewProductData($request, $index, $newProduct);
             }
 
             $drop->products()->sync($productIds);
@@ -235,9 +137,34 @@ class DropController extends Controller
         return back()->with('success', 'Demande refusée.');
     }
 
-    private function validateNewProductSizeColorCombinations(array $newProducts): void
+    /**
+     * Valide tous les nouveaux produits d'un coup, avant toute écriture en base ou sur disque.
+     * Retourne uniquement les produits valides (les lignes totalement vides sont ignorées).
+     * Lève une ValidationException regroupant toutes les erreurs si au moins un produit est invalide.
+     */
+    private function prepareNewProducts(array $newProducts): array
     {
-        foreach ($newProducts as $productIndex => $newProduct) {
+        $errors = [];
+        $validated = [];
+
+        foreach ($newProducts as $index => $newProduct) {
+            $name = $newProduct['name'] ?? null;
+            $price = $newProduct['price'] ?? null;
+
+            // Ligne totalement vide : slot de formulaire non utilisé, on ignore silencieusement.
+            if (empty($name) && empty($price)) {
+                continue;
+            }
+
+            // Ligne partiellement remplie : vraie erreur de saisie, on la signale.
+            if (empty($name) || empty($price)) {
+                $errors['new_products.'.$index] = [
+                    'Produit #'.($index + 1).' : le nom et le prix sont tous les deux requis.',
+                ];
+
+                continue;
+            }
+
             $seenCombinations = [];
 
             foreach ($newProduct['sizes'] ?? [] as $sizeData) {
@@ -248,15 +175,93 @@ class DropController extends Controller
                 $combination = ($sizeData['size'] ?? '').'|'.($sizeData['color'] ?? '');
 
                 if (isset($seenCombinations[$combination])) {
-                    throw ValidationException::withMessages([
-                        'new_products.'.$productIndex.'.sizes' => [
-                            'La combinaison taille/couleur "'.($sizeData['size'] ?? '').' / '.($sizeData['color'] ?? '').'" est en double.',
-                        ],
-                    ]);
+                    $errors['new_products.'.$index.'.sizes'] = [
+                        'Produit #'.($index + 1).' : la combinaison taille/couleur "'.($sizeData['size'] ?? '').' / '.($sizeData['color'] ?? '').'" est en double.',
+                    ];
                 }
 
                 $seenCombinations[$combination] = true;
             }
+
+            $validated[$index] = $newProduct;
         }
+
+        // Doublons de SKU, à la fois entre les nouveaux produits et contre la base existante.
+        $allSkus = [];
+        foreach ($validated as $newProduct) {
+            foreach ($newProduct['sizes'] ?? [] as $sizeData) {
+                if (! empty($sizeData['sku'])) {
+                    $allSkus[] = $sizeData['sku'];
+                }
+            }
+        }
+
+        if (! empty($allSkus)) {
+            $duplicates = array_unique(array_diff_assoc($allSkus, array_unique($allSkus)));
+            if (! empty($duplicates)) {
+                $errors['new_products'][] = 'Doublon de SKU dans les nouveaux produits : '.implode(', ', $duplicates);
+            }
+
+            $existingSkus = Variant::whereIn('sku', $allSkus)->pluck('sku')->all();
+            if (! empty($existingSkus)) {
+                $errors['new_products'][] = 'SKU déjà utilisé en base : '.implode(', ', $existingSkus);
+            }
+        }
+
+        if (! empty($errors)) {
+            throw ValidationException::withMessages($errors);
+        }
+
+        return $validated;
+    }
+
+    /**
+     * Crée un produit (et ses variantes) à partir d'une entrée new_products déjà validée.
+     * Nettoie l'image uploadée si la création échoue après l'upload (filet de sécurité,
+     * car une transaction SQL ne rollback jamais le filesystem).
+     */
+    private function createProductFromNewProductData($request, int $index, array $newProduct): int
+    {
+        $imagePath = null;
+        if ($request->hasFile("new_products.$index.image")) {
+            $imagePath = $request->file("new_products.$index.image")->store('products', 'public');
+        }
+
+        try {
+            $product = Product::create([
+                'name' => $newProduct['name'],
+                'slug' => Str::slug($newProduct['name']).'-'.uniqid(),
+                'price' => $newProduct['price'],
+                'image' => $imagePath,
+                'category_id' => $newProduct['category_id'] ?? null,
+            ]);
+
+            $sizes = $newProduct['sizes'] ?? [];
+            $hasValidSize = false;
+
+            foreach ($sizes as $sizeData) {
+                if (! empty($sizeData['size']) && isset($sizeData['stock'])) {
+                    $product->variants()->create([
+                        'size' => $sizeData['size'],
+                        'stock' => $sizeData['stock'],
+                        'sku' => $sizeData['sku'] ?? null,
+                        'color' => $sizeData['color'] ?? null,
+                    ]);
+                    $hasValidSize = true;
+                }
+            }
+
+            if (! $hasValidSize) {
+                $product->variants()->create(['size' => 'Unique', 'stock' => 1]);
+            }
+        } catch (\Throwable $e) {
+            if ($imagePath) {
+                Storage::disk('public')->delete($imagePath);
+            }
+
+            throw $e;
+        }
+
+        return $product->id;
     }
 }
