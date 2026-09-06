@@ -53,25 +53,10 @@ class ApproveWhitelistAction
                 );
             }
 
-            /*
-             * If the drop has a whitelist limit, check the
-             * number of already approved requests while the
-             * drop row is locked.
-             */
-            if ($lockedDrop->max_whitelist_slots !== null) {
-                $approvedCount = DropWhitelist::query()
-                    ->where('drop_id', $lockedDrop->id)
-                    ->where('status', 'approved')
-                    ->count();
-
-                if (
-                    $approvedCount >=
-                    $lockedDrop->max_whitelist_slots
-                ) {
-                    throw new LogicException(
-                        'Le nombre maximum de places whitelist a été atteint.'
-                    );
-                }
+            if (! $lockedDrop->hasWhitelistSlotsAvailable()) {
+                throw new LogicException(
+                    'Le nombre maximum de places whitelist a été atteint.'
+                );
             }
 
             /*

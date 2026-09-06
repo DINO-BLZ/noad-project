@@ -18,7 +18,7 @@ class DropWhitelistApprovalTest extends TestCase
     {
         return Drop::create(array_merge([
             'name' => 'Test Drop',
-            'slug' => 'test-drop-' . uniqid(),
+            'slug' => 'test-drop-'.uniqid(),
             'start_date' => now()->subDay(),
             'end_date' => now()->addDays(3),
             'status' => 'active',

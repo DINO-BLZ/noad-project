@@ -2,6 +2,7 @@
 
 namespace App\Actions\Orders;
 
+use App\Concerns\LocksRowsForUpdate;
 use App\Enums\OrderStatus;
 use App\Models\CartItem;
 use App\Models\Order;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class CreateOrderAction
 {
+    use LocksRowsForUpdate;
+
     public function execute(array $data, ?int $userId, ?string $sessionId, ?string $checkoutToken = null): Order
     {
         try {
@@ -109,14 +112,5 @@ class CreateOrderAction
 
             throw $exception;
         }
-    }
-
-    protected function withRowLock($query)
-    {
-        if (config('database.default') === 'sqlite') {
-            return $query;
-        }
-
-        return $query->lockForUpdate();
     }
 }

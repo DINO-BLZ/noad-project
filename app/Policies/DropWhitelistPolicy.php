@@ -2,7 +2,6 @@
 
 namespace App\Policies;
 
-use App\Models\Drop;
 use App\Models\DropWhitelist;
 use App\Models\User;
 

@@ -65,6 +65,7 @@ class OrderStatusLifecycleTest extends TestCase
             'shipped to cancelled' => ['shipped', 'cancelled'],
             'delivered to cancelled' => ['delivered', 'cancelled'],
             'delivered to shipped' => ['delivered', 'shipped'],
+            'delivered to pending' => ['delivered', 'pending'],
             'paid to pending' => ['paid', 'pending'],
             'shipped to pending' => ['shipped', 'pending'],
         ];

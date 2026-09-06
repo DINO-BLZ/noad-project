@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Concerns\LocksRowsForUpdate;
 use App\Models\CartItem;
 use Illuminate\Support\Facades\Auth;
 
 class CartService
 {
+    use LocksRowsForUpdate;
+
     /**
      * Retourne [userId, sessionId] : userId si connecté, sinon
      * sessionId pour identifier le panier invité.
@@ -85,14 +88,5 @@ class CartService
         }
 
         return ['items' => $items, 'total' => $total];
-    }
-
-    public function withRowLock($query)
-    {
-        if (config('database.default') === 'sqlite') {
-            return $query;
-        }
-
-        return $query->lockForUpdate();
     }
 }
