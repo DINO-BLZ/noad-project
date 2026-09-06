@@ -12,6 +12,11 @@ class DropPolicy
         return (bool) $user->is_admin;
     }
 
+    public function request(User $user, Drop $drop): bool
+    {
+        return ! $drop->isEnded() && ! $drop->isSoldOut();
+    }
+
     public function update(User $user, Drop $drop): bool
     {
         return (bool) $user->is_admin;
