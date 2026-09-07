@@ -53,8 +53,10 @@ class ProductController extends Controller
     }
 
     public function edit(Product $product)
-    {
-        $product->load(['variants', 'images']);
+{
+    $this->authorize('update', $product);
+
+    $product->load(['variants', 'images']);
 
         $categories = Category::query()
             ->orderBy('name')

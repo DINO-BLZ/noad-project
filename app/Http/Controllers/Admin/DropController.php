@@ -75,8 +75,10 @@ class DropController extends Controller
     }
 
     public function edit(Drop $drop)
-    {
-        $products = Product::all();
+{
+    $this->authorize('update', $drop);
+
+    $products = Product::all();
         $categories = Category::all();
 
         $whitelistRequests = $drop
