@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -259,27 +260,81 @@ class UpdateProductTest extends TestCase
 
         $product->refresh();
 
-        /*
-         * Le chemin de l'image doit avoir changé.
-         */
         $this->assertNotSame(
             $oldImage,
             $product->image
         );
 
-        /*
-         * La nouvelle image doit exister.
-         */
         Storage::disk('public')->assertExists(
             $product->image
         );
 
-        /*
-         * L'ancienne image doit avoir été supprimée.
-         */
         Storage::disk('public')->assertMissing(
             $oldImage
         );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Gallery
+    |--------------------------------------------------------------------------
+    */
+
+    public function test_admin_can_add_gallery_images(): void
+    {
+        Storage::fake('public');
+
+        $admin = $this->createAdmin();
+        $category = $this->createCategory();
+        $product = $this->createProduct($category);
+
+        $image1 = UploadedFile::fake()->image(
+            'gallery-1.jpg'
+        );
+
+        $image2 = UploadedFile::fake()->image(
+            'gallery-2.jpg'
+        );
+
+        $response = $this->actingAs($admin)->put(
+            route('admin.products.update', $product),
+            [
+                'name' => $product->name,
+                'price' => $product->price,
+                'category_id' => $product->category_id,
+                'description' => $product->description,
+
+                'variants' => [],
+
+                'images' => [
+                    $image1,
+                    $image2,
+                ],
+            ]
+        );
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseCount(
+            'product_images',
+            2
+        );
+
+        $images = ProductImage::where(
+            'product_id',
+            $product->id
+        )->get();
+
+        $this->assertCount(
+            2,
+            $images
+        );
+
+        foreach ($images as $image) {
+            Storage::disk('public')->assertExists(
+                $image->path
+            );
+        }
     }
 
     /*
@@ -339,7 +394,9 @@ class UpdateProductTest extends TestCase
             ]
         );
 
-        $response->assertRedirect(route('login'));
+        $response->assertRedirect(
+            route('login')
+        );
 
         $product->refresh();
 

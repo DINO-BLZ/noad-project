@@ -3,8 +3,6 @@
 namespace App\Actions\Products;
 
 use App\Models\Product;
-use App\Models\ProductImage;
-use App\Models\Variant;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -12,88 +10,58 @@ use Throwable;
 
 class UpdateProductAction
 {
-    /**
-     * Update a product, its variants and its gallery.
-     *
-     * @param  array<string, mixed>  $data
-     * @param  array<int, UploadedFile>  $galleryImages
-     */
     public function execute(
         Product $product,
         array $data,
         ?UploadedFile $coverImage = null,
         array $galleryImages = []
     ): Product {
-        $newCoverPath = null;
-        $newGalleryPaths = [];
-        $oldCoverPath = null;
-        $removedGalleryPaths = [];
+        $newFiles = [];
+        $filesToDelete = [];
 
         try {
-            /*
-             * Upload the new cover before the transaction.
-             *
-             * Database transactions do not rollback filesystem changes,
-             * so every uploaded file is tracked and cleaned up if
-             * something fails.
-             */
-            if ($coverImage) {
-                $newCoverPath = $coverImage->store(
-                    'products',
-                    'public'
-                );
-            }
-
-            foreach ($galleryImages as $galleryImage) {
-                if ($galleryImage instanceof UploadedFile) {
-                    $newGalleryPaths[] = $galleryImage->store(
-                        'products',
-                        'public'
-                    );
-                }
-            }
-
-            $removedGalleryIds = collect(
-                $data['remove_images'] ?? []
-            )
-                ->map(fn ($id) => (int) $id)
-                ->unique()
-                ->values();
-
-            $selectedPrimaryImageId = isset($data['primary_image'])
-                ? (int) $data['primary_image']
-                : null;
-
-            DB::transaction(function () use (
+            $updatedProduct = DB::transaction(function () use (
                 $product,
                 $data,
-                $newCoverPath,
-                $newGalleryPaths,
-                $removedGalleryIds,
-                $selectedPrimaryImageId,
-                &$oldCoverPath,
-                &$removedGalleryPaths
+                $coverImage,
+                $galleryImages,
+                &$newFiles,
+                &$filesToDelete
             ) {
                 /*
-                 * Lock the product while updating it.
-                 */
-                $product->lockForUpdate();
-
-                /*
-                 * Update basic product information.
+                 * ---------------------------------------------------------
+                 * 1. INFORMATIONS DU PRODUIT
+                 * ---------------------------------------------------------
                  */
                 $product->update([
-                    'category_id' => $data['category_id'],
                     'name' => $data['name'],
-                    'description' => $data['description'] ?? null,
                     'price' => $data['price'],
+                    'category_id' => $data['category_id'],
+                    'description' => $data['description'] ?? null,
                 ]);
 
                 /*
-                 * Replace the main product image.
+                 * ---------------------------------------------------------
+                 * 2. IMAGE DE COUVERTURE
+                 * ---------------------------------------------------------
                  */
-                if ($newCoverPath) {
-                    $oldCoverPath = $product->image;
+                if ($coverImage instanceof UploadedFile) {
+                    $newCoverPath = $coverImage->store(
+                        'products',
+                        'public'
+                    );
+
+                    if (! $newCoverPath) {
+                        throw new \RuntimeException(
+                            'Impossible d’enregistrer l’image de couverture.'
+                        );
+                    }
+
+                    $newFiles[] = $newCoverPath;
+
+                    if ($product->image) {
+                        $filesToDelete[] = $product->image;
+                    }
 
                     $product->update([
                         'image' => $newCoverPath,
@@ -102,35 +70,27 @@ class UpdateProductAction
 
                 /*
                  * ---------------------------------------------------------
-                 * VARIANTS
+                 * 3. VARIANTES
                  * ---------------------------------------------------------
                  */
-
                 $submittedVariants = $data['variants'] ?? [];
-
                 $submittedVariantIds = [];
 
                 foreach ($submittedVariants as $variantData) {
-                    $variantId = isset($variantData['id'])
-                        ? (int) $variantData['id']
-                        : null;
+                    $variantId = $variantData['id'] ?? null;
 
-                    /*
-                     * Existing variant.
-                     */
                     if ($variantId) {
+                        /*
+                         * Sécurité importante :
+                         * la variante doit appartenir à CE produit.
+                         */
                         $variant = $product->variants()
                             ->whereKey($variantId)
-                            ->lockForUpdate()
                             ->first();
 
-                        /*
-                         * Never allow a variant belonging to another
-                         * product to be modified.
-                         */
                         if (! $variant) {
                             throw new \RuntimeException(
-                                'Une variante sélectionnée n’appartient pas à ce produit.'
+                                'Une variante sélectionnée est invalide.'
                             );
                         }
 
@@ -142,60 +102,80 @@ class UpdateProductAction
                         ]);
 
                         $submittedVariantIds[] = $variant->id;
+                    } else {
+                        $variant = $product->variants()->create([
+                            'size' => $variantData['size'],
+                            'stock' => $variantData['stock'],
+                            'sku' => $variantData['sku'] ?? null,
+                            'color' => $variantData['color'] ?? null,
+                        ]);
 
-                        continue;
+                        $submittedVariantIds[] = $variant->id;
                     }
-
-                    /*
-                     * New variant.
-                     */
-                    $variant = $product->variants()->create([
-                        'size' => $variantData['size'],
-                        'stock' => $variantData['stock'],
-                        'sku' => $variantData['sku'] ?? null,
-                        'color' => $variantData['color'] ?? null,
-                    ]);
-
-                    $submittedVariantIds[] = $variant->id;
                 }
 
                 /*
-                 * Variants removed from the form are deleted.
-                 *
-                 * Only variants belonging to this product can be deleted.
+                 * Supprime les variantes qui ne sont plus présentes
+                 * dans le formulaire.
                  */
-                $product->variants()
-                    ->whereNotIn('id', $submittedVariantIds)
-                    ->delete();
+                $variantsToDelete = $product->variants()
+                    ->when(
+                        ! empty($submittedVariantIds),
+                        fn ($query) => $query->whereNotIn(
+                            'id',
+                            $submittedVariantIds
+                        )
+                    )
+                    ->get();
+
+                foreach ($variantsToDelete as $variant) {
+                    $variant->delete();
+                }
 
                 /*
                  * ---------------------------------------------------------
-                 * GALLERY
+                 * 4. SUPPRESSION DES IMAGES GALERIE
                  * ---------------------------------------------------------
                  */
+                $removeImageIds = $data['remove_images'] ?? [];
 
-                /*
-                 * Remove selected gallery images.
-                 */
-                if ($removedGalleryIds->isNotEmpty()) {
+                if (! empty($removeImageIds)) {
                     $imagesToRemove = $product->images()
-                        ->whereIn('id', $removedGalleryIds)
-                        ->lockForUpdate()
+                        ->whereIn('id', $removeImageIds)
                         ->get();
 
                     foreach ($imagesToRemove as $image) {
-                        $removedGalleryPaths[] = $image->path;
-                    }
+                        if ($image->path) {
+                            $filesToDelete[] = $image->path;
+                        }
 
-                    $product->images()
-                        ->whereIn('id', $removedGalleryIds)
-                        ->delete();
+                        $image->delete();
+                    }
                 }
 
                 /*
-                 * Add new gallery images.
+                 * ---------------------------------------------------------
+                 * 5. AJOUT DES IMAGES GALERIE
+                 * ---------------------------------------------------------
                  */
-                foreach ($newGalleryPaths as $path) {
+                foreach ($galleryImages as $galleryImage) {
+                    if (! $galleryImage instanceof UploadedFile) {
+                        continue;
+                    }
+
+                    $path = $galleryImage->store(
+                        'products/gallery',
+                        'public'
+                    );
+
+                    if (! $path) {
+                        throw new \RuntimeException(
+                            'Impossible d’enregistrer une image de galerie.'
+                        );
+                    }
+
+                    $newFiles[] = $path;
+
                     $product->images()->create([
                         'path' => $path,
                         'is_primary' => false,
@@ -204,18 +184,14 @@ class UpdateProductAction
 
                 /*
                  * ---------------------------------------------------------
-                 * PRIMARY GALLERY IMAGE
+                 * 6. IMAGE PRINCIPALE
                  * ---------------------------------------------------------
                  */
+                $primaryImageId = $data['primary_image'] ?? null;
 
-                /*
-                 * If the administrator selected a primary image,
-                 * verify that the image belongs to this product and
-                 * has not been removed.
-                 */
-                if ($selectedPrimaryImageId !== null) {
+                if ($primaryImageId !== null && $primaryImageId !== '') {
                     $primaryImage = $product->images()
-                        ->whereKey($selectedPrimaryImageId)
+                        ->whereKey($primaryImageId)
                         ->lockForUpdate()
                         ->first();
 
@@ -225,6 +201,9 @@ class UpdateProductAction
                         );
                     }
 
+                    /*
+                     * Une seule image principale.
+                     */
                     $product->images()->update([
                         'is_primary' => false,
                     ]);
@@ -232,68 +211,57 @@ class UpdateProductAction
                     $primaryImage->update([
                         'is_primary' => true,
                     ]);
-                } else {
-                    /*
-                     * If no primary image is selected, guarantee that
-                     * the gallery still has at most one primary image.
-                     */
-                    $primaryImage = $product->images()
+                }
+
+                /*
+                 * ---------------------------------------------------------
+                 * 7. FALLBACK IMAGE PRINCIPALE
+                 * ---------------------------------------------------------
+                 */
+                if (
+                    ! $product->images()
                         ->where('is_primary', true)
-                        ->lockForUpdate()
+                        ->exists()
+                ) {
+                    $fallbackImage = $product->images()
+                        ->orderBy('id')
                         ->first();
 
-                    /*
-                     * If the previous primary image was deleted,
-                     * promote the first remaining gallery image.
-                     */
-                    if (! $primaryImage) {
-                        $fallbackImage = $product->images()
-                            ->orderBy('id')
-                            ->lockForUpdate()
-                            ->first();
-
-                        if ($fallbackImage) {
-                            $fallbackImage->update([
-                                'is_primary' => true,
-                            ]);
-                        }
+                    if ($fallbackImage) {
+                        $fallbackImage->update([
+                            'is_primary' => true,
+                        ]);
                     }
                 }
+
+                return $product->fresh([
+                    'category',
+                    'variants',
+                    'images',
+                ]);
             });
 
             /*
-             * The database transaction succeeded.
+             * -------------------------------------------------------------
+             * 8. SUPPRESSION DES ANCIENS FICHIERS
              *
-             * Now it is safe to delete files that are no longer used.
+             * La transaction DB est maintenant terminée avec succès.
+             * On peut supprimer les anciens fichiers.
+             * -------------------------------------------------------------
              */
-
-            if ($oldCoverPath && $oldCoverPath !== $newCoverPath) {
-                Storage::disk('public')->delete($oldCoverPath);
+            foreach (array_unique($filesToDelete) as $path) {
+                Storage::disk('public')->delete($path);
             }
 
-            foreach ($removedGalleryPaths as $path) {
-                if ($path) {
-                    Storage::disk('public')->delete($path);
-                }
-            }
+            return $updatedProduct;
 
-            return $product->fresh([
-                'category',
-                'variants',
-                'images',
-            ]);
         } catch (Throwable $e) {
             /*
-             * Database transaction failed.
-             *
-             * Delete every newly uploaded file because the DB changes
-             * were rolled back.
+             * La DB a échoué :
+             * on supprime uniquement les nouveaux fichiers créés
+             * pendant cette opération.
              */
-            if ($newCoverPath) {
-                Storage::disk('public')->delete($newCoverPath);
-            }
-
-            foreach ($newGalleryPaths as $path) {
+            foreach (array_unique($newFiles) as $path) {
                 Storage::disk('public')->delete($path);
             }
 
