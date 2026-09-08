@@ -3,9 +3,11 @@
 namespace App\Actions\Products;
 
 use App\Models\Product;
+use App\Models\Variant;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class UpdateProductAction
@@ -16,6 +18,8 @@ class UpdateProductAction
         ?UploadedFile $coverImage = null,
         array $galleryImages = []
     ): Product {
+        $this->assertNoDuplicateVariants($product, $data['variants'] ?? []);
+
         $newFiles = [];
         $filesToDelete = [];
 
@@ -86,12 +90,13 @@ class UpdateProductAction
                          */
                         $variant = $product->variants()
                             ->whereKey($variantId)
+                            ->lockForUpdate()
                             ->first();
 
                         if (! $variant) {
-                            throw new \RuntimeException(
-                                'Une variante sélectionnée est invalide.'
-                            );
+                            throw ValidationException::withMessages([
+                                'variants' => ['Une variante sélectionnée est invalide.'],
+                            ]);
                         }
 
                         $variant->update([
@@ -142,6 +147,7 @@ class UpdateProductAction
                 if (! empty($removeImageIds)) {
                     $imagesToRemove = $product->images()
                         ->whereIn('id', $removeImageIds)
+                        ->lockForUpdate()
                         ->get();
 
                     foreach ($imagesToRemove as $image) {
@@ -196,9 +202,9 @@ class UpdateProductAction
                         ->first();
 
                     if (! $primaryImage) {
-                        throw new \RuntimeException(
-                            'L’image principale sélectionnée est invalide.'
-                        );
+                        throw ValidationException::withMessages([
+                            'primary_image' => ['L’image principale sélectionnée est invalide.'],
+                        ]);
                     }
 
                     /*
@@ -257,7 +263,8 @@ class UpdateProductAction
 
         } catch (Throwable $e) {
             /*
-             * La DB a échoué :
+             * La DB a échoué (ou la validation a rejeté la demande avant
+             * même d'entrer en transaction) :
              * on supprime uniquement les nouveaux fichiers créés
              * pendant cette opération.
              */
@@ -266,6 +273,56 @@ class UpdateProductAction
             }
 
             throw $e;
+        }
+    }
+
+    /**
+     * Vérifie, avant toute écriture, qu'aucune combinaison taille/couleur
+     * n'est soumise deux fois et qu'aucun SKU soumis n'est déjà utilisé
+     * par une autre variante (une contrainte UNIQUE existe en base sur
+     * les deux, mais on veut un message de validation propre plutôt
+     * qu'une erreur SQL brute).
+     */
+    private function assertNoDuplicateVariants(Product $product, array $variantsInput): void
+    {
+        $seenCombos = [];
+        $submittedSkus = [];
+
+        foreach ($variantsInput as $variantData) {
+            $combo = ($variantData['size'] ?? '').'|'.($variantData['color'] ?? '');
+
+            if (isset($seenCombos[$combo])) {
+                throw ValidationException::withMessages([
+                    'variants' => ["La combinaison taille/couleur \"{$variantData['size']}\" est en double."],
+                ]);
+            }
+
+            $seenCombos[$combo] = true;
+
+            $sku = $variantData['sku'] ?? null;
+
+            if ($sku) {
+                $submittedSkus[] = $sku;
+
+                $conflict = Variant::where('sku', $sku)
+                    ->when(
+                        ! empty($variantData['id']),
+                        fn ($query) => $query->where('id', '!=', $variantData['id'])
+                    )
+                    ->exists();
+
+                if ($conflict) {
+                    throw ValidationException::withMessages([
+                        'variants' => ["Le SKU \"{$sku}\" est déjà utilisé par une autre variante."],
+                    ]);
+                }
+            }
+        }
+
+        if (count($submittedSkus) !== count(array_unique($submittedSkus))) {
+            throw ValidationException::withMessages([
+                'variants' => ['Un même SKU est utilisé plusieurs fois dans le formulaire.'],
+            ]);
         }
     }
 }

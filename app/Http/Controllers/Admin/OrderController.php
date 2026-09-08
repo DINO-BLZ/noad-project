@@ -52,7 +52,7 @@ class OrderController extends Controller
         $order->loadMissing('user');
 
         if ($order->user) {
-            Mail::to($order->user->email)->send(new OrderStatusUpdatedMail($order));
+            Mail::to($order->user->email)->queue(new OrderStatusUpdatedMail($order));
         }
 
         return back()->with('success', 'Statut de la commande mis à jour.');

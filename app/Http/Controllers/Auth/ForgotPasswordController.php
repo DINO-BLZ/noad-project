@@ -22,7 +22,7 @@ class ForgotPasswordController extends Controller
         $status = Password::sendResetLink(
             $request->only('email'),
             function ($user, string $token) {
-                Mail::to($user->email)->send(new PasswordResetMail($user, $token));
+                Mail::to($user->email)->queue(new PasswordResetMail($user, $token));
             }
         );
 

@@ -176,7 +176,7 @@ class DropController extends Controller
         }
 
         Mail::to($whitelist->user->email)
-            ->send(new WhitelistStatusMail($whitelist));
+            ->queue(new WhitelistStatusMail($whitelist));
 
         return back()->with(
             'success',
@@ -213,7 +213,7 @@ class DropController extends Controller
         $whitelist->setRelation('drop', $drop);
 
         Mail::to($whitelist->user->email)
-            ->send(new WhitelistStatusMail($whitelist));
+            ->queue(new WhitelistStatusMail($whitelist));
 
         return back()->with(
             'success',
