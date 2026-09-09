@@ -15,13 +15,7 @@
                 <p>Demandée le {{ $w->created_at->format('d M Y') }}</p>
             </div>
 
-            <span class="drop-status drop-status--{{ $w->status === 'approved' ? 'active' : ($w->status === 'rejected' ? 'ended' : 'upcoming') }}">
-                {{ match($w->status) {
-                    'approved' => 'Acceptée',
-                    'rejected' => 'Refusée',
-                    default => 'En attente',
-                } }}
-            </span>
+            <x-status-badge :status="$w->status" />
 
             <a href="{{ route('drops.show', $w->drop) }}">Voir le drop</a>
         </div>

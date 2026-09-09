@@ -19,8 +19,7 @@
                     <h3>{{ $drop->name }}</h3>
                     <p>{{ $drop->start_date->format('d/m/Y H:i') }} → {{ $drop->end_date->format('d/m/Y H:i') }}</p>
                 </div>
-                <span class="drop-status drop-status--{{ $drop->status }}">{{ ucfirst($drop->status) }}</span>
-                <div class="admin-drop-row__actions">
+               <x-status-badge :status="$drop->status" />
                     <a href="{{ route('admin.drops.edit', $drop) }}">Gérer</a>
                     <form action="{{ route('admin.drops.destroy', $drop) }}" method="POST" onsubmit="return confirm('Supprimer ce drop ?');">
                         @csrf

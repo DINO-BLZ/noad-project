@@ -50,12 +50,13 @@ class CreateAdminCommand extends Command
             return self::FAILURE;
         }
 
-        User::create([
-            'name' => $name,
-            'email' => $email,
-            'password' => Hash::make($password),
-            'is_admin' => true,
-        ]);
+       $user = User::create([
+    'name' => $name,
+    'email' => $email,
+    'password' => Hash::make($password),
+]);
+
+$user->forceFill(['is_admin' => true])->save();
 
         $this->info("Compte administrateur {$email} créé avec succès.");
 

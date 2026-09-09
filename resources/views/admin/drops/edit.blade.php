@@ -61,9 +61,7 @@
         @forelse($whitelistRequests as $req)
             <div class="whitelist-row">
                 <span>{{ $req->user->name }} ({{ $req->user->email }})</span>
-                <span class="drop-status drop-status--{{ $req->status === 'approved' ? 'active' : ($req->status === 'rejected' ? 'ended' : 'upcoming') }}">
-                    {{ ucfirst($req->status) }}
-                </span>
+               <x-status-badge :status="$req->status" />
                 @if($req->status === 'pending')
                     <div class="whitelist-row__actions">
                         <form action="{{ route('admin.drops.whitelist.approve', [$drop, $req->id]) }}" method="POST">
