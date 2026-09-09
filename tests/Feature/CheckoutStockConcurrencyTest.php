@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\OrderConfirmationMail;
 use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Order;
@@ -9,6 +10,7 @@ use App\Models\Product;
 use App\Models\User;
 use App\Models\Variant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class CheckoutStockConcurrencyTest extends TestCase
@@ -221,6 +223,8 @@ class CheckoutStockConcurrencyTest extends TestCase
 
     public function test_checkout_with_valid_cart_creates_order_and_order_items_and_clears_cart()
     {
+        Mail::fake();
+
         $user = User::factory()->create();
         $category = Category::create(['name' => 'Test', 'slug' => 'checkout-valid']);
         $product = Product::create([
@@ -281,6 +285,7 @@ class CheckoutStockConcurrencyTest extends TestCase
         ]);
         $variant->refresh();
         $this->assertEquals(8, $variant->stock);
+        Mail::assertQueued(OrderConfirmationMail::class);
     }
 
     public function test_repeated_checkout_submission_with_same_token_returns_same_order(): void

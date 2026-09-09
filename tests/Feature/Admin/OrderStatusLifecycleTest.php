@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Actions\Orders\OrderStatusTransitionService;
 use App\Enums\OrderStatus;
+use App\Mail\OrderStatusUpdatedMail;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -157,6 +158,7 @@ class OrderStatusLifecycleTest extends TestCase
 
         $response->assertRedirect();
         $this->assertSame(OrderStatus::Paid, $order->fresh()->status);
+        Mail::assertQueued(OrderStatusUpdatedMail::class);
     }
 
     private function cancelAsAdmin(Order $order)
