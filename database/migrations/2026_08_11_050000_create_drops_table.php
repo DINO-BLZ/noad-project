@@ -15,6 +15,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->dateTime('start_date');
             $table->dateTime('end_date');
+            $table->enum('status', ['upcoming', 'active', 'ended'])->default('upcoming');
             $table->timestamps();
         });
     }
