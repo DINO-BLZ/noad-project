@@ -30,11 +30,7 @@
         </label>
 
         <label>Statut
-            <select name="status" required>
-                <option value="upcoming" {{ $drop->status === 'upcoming' ? 'selected' : '' }}>À venir</option>
-                <option value="active" {{ $drop->status === 'active' ? 'selected' : '' }}>En cours</option>
-                <option value="ended" {{ $drop->status === 'ended' ? 'selected' : '' }}>Terminé</option>
-            </select>
+            
         </label>
 
         <label>Produits associés

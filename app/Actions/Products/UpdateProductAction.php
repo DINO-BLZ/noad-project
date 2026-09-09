@@ -103,7 +103,7 @@ class UpdateProductAction
                             'size' => $variantData['size'],
                             'stock' => $variantData['stock'],
                             'sku' => $variantData['sku'] ?? null,
-                            'color' => $variantData['color'] ?? null,
+                            'color' => $variantData['color'] ?? '',
                         ]);
 
                         $submittedVariantIds[] = $variant->id;
@@ -112,7 +112,7 @@ class UpdateProductAction
                             'size' => $variantData['size'],
                             'stock' => $variantData['stock'],
                             'sku' => $variantData['sku'] ?? null,
-                            'color' => $variantData['color'] ?? null,
+                            'color' => $variantData['color'] ?? '',
                         ]);
 
                         $submittedVariantIds[] = $variant->id;

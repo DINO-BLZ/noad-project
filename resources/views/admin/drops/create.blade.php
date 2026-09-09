@@ -25,11 +25,7 @@
         </label>
 
         <label>Statut
-            <select name="status" required>
-                <option value="upcoming">À venir</option>
-                <option value="active">En cours</option>
-                <option value="ended">Terminé</option>
-            </select>
+            
             <label>Places whitelist max (laisser vide = illimité)
     <input type="number" name="max_whitelist_slots" min="0" value="{{ old('max_whitelist_slots') }}">
 </label>

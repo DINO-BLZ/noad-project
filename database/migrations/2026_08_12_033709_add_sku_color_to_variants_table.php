@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('variants', function (Blueprint $table) {
             $table->string('sku')->nullable()->unique()->after('id');
-            $table->string('color')->nullable()->after('size');
+            $table->string('color')->default('')->after('size');
 
             // Empêche les doublons taille+couleur pour un même produit
             $table->unique(['product_id', 'size', 'color'], 'variants_product_size_color_unique');

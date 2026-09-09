@@ -19,7 +19,7 @@ class DropRequest extends FormRequest
             'description' => 'nullable|string',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
-            'status' => 'required|in:upcoming,active,ended',
+        
             'products' => 'array',
             'max_whitelist_slots' => 'nullable|integer|min:0',
             'products.*' => 'exists:products,id',
