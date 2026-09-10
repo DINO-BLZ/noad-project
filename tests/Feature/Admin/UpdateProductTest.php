@@ -32,7 +32,7 @@ class UpdateProductTest extends TestCase
     {
         return Category::create([
             'name' => 'Vêtements',
-            'slug' => 'vetements-' . uniqid(),
+            'slug' => 'vetements-'.uniqid(),
         ]);
     }
 
@@ -41,7 +41,7 @@ class UpdateProductTest extends TestCase
         return Product::create([
             'category_id' => $category->id,
             'name' => 'T-shirt',
-            'slug' => 't-shirt-' . uniqid(),
+            'slug' => 't-shirt-'.uniqid(),
             'price' => 5000,
             'description' => 'Description du produit',
         ]);
@@ -232,7 +232,7 @@ class UpdateProductTest extends TestCase
         $product = Product::create([
             'category_id' => $category->id,
             'name' => 'T-shirt',
-            'slug' => 't-shirt-' . uniqid(),
+            'slug' => 't-shirt-'.uniqid(),
             'price' => 5000,
             'description' => 'Description du produit',
             'image' => $oldImage,
@@ -335,6 +335,176 @@ class UpdateProductTest extends TestCase
                 $image->path
             );
         }
+    }
+
+    public function test_admin_can_change_primary_gallery_image(): void
+    {
+        Storage::fake('public');
+
+        $admin = $this->createAdmin();
+        $category = $this->createCategory();
+        $product = $this->createProduct($category);
+
+        $first = ProductImage::create([
+            'product_id' => $product->id,
+            'path' => 'products/gallery/first.jpg',
+            'position' => 0,
+            'is_primary' => true,
+        ]);
+
+        $second = ProductImage::create([
+            'product_id' => $product->id,
+            'path' => 'products/gallery/second.jpg',
+            'position' => 1,
+            'is_primary' => false,
+        ]);
+
+        $response = $this->actingAs($admin)->put(
+            route('admin.products.update', $product),
+            [
+                'name' => $product->name,
+                'price' => $product->price,
+                'category_id' => $product->category_id,
+                'description' => $product->description,
+                'variants' => [],
+                'primary_image' => (string) $second->id,
+            ]
+        );
+
+        $response->assertRedirect();
+
+        $this->assertFalse($first->fresh()->is_primary);
+        $this->assertTrue($second->fresh()->is_primary);
+        $this->assertSame(1, $product->images()->where('is_primary', true)->count());
+    }
+
+    public function test_saving_product_keeps_existing_primary_gallery_image(): void
+    {
+        Storage::fake('public');
+
+        $admin = $this->createAdmin();
+        $category = $this->createCategory();
+        $product = $this->createProduct($category);
+
+        ProductImage::create([
+            'product_id' => $product->id,
+            'path' => 'products/gallery/first.jpg',
+            'position' => 0,
+            'is_primary' => false,
+        ]);
+
+        $primary = ProductImage::create([
+            'product_id' => $product->id,
+            'path' => 'products/gallery/second.jpg',
+            'position' => 1,
+            'is_primary' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->put(
+            route('admin.products.update', $product),
+            [
+                'name' => 'Nom mis à jour',
+                'price' => $product->price,
+                'category_id' => $product->category_id,
+                'description' => $product->description,
+                'variants' => [],
+                'primary_image' => (string) $primary->id,
+            ]
+        );
+
+        $response->assertRedirect();
+
+        $this->assertTrue($primary->fresh()->is_primary);
+        $this->assertSame(1, $product->images()->where('is_primary', true)->count());
+        $this->assertSame($primary->id, $product->images()->where('is_primary', true)->value('id'));
+    }
+
+    public function test_empty_skus_are_stored_as_null_for_multiple_variants(): void
+    {
+        $admin = $this->createAdmin();
+        $category = $this->createCategory();
+        $product = $this->createProduct($category);
+
+        $response = $this->actingAs($admin)->put(
+            route('admin.products.update', $product),
+            [
+                'name' => $product->name,
+                'price' => $product->price,
+                'category_id' => $product->category_id,
+                'description' => $product->description,
+                'variants' => [
+                    [
+                        'size' => 'M',
+                        'stock' => 2,
+                        'sku' => '',
+                        'color' => 'Noir',
+                    ],
+                    [
+                        'size' => 'L',
+                        'stock' => 3,
+                        'sku' => '',
+                        'color' => 'Noir',
+                    ],
+                ],
+            ]
+        );
+
+        $response->assertRedirect();
+        $this->assertDatabaseCount('variants', 2);
+        $this->assertDatabaseHas('variants', [
+            'product_id' => $product->id,
+            'size' => 'M',
+            'sku' => null,
+        ]);
+        $this->assertDatabaseHas('variants', [
+            'product_id' => $product->id,
+            'size' => 'L',
+            'sku' => null,
+        ]);
+    }
+
+    public function test_removed_gallery_file_is_kept_when_product_update_fails(): void
+    {
+        Storage::fake('public');
+
+        $admin = $this->createAdmin();
+        $category = $this->createCategory();
+        $product = $this->createProduct($category);
+
+        $path = 'products/gallery/keep-me.jpg';
+        Storage::disk('public')->put($path, 'contents');
+
+        $image = ProductImage::create([
+            'product_id' => $product->id,
+            'path' => $path,
+            'position' => 0,
+            'is_primary' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->from(
+            route('admin.products.edit', $product)
+        )->put(
+            route('admin.products.update', $product),
+            [
+                'name' => $product->name,
+                'price' => $product->price,
+                'category_id' => $product->category_id,
+                'description' => $product->description,
+                'variants' => [],
+                'remove_images' => [$image->id],
+                'primary_image' => '999999',
+            ]
+        );
+
+        $response->assertRedirect(route('admin.products.edit', $product));
+        $response->assertSessionHasErrors('primary_image');
+
+        $this->assertDatabaseHas('product_images', [
+            'id' => $image->id,
+            'path' => $path,
+        ]);
+
+        Storage::disk('public')->assertExists($path);
     }
 
     /*

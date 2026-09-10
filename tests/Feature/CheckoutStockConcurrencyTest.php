@@ -329,6 +329,80 @@ class CheckoutStockConcurrencyTest extends TestCase
         $this->assertSame(1, $variant->fresh()->stock);
     }
 
+    public function test_checkout_token_from_another_user_does_not_return_their_order(): void
+    {
+        Mail::fake();
+
+        $owner = User::factory()->create();
+        $attacker = User::factory()->create();
+        $category = Category::create(['name' => 'Test', 'slug' => 'checkout-token-scope']);
+        $product = Product::create([
+            'name' => 'T-shirt',
+            'slug' => 'tshirt-checkout-token-scope',
+            'price' => 25.00,
+            'category_id' => $category->id,
+        ]);
+        $ownerVariant = Variant::create([
+            'product_id' => $product->id,
+            'size' => 'M',
+            'stock' => 5,
+            'sku' => 'SKU-TOKEN-OWNER',
+            'color' => 'Blue',
+        ]);
+        $attackerVariant = Variant::create([
+            'product_id' => $product->id,
+            'size' => 'L',
+            'stock' => 5,
+            'sku' => 'SKU-TOKEN-ATTACKER',
+            'color' => 'Blue',
+        ]);
+
+        CartItem::create([
+            'user_id' => $owner->id,
+            'variant_id' => $ownerVariant->id,
+            'quantity' => 1,
+        ]);
+
+        $token = '11111111-1111-4111-8111-111111111111';
+
+        $this->actingAs($owner)->post(route('checkout.store'), [
+            'checkout_token' => $token,
+            'full_name' => 'Owner',
+            'phone' => '123456789',
+            'address' => '123 Main',
+            'wilaya' => 'Algiers',
+            'payment_method' => 'cod',
+        ])->assertRedirect();
+
+        $ownerOrder = Order::where('user_id', $owner->id)->first();
+        $this->assertNotNull($ownerOrder);
+
+        CartItem::create([
+            'user_id' => $attacker->id,
+            'variant_id' => $attackerVariant->id,
+            'quantity' => 1,
+        ]);
+
+        $response = $this->actingAs($attacker)->post(route('checkout.store'), [
+            'checkout_token' => $token,
+            'full_name' => 'Attacker',
+            'phone' => '987654321',
+            'address' => '456 Side',
+            'wilaya' => 'Oran',
+            'payment_method' => 'cod',
+        ]);
+
+        $response->assertRedirectBackWithErrors('checkout');
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertDatabaseHas('cart_items', [
+            'user_id' => $attacker->id,
+            'variant_id' => $attackerVariant->id,
+            'quantity' => 1,
+        ]);
+        $this->assertSame(4, $ownerVariant->fresh()->stock);
+        $this->assertSame(5, $attackerVariant->fresh()->stock);
+    }
+
     public function test_checkout_with_empty_cart_redirects_without_creating_order()
     {
         $user = User::factory()->create();

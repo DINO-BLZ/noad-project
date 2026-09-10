@@ -3,6 +3,7 @@
 namespace App\Actions\Products;
 
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\Variant;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -102,7 +103,7 @@ class UpdateProductAction
                         $variant->update([
                             'size' => $variantData['size'],
                             'stock' => $variantData['stock'],
-                            'sku' => $variantData['sku'] ?? null,
+                            'sku' => $this->nullableSku($variantData['sku'] ?? null),
                             'color' => $variantData['color'] ?? '',
                         ]);
 
@@ -111,7 +112,7 @@ class UpdateProductAction
                         $variant = $product->variants()->create([
                             'size' => $variantData['size'],
                             'stock' => $variantData['stock'],
-                            'sku' => $variantData['sku'] ?? null,
+                            'sku' => $this->nullableSku($variantData['sku'] ?? null),
                             'color' => $variantData['color'] ?? '',
                         ]);
 
@@ -155,7 +156,16 @@ class UpdateProductAction
                             $filesToDelete[] = $image->path;
                         }
 
-                        $image->delete();
+                        /*
+                         * ProductImage's deleting hook removes the file
+                         * immediately. Skip it here so a later failure in
+                         * this transaction can roll back without leaving a
+                         * DB row that points at a missing file. Physical
+                         * files are deleted only after commit.
+                         */
+                        ProductImage::withoutEvents(
+                            fn () => $image->delete()
+                        );
                     }
                 }
 
@@ -208,15 +218,21 @@ class UpdateProductAction
                     }
 
                     /*
-                     * Une seule image principale.
+                     * Une seule image principale. The in-memory model still
+                     * has the pre-update is_primary value, so a second
+                     * $primaryImage->update() would be skipped as "not dirty"
+                     * if it was already primary — leaving none after the
+                     * mass update. Write through the query instead.
                      */
                     $product->images()->update([
                         'is_primary' => false,
                     ]);
 
-                    $primaryImage->update([
-                        'is_primary' => true,
-                    ]);
+                    $product->images()
+                        ->whereKey($primaryImage->id)
+                        ->update([
+                            'is_primary' => true,
+                        ]);
                 }
 
                 /*
@@ -299,7 +315,7 @@ class UpdateProductAction
 
             $seenCombos[$combo] = true;
 
-            $sku = $variantData['sku'] ?? null;
+            $sku = $this->nullableSku($variantData['sku'] ?? null);
 
             if ($sku) {
                 $submittedSkus[] = $sku;
@@ -324,5 +340,16 @@ class UpdateProductAction
                 'variants' => ['Un même SKU est utilisé plusieurs fois dans le formulaire.'],
             ]);
         }
+    }
+
+    private function nullableSku(mixed $sku): ?string
+    {
+        if (! is_string($sku)) {
+            return null;
+        }
+
+        $sku = trim($sku);
+
+        return $sku === '' ? null : $sku;
     }
 }

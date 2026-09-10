@@ -11,7 +11,10 @@
         @if($product->images->count() > 0)
             <div class="product__thumbnails">
                 <img src="{{ asset('storage/' . $product->image) }}" alt="" class="product__thumbnail is-active" data-full="{{ asset('storage/' . $product->image) }}">
-                @foreach($product->images->sortByDesc('is_primary')->sortBy('position') as $image)
+                @foreach($product->images->sortBy([
+                    fn ($image) => $image->is_primary ? 0 : 1,
+                    fn ($image) => $image->position,
+                ]) as $image)
                     <img src="{{ asset('storage/' . $image->path) }}" alt="" class="product__thumbnail" data-full="{{ asset('storage/' . $image->path) }}">
                 @endforeach
             </div>

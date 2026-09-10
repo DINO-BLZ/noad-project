@@ -20,7 +20,7 @@ class CreateOrderAction
         try {
             return DB::transaction(function () use ($data, $userId, $sessionId, $checkoutToken) {
                 if ($checkoutToken) {
-                    $existingOrder = Order::where('checkout_token', $checkoutToken)->first();
+                    $existingOrder = $this->orderForCheckoutToken($checkoutToken, $userId);
 
                     if ($existingOrder) {
                         return $existingOrder->fresh(['items']);
@@ -103,14 +103,24 @@ class CreateOrderAction
             });
         } catch (QueryException $exception) {
             if ($checkoutToken && $exception->getCode() === '23000') {
-                $existingOrder = Order::where('checkout_token', $checkoutToken)->first();
+                $existingOrder = $this->orderForCheckoutToken($checkoutToken, $userId);
 
                 if ($existingOrder) {
                     return $existingOrder->fresh(['items']);
                 }
+
+                abort(422, "Cette session de commande n'est plus valide.");
             }
 
             throw $exception;
         }
+    }
+
+    private function orderForCheckoutToken(string $checkoutToken, ?int $userId): ?Order
+    {
+        return Order::query()
+            ->where('checkout_token', $checkoutToken)
+            ->where('user_id', $userId)
+            ->first();
     }
 }

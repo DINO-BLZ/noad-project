@@ -88,6 +88,22 @@ php artisan serve
 
 L'app est accessible sur `http://localhost:8000`.
 
+## Planificateur (drops, recherche)
+
+Les jobs suivants sont enregistrés dans le scheduler Laravel :
+
+- chaque minute : email les whitelistés dont le drop vient de commencer (`drops:notify-opened`)
+- chaque minute : expire les demandes encore `pending` d'un drop dont `end_date` est passée (`drops:expire-pending-whitelists`)
+- chaque jour à 03:00 UTC : réindexe le catalogue produit (`search:reindex-products`, no-op si `SCOUT_DRIVER=null`)
+
+En production, ajoute une crontab :
+
+```bash
+* * * * * cd /chemin/vers/noad && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Sans cette ligne, les commandes existent mais ne se déclenchent pas toutes seules.
+
 ## Tests
 
 La suite principale tourne en SQLite en mémoire, sans dépendance externe :
@@ -110,7 +126,7 @@ vendor/bin/pint
 
 ## Intégration continue
 
-Chaque push/PR sur `main` déclenche automatiquement, via GitHub Actions (`.github/workflows/tests.yml`) :
+Chaque push/PR (toutes branches) déclenche automatiquement, via GitHub Actions (`.github/workflows/tests.yml`) :
 - vérification du style (Pint)
 - suite de tests SQLite
 - suite de tests MySQL (verrouillage pessimiste, avec un vrai conteneur MySQL)

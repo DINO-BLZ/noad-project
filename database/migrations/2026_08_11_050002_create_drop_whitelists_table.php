@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('drop_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->enum('status', ['pending', 'approved', 'rejected', 'expired'])->default('pending');
             $table->timestamps();
             $table->unique(['drop_id', 'user_id']);
         });
