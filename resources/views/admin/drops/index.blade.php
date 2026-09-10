@@ -19,7 +19,8 @@
                     <h3>{{ $drop->name }}</h3>
                     <p>{{ $drop->start_date->format('d/m/Y H:i') }} → {{ $drop->end_date->format('d/m/Y H:i') }}</p>
                 </div>
-               <x-status-badge :status="$drop->status" />
+                              <x-status-badge :status="$drop->status" />
+                <div class="admin-drop-row__actions">
                     <a href="{{ route('admin.drops.edit', $drop) }}">Gérer</a>
                     <form action="{{ route('admin.drops.destroy', $drop) }}" method="POST" onsubmit="return confirm('Supprimer ce drop ?');">
                         @csrf
@@ -28,6 +29,7 @@
                     </form>
                 </div>
             </div>
+        </div>
         @empty
             <p class="admin-panel__empty">Aucun drop créé pour le moment.</p>
         @endforelse

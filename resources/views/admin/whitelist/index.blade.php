@@ -9,7 +9,6 @@
         <a href="{{ route('admin.whitelist.index', ['status' => 'pending']) }}" class="{{ request('status') === 'pending' ? 'is-active' : '' }}">En attente</a>
         <a href="{{ route('admin.whitelist.index', ['status' => 'approved']) }}" class="{{ request('status') === 'approved' ? 'is-active' : '' }}">Acceptées</a>
         <a href="{{ route('admin.whitelist.index', ['status' => 'rejected']) }}" class="{{ request('status') === 'rejected' ? 'is-active' : '' }}">Refusées</a>
-        <a href="{{ route('admin.whitelist.index', ['status' => 'expired']) }}" class="{{ request('status') === 'expired' ? 'is-active' : '' }}">Expirées</a>
     </div>
 
     @if(session('success'))
@@ -20,7 +19,7 @@
         <div class="whitelist-row">
             <span>{{ $req->user->name }} ({{ $req->user->email }})</span>
             <span>{{ $req->drop->name }}</span>
-            <x-status-badge :status="$req->status" />
+          <x-status-badge :status="$req->status" />
 
             @if($req->status === 'pending')
                 <div class="whitelist-row__actions">
