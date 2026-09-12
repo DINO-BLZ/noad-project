@@ -24,34 +24,56 @@ class CartController extends Controller
         ]);
     }
 
-    public function add(AddToCartRequest $request, Product $product, AddToCartAction $action)
-    {
-        if (Auth::check() && Auth::user()->is_admin) {
-            return response()->json(['message' => 'Les comptes administrateurs ne peuvent pas effectuer d\'achats.'], 403);
-        }
+   public function add(
+    AddToCartRequest $request,
+    Product $product,
+    AddToCartAction $action
+) {
+    if (Auth::check() && Auth::user()->is_admin) {
+        return response()->json([
+            'message' => 'Les comptes administrateurs ne peuvent pas effectuer d\'achats.'
+        ], 403);
+    }
 
+    try {
+        $summary = $action->execute(
+            $product,
+            (int) $request->variant_id
+        );
+    } catch (HttpException $e) {
+        return response()->json([
+            'message' => $e->getMessage()
+        ], $e->getStatusCode());
+    }
+
+    return response()->json($summary);
+}
+
+    public function update(
+        UpdateCartItemRequest $request,
+        $variantId,
+        UpdateCartAction $action
+    ) {
         try {
-            $summary = $action->execute($product, $request->variant_id);
+            $summary = $action->execute(
+                (int) $variantId,
+                $request->quantity
+            );
         } catch (HttpException $e) {
-            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], $e->getStatusCode());
         }
 
         return response()->json($summary);
     }
 
-    public function update(UpdateCartItemRequest $request, $variantId, UpdateCartAction $action)
-    {
-        try {
-            $summary = $action->execute((int) $variantId, $request->quantity);
-        } catch (HttpException $e) {
-            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
-        }
-
-        return response()->json($summary);
-    }
-
-    public function remove($variantId, RemoveCartItemAction $action)
-    {
-        return response()->json($action->execute((int) $variantId));
+    public function remove(
+        $variantId,
+        RemoveCartItemAction $action
+    ) {
+        return response()->json(
+            $action->execute((int) $variantId)
+        );
     }
 }

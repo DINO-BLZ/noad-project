@@ -14,7 +14,19 @@ class AddToCartRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'variant_id' => 'required|exists:variants,id',
+            'variant_id' => ['required', 'integer', 'exists:variants,id'],
+            'quantity' => ['nullable', 'integer', 'min:1', 'max:99'],
+            'intent' => ['nullable', 'in:cart,buy_now'],
         ];
+    }
+
+    public function quantity(): int
+    {
+        return (int) ($this->validated()['quantity'] ?? 1);
+    }
+
+    public function intent(): string
+    {
+        return $this->validated()['intent'] ?? 'cart';
     }
 }
