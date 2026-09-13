@@ -341,7 +341,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     */
 
                     document
-                        .querySelectorAll(".cart__total-amount")
+                        .querySelectorAll(".cart__grand-total-value")
                         .forEach((element) => {
 
                             if (data.total !== undefined) {

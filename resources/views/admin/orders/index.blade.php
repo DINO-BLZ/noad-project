@@ -4,1235 +4,1233 @@
 
 <div class="admin-orders-page">
 
-    {{-- =========================================================
-         01. BARRE SUPÉRIEURE OPÉRATIONNELLE & TÉLÉMÉTRIE
-    ========================================================== --}}
+```
+{{-- =========================================================
+     01. BARRE SUPÉRIEURE OPÉRATIONNELLE & TÉLÉMÉTRIE
+========================================================== --}}
 
-    <div class="ops-telemetry-strip">
+<div class="ops-telemetry-strip">
 
-        <div class="telemetry-left">
+    <div class="telemetry-left">
 
-            <span class="ops-badge">
-                OPS CORE V4.2
+        <span class="ops-badge">
+            OPS CORE V4.2
+        </span>
+
+        <span class="ops-sub">
+            POSTE DE CONTRÔLE LOGISTIQUE
+        </span>
+
+        <span class="sep">•</span>
+
+        <span class="carrier-sync">
+            <span class="dot-carrier-live">●</span>
+            YALIDINE / ALG EXPRESS SYNC : ONLINE
+        </span>
+    </div>
+
+    <div class="telemetry-right">
+
+        <span class="sys-slogan">
+            DEFEND YOUR PRINCIPLES
+        </span>
+
+        <span class="carrier-clock">
+            {{ now()->format('H:i:s') }} UTC+1
+        </span>
+    </div>
+</div>
+
+
+{{-- =========================================================
+     02. EN-TÊTE DE PAGE & ACTIONS GLOBALES
+========================================================== --}}
+
+<header class="orders-head-section">
+
+    <div class="head-titles">
+
+        <h1 class="orders-page-title">
+            NOAD — COMMANDES &amp; EXPÉDITIONS
+        </h1>
+
+        <span class="national-coverage-tag">
+            TERRITOIRE NATIONAL : 58 WILAYAS
+        </span>
+    </div>
+
+    <div class="head-actions-stack">
+
+        <button
+            type="button"
+            class="btn-ops-outline"
+        >
+            <span class="icon">⤓</span>
+            EXPORTER MANIFESTE (.CSV)
+        </button>
+
+        <button
+            type="button"
+            class="btn-ops-solid"
+        >
+            <span class="icon">🖨</span>
+            BORDEREAUX DE TRANSPORT
+            ({{ $toShipOrdersCount ?? 0 }})
+        </button>
+    </div>
+</header>
+
+
+{{-- =========================================================
+     03. KPIs LOGISTIQUES
+========================================================== --}}
+
+<section class="orders-kpi-grid">
+
+    {{-- KPI 1 --}}
+
+    <div class="ops-kpi-card">
+
+        <div class="kpi-top">
+
+            <span class="kpi-label">
+                VOLUME GLOBAL
             </span>
 
-            <span class="ops-sub">
-                POSTE DE CONTRÔLE LOGISTIQUE
+            <span class="kpi-icon">
+                🗂
             </span>
-
-            <span class="sep">•</span>
-
-            <span class="carrier-sync">
-                <span class="dot-carrier-live">●</span>
-                YALIDINE / ALG EXPRESS SYNC : ONLINE
-            </span>
-
         </div>
 
-        <div class="telemetry-right">
+        <div class="kpi-value-row">
 
-            <span class="sys-slogan">
-                DEFEND YOUR PRINCIPLES
+            <span class="kpi-val">
+                {{ $totalOrdersCount ?? 0 }}
             </span>
 
-            <span class="carrier-clock">
-                {{ now()->format('H:i:s') }} UTC+1
+            <span class="kpi-sub-unit">
+                COMMANDES
             </span>
-
         </div>
 
+        <div class="kpi-foot-row">
+
+            <span class="meta-tag">
+                CYCLE EN COURS
+            </span>
+
+            <span class="stat-growth positive">
+                +14% S/S-1
+            </span>
+        </div>
     </div>
 
 
-    {{-- =========================================================
-         02. EN-TÊTE DE PAGE & ACTIONS GLOBALES
-    ========================================================== --}}
+    {{-- KPI 2 --}}
 
-    <header class="orders-head-section">
+    <div class="ops-kpi-card alert-card">
 
-        <div class="head-titles">
+        <div class="kpi-top">
 
-            <h1 class="orders-page-title">
-                NOAD — COMMANDES &amp; EXPÉDITIONS
-            </h1>
-
-            <span class="national-coverage-tag">
-                TERRITOIRE NATIONAL : 58 WILAYAS
+            <span class="kpi-label">
+                À EXPÉDIER
             </span>
 
+            <span class="kpi-icon alert-col">
+                📦
+            </span>
         </div>
 
-        <div class="head-actions-stack">
+        <div class="kpi-value-row">
 
-            <button
-                type="button"
-                class="btn-ops-outline"
-            >
-                <span class="icon">⤓</span>
-                EXPORTER MANIFESTE (.CSV)
-            </button>
+            <span class="kpi-val alert-val">
+                {{ $toShipOrdersCount ?? 0 }}
+            </span>
 
-            <button
-                type="button"
-                class="btn-ops-solid"
-            >
-                <span class="icon">🖨</span>
-                BORDEREAUX DE TRANSPORT
-                ({{ $toShipOrdersCount ?? 0 }})
-            </button>
-
+            <span class="kpi-sub-unit">
+                COLIS HUB
+            </span>
         </div>
 
-    </header>
+        <div class="kpi-foot-row">
+
+            <span class="meta-tag">
+                DÉPART ALGER HUB
+            </span>
+
+            <span class="stat-growth alert-tag">
+                CRITIQUE &lt; 3H
+            </span>
+        </div>
+    </div>
 
 
-    {{-- =========================================================
-         03. KPIs LOGISTIQUES
-    ========================================================== --}}
+    {{-- KPI 3 --}}
 
-    <section class="orders-kpi-grid">
+    <div class="ops-kpi-card">
 
-        {{-- KPI 1 --}}
-        <div class="ops-kpi-card">
+        <div class="kpi-top">
 
-            <div class="kpi-top">
+            <span class="kpi-label">
+                EN TRANSIT EXPÉDITIONS
+            </span>
 
-                <span class="kpi-label">
-                    VOLUME GLOBAL
-                </span>
+            <span class="kpi-icon">
+                🚚
+            </span>
+        </div>
 
-                <span class="kpi-icon">
-                    🗂
-                </span>
+        <div class="kpi-value-row">
 
-            </div>
+            <span class="kpi-val">
+                {{ $inTransitCount ?? 0 }}
+            </span>
 
-            <div class="kpi-value-row">
+            <span class="kpi-sub-unit">
+                SUR ROUTE
+            </span>
+        </div>
 
-                <span class="kpi-val">
+        <div class="kpi-foot-row">
+
+            <span class="meta-tag">
+                ALG EXPRESS / YALIDINE
+            </span>
+
+            <span class="meta-white">
+                24 WILAYAS
+            </span>
+        </div>
+    </div>
+
+
+    {{-- KPI 4 --}}
+
+    <div class="ops-kpi-card">
+
+        <div class="kpi-top">
+
+            <span class="kpi-label">
+                LIVRÉES &amp; ENCAISSÉES
+            </span>
+
+            <span class="kpi-icon">
+                ✓
+            </span>
+        </div>
+
+        <div class="kpi-value-row">
+
+            <span class="kpi-val">
+                {{ $deliveredCount ?? 0 }}
+            </span>
+
+            <span class="kpi-sub-unit">
+                COMPLÉTÉES
+            </span>
+        </div>
+
+        <div class="kpi-foot-row">
+
+            <span class="meta-tag">
+                TAUX SUCCÈS 1ST RUN
+            </span>
+
+            <span class="stat-growth positive">
+                96.8%
+            </span>
+        </div>
+    </div>
+
+
+    {{-- KPI 5 --}}
+
+    <div class="ops-kpi-card">
+
+        <div class="kpi-top">
+
+            <span class="kpi-label">
+                COD EN ATTENTE
+            </span>
+
+            <span class="kpi-icon">
+                💵
+            </span>
+        </div>
+
+        <div class="kpi-value-row">
+
+            <span class="kpi-val">
+                {{ number_format($pendingCodAmount ?? 0, 0, ',', ' ') }}
+            </span>
+
+            <span class="kpi-currency">
+                DA
+            </span>
+        </div>
+
+        <div class="kpi-foot-row">
+
+            <span class="meta-tag">
+                À RAPPROCHER BANQUE
+            </span>
+
+            <span class="stat-growth alert-tag">
+                {{ $pendingVouchersCount ?? 0 }} BORDEREAUX
+            </span>
+        </div>
+    </div>
+
+</section>
+
+
+{{-- =========================================================
+     04. FILTRES AVANCÉS & ONGLETS
+========================================================== --}}
+
+<div class="filters-master-block">
+
+    {{-- Onglets --}}
+
+    <div class="status-tabs-row">
+
+        <div class="tabs-list">
+
+            <a
+                href="{{ request()->fullUrlWithQuery(['status' => null]) }}"
+                class="tab-btn {{ !request('status') ? 'active' : '' }}"
+            >
+                TOUS
+
+                <span class="tab-count">
                     {{ $totalOrdersCount ?? 0 }}
                 </span>
+            </a>
 
-                <span class="kpi-sub-unit">
-                    COMMANDES
-                </span>
+            <a
+                href="{{ request()->fullUrlWithQuery(['status' => 'to_ship']) }}"
+                class="tab-btn {{ request('status') === 'to_ship' ? 'active' : '' }}"
+            >
+                À EXPÉDIER
 
-            </div>
-
-            <div class="kpi-foot-row">
-
-                <span class="meta-tag">
-                    CYCLE EN COURS
-                </span>
-
-                <span class="stat-growth positive">
-                    +14% S/S-1
-                </span>
-
-            </div>
-
-        </div>
-
-
-        {{-- KPI 2 --}}
-        <div class="ops-kpi-card alert-card">
-
-            <div class="kpi-top">
-
-                <span class="kpi-label">
-                    À EXPÉDIER
-                </span>
-
-                <span class="kpi-icon alert-col">
-                    📦
-                </span>
-
-            </div>
-
-            <div class="kpi-value-row">
-
-                <span class="kpi-val alert-val">
+                <span class="tab-count alert">
                     {{ $toShipOrdersCount ?? 0 }}
                 </span>
+            </a>
 
-                <span class="kpi-sub-unit">
-                    COLIS HUB
-                </span>
+            <a
+                href="{{ request()->fullUrlWithQuery(['status' => 'in_transit']) }}"
+                class="tab-btn {{ request('status') === 'in_transit' ? 'active' : '' }}"
+            >
+                EN TRANSIT
 
-            </div>
-
-            <div class="kpi-foot-row">
-
-                <span class="meta-tag">
-                    DÉPART ALGER HUB
-                </span>
-
-                <span class="stat-growth alert-tag">
-                    CRITIQUE &lt; 3H
-                </span>
-
-            </div>
-
-        </div>
-
-
-        {{-- KPI 3 --}}
-        <div class="ops-kpi-card">
-
-            <div class="kpi-top">
-
-                <span class="kpi-label">
-                    EN TRANSIT EXPÉDITIONS
-                </span>
-
-                <span class="kpi-icon">
-                    🚚
-                </span>
-
-            </div>
-
-            <div class="kpi-value-row">
-
-                <span class="kpi-val">
+                <span class="tab-count">
                     {{ $inTransitCount ?? 0 }}
                 </span>
+            </a>
 
-                <span class="kpi-sub-unit">
-                    SUR ROUTE
-                </span>
+            <a
+                href="{{ request()->fullUrlWithQuery(['status' => 'delivered']) }}"
+                class="tab-btn {{ request('status') === 'delivered' ? 'active' : '' }}"
+            >
+                LIVRÉES
 
-            </div>
-
-            <div class="kpi-foot-row">
-
-                <span class="meta-tag">
-                    ALG EXPRESS / YALIDINE
-                </span>
-
-                <span class="meta-white">
-                    24 WILAYAS
-                </span>
-
-            </div>
-
-        </div>
-
-
-        {{-- KPI 4 --}}
-        <div class="ops-kpi-card">
-
-            <div class="kpi-top">
-
-                <span class="kpi-label">
-                    LIVRÉES &amp; ENCAISSÉES
-                </span>
-
-                <span class="kpi-icon">
-                    ✓
-                </span>
-
-            </div>
-
-            <div class="kpi-value-row">
-
-                <span class="kpi-val">
+                <span class="tab-count">
                     {{ $deliveredCount ?? 0 }}
                 </span>
+            </a>
 
-                <span class="kpi-sub-unit">
-                    COMPLÉTÉES
+            <a
+                href="{{ request()->fullUrlWithQuery(['status' => 'incident']) }}"
+                class="tab-btn {{ request('status') === 'incident' ? 'active' : '' }}"
+            >
+                INCIDENTS / RETOURS
+
+                <span class="tab-count alert-bg">
+                    {{ $incidentCount ?? 0 }}
                 </span>
+            </a>
 
-            </div>
+        </div>
 
-            <div class="kpi-foot-row">
+        <div class="sync-indicator-block">
 
-                <span class="meta-tag">
-                    TAUX SUCCÈS 1ST RUN
-                </span>
+            <span class="sync-icon">
+                ↺
+            </span>
 
-                <span class="stat-growth positive">
-                    96.8%
-                </span>
+            <span class="sync-label">
+                SYNC AUTOMATIQUE : 45s
+            </span>
 
-            </div>
+        </div>
+
+    </div>
+
+
+    {{-- Recherche + filtres --}}
+
+    <form
+        method="GET"
+        action="{{ route('admin.orders.index') }}"
+        class="search-filter-controls"
+    >
+
+        {{-- Recherche --}}
+
+        <div class="search-input-group">
+
+            <span class="search-lens">
+                🔍
+            </span>
+
+            <input
+                type="text"
+                name="search"
+                value="{{ request('search') }}"
+                placeholder="RECHERCHER PAR N° COMMANDE, NOM CLIENT, TÉLÉPHONE (+213)..."
+                class="input-search-ops"
+            >
 
         </div>
 
 
-        {{-- KPI 5 --}}
-        <div class="ops-kpi-card">
+        {{-- Wilaya --}}
 
-            <div class="kpi-top">
+        <div class="select-group">
 
-                <span class="kpi-label">
-                    COD EN ATTENTE
-                </span>
+            <select
+                name="wilaya"
+                class="select-ops"
+            >
 
-                <span class="kpi-icon">
-                    💵
-                </span>
+                <option value="">
+                    WILAYAS D'EXPÉDITION (58 TOUTES)
+                </option>
 
-            </div>
-
-            <div class="kpi-value-row">
-
-                <span class="kpi-val">
-                    {{ number_format($pendingCodAmount ?? 0, 0, ',', ' ') }}
-                </span>
-
-                <span class="kpi-currency">
-                    DA
-                </span>
-
-            </div>
-
-            <div class="kpi-foot-row">
-
-                <span class="meta-tag">
-                    À RAPPROCHER BANQUE
-                </span>
-
-                <span class="stat-growth alert-tag">
-                    {{ $pendingVouchersCount ?? 0 }} BORDEREAUX
-                </span>
-
-            </div>
-
-        </div>
-
-    </section>
-
-
-    {{-- =========================================================
-         04. FILTRES AVANCÉS & ONGLETS
-    ========================================================== --}}
-
-    <div class="filters-master-block">
-
-        {{-- Onglets --}}
-        <div class="status-tabs-row">
-
-            <div class="tabs-list">
-
-                <a
-                    href="{{ request()->fullUrlWithQuery(['status' => null]) }}"
-                    class="tab-btn {{ !request('status') ? 'active' : '' }}"
+                <option
+                    value="16"
+                    {{ request('wilaya') == '16' ? 'selected' : '' }}
                 >
-                    TOUS
-                    <span class="tab-count">
-                        {{ $totalOrdersCount ?? 0 }}
-                    </span>
-                </a>
+                    16 — ALGER
+                </option>
 
-                <a
-                    href="{{ request()->fullUrlWithQuery(['status' => 'to_ship']) }}"
-                    class="tab-btn {{ request('status') === 'to_ship' ? 'active' : '' }}"
+                <option
+                    value="31"
+                    {{ request('wilaya') == '31' ? 'selected' : '' }}
                 >
-                    À EXPÉDIER
-                    <span class="tab-count alert">
-                        {{ $toShipOrdersCount ?? 0 }}
-                    </span>
-                </a>
+                    31 — ORAN
+                </option>
 
-                <a
-                    href="{{ request()->fullUrlWithQuery(['status' => 'in_transit']) }}"
-                    class="tab-btn {{ request('status') === 'in_transit' ? 'active' : '' }}"
+                <option
+                    value="25"
+                    {{ request('wilaya') == '25' ? 'selected' : '' }}
                 >
-                    EN TRANSIT
-                    <span class="tab-count">
-                        {{ $inTransitCount ?? 0 }}
-                    </span>
-                </a>
+                    25 — CONSTANTINE
+                </option>
 
-                <a
-                    href="{{ request()->fullUrlWithQuery(['status' => 'delivered']) }}"
-                    class="tab-btn {{ request('status') === 'delivered' ? 'active' : '' }}"
+                <option
+                    value="09"
+                    {{ request('wilaya') == '09' ? 'selected' : '' }}
                 >
-                    LIVRÉES
-                    <span class="tab-count">
-                        {{ $deliveredCount ?? 0 }}
-                    </span>
-                </a>
+                    09 — BLIDA
+                </option>
 
-                <a
-                    href="{{ request()->fullUrlWithQuery(['status' => 'incident']) }}"
-                    class="tab-btn {{ request('status') === 'incident' ? 'active' : '' }}"
+                <option
+                    value="19"
+                    {{ request('wilaya') == '19' ? 'selected' : '' }}
                 >
-                    INCIDENTS / RETOURS
-                    <span class="tab-count alert-bg">
-                        {{ $incidentCount ?? 0 }}
-                    </span>
-                </a>
+                    19 — SÉTIF
+                </option>
 
-            </div>
+                <option
+                    value="30"
+                    {{ request('wilaya') == '30' ? 'selected' : '' }}
+                >
+                    30 — OUARGLA / HASSI MESSAOUD
+                </option>
 
-            <div class="sync-indicator-block">
-
-                <span class="sync-icon">
-                    ↺
-                </span>
-
-                <span class="sync-label">
-                    SYNC AUTOMATIQUE : 45s
-                </span>
-
-            </div>
+            </select>
 
         </div>
 
 
-        {{-- Recherche + filtres --}}
-        <form
-            method="GET"
-            action="{{ route('admin.orders.index') }}"
-            class="search-filter-controls"
+        {{-- Drop --}}
+
+        <div class="select-group">
+
+            <select
+                name="drop"
+                class="select-ops"
+            >
+
+                <option value="">
+                    TOUS LES DROPS
+                </option>
+
+                <option
+                    value="1"
+                    {{ request('drop') == '1' ? 'selected' : '' }}
+                >
+                    DROP 01 — THE RESISTANCE
+                </option>
+
+                <option
+                    value="2"
+                    {{ request('drop') == '2' ? 'selected' : '' }}
+                >
+                    DROP 02 — URBAN ARMOUR
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <button
+            type="submit"
+            class="btn-more-filters"
         >
 
-            {{-- Recherche --}}
-            <div class="search-input-group">
+            <span class="icon">
+                ⚙
+            </span>
 
-                <span class="search-lens">
-                    🔍
-                </span>
+            FILTRER
 
-                <input
-                    type="text"
-                    name="search"
-                    value="{{ request('search') }}"
-                    placeholder="RECHERCHER PAR N° COMMANDE, NOM CLIENT, TÉLÉPHONE (+213)..."
-                    class="input-search-ops"
-                >
+        </button>
 
-            </div>
-
-
-            {{-- Wilaya --}}
-            <div class="select-group">
-
-                <select
-                    name="wilaya"
-                    class="select-ops"
-                >
-
-                    <option value="">
-                        WILAYAS D'EXPÉDITION (58 TOUTES)
-                    </option>
-
-                    <option
-                        value="16"
-                        {{ request('wilaya') == '16' ? 'selected' : '' }}
-                    >
-                        16 — ALGER
-                    </option>
-
-                    <option
-                        value="31"
-                        {{ request('wilaya') == '31' ? 'selected' : '' }}
-                    >
-                        31 — ORAN
-                    </option>
-
-                    <option
-                        value="25"
-                        {{ request('wilaya') == '25' ? 'selected' : '' }}
-                    >
-                        25 — CONSTANTINE
-                    </option>
-
-                    <option
-                        value="09"
-                        {{ request('wilaya') == '09' ? 'selected' : '' }}
-                    >
-                        09 — BLIDA
-                    </option>
-
-                    <option
-                        value="19"
-                        {{ request('wilaya') == '19' ? 'selected' : '' }}
-                    >
-                        19 — SÉTIF
-                    </option>
-
-                    <option
-                        value="30"
-                        {{ request('wilaya') == '30' ? 'selected' : '' }}
-                    >
-                        30 — OUARGLA / HASSI MESSAOUD
-                    </option>
-
-                </select>
-
-            </div>
-
-
-            {{-- Drop --}}
-            <div class="select-group">
-
-                <select
-                    name="drop"
-                    class="select-ops"
-                >
-
-                    <option value="">
-                        TOUS LES DROPS
-                    </option>
-
-                    <option
-                        value="1"
-                        {{ request('drop') == '1' ? 'selected' : '' }}
-                    >
-                        DROP 01 — THE RESISTANCE
-                    </option>
-
-                    <option
-                        value="2"
-                        {{ request('drop') == '2' ? 'selected' : '' }}
-                    >
-                        DROP 02 — URBAN ARMOUR
-                    </option>
-
-                </select>
-
-            </div>
-
-
-            <button
-                type="submit"
-                class="btn-more-filters"
-            >
-                <span class="icon">
-                    ⚙
-                </span>
-
-                FILTRER
-            </button>
-
-        </form>
-
-    </div>
-
-
-    {{-- =========================================================
-         05. TABLEAU DES COMMANDES
-    ========================================================== --}}
-
-    <div class="orders-table-wrapper">
-
-        <table class="orders-tactical-table">
-
-            <thead>
-
-                <tr>
-
-                    <th class="col-check">
-                        <input
-                            type="checkbox"
-                            id="select-all"
-                            class="custom-check"
-                        >
-                    </th>
-
-                    <th>
-                        COMMANDE &amp; HEURE
-                    </th>
-
-                    <th>
-                        DESTINATAIRE &amp; DESTINATION
-                    </th>
-
-                    <th>
-                        ARTICLES &amp; CONTENU
-                    </th>
-
-                    <th>
-                        TOTAL TTC &amp; RÈGLEMENT
-                    </th>
-
-                    <th>
-                        STATUT LOGISTIQUE
-                    </th>
-
-                    <th class="text-right">
-                        ACTIONS
-                    </th>
-
-                </tr>
-
-            </thead>
-
-
-            <tbody>
-
-                @forelse($orders as $order)
-
-                    <tr>
-
-                        {{-- Checkbox --}}
-                        <td class="col-check">
-
-                            <input
-                                type="checkbox"
-                                name="selected_orders[]"
-                                value="{{ $order->id }}"
-                                class="custom-check order-checkbox"
-                            >
-
-                        </td>
-
-
-                        {{-- Commande --}}
-                        <td>
-
-                            <div class="order-id-stack">
-
-                                <div class="id-row">
-
-                                    <span class="dot-red-select">
-                                        ●
-                                    </span>
-
-                                    <span class="order-hash">
-                                        {{ $order->reference ?? ('ND-2026-' . $order->id) }}
-                                    </span>
-
-                                    <span class="hub-badge">
-                                        HUB {{ sprintf('%02d', $order->wilaya_code ?? 16) }}
-                                    </span>
-
-                                </div>
-
-                                <span class="order-date-meta">
-
-                                    @if($order->created_at)
-
-                                        {{ $order->created_at->diffForHumans() }}
-                                        •
-                                        {{ $order->created_at->format('H:i') }} CET
-
-                                    @else
-
-                                        DATE INCONNUE
-
-                                    @endif
-
-                                </span>
-
-                                <span class="tracking-code">
-
-                                    TRACK:
-                                    {{ $order->tracking_number ?? 'NON ASSIGNÉ' }}
-
-                                </span>
-
-                            </div>
-
-                        </td>
-
-
-                        {{-- Destinataire --}}
-                        <td>
-
-                            <div class="dest-cell">
-
-                                <div class="dest-avatar-row">
-
-                                    <span class="avatar-tag">
-
-                                        {{ strtoupper(
-                                            substr(
-                                                $order->fullname ?? 'NA',
-                                                0,
-                                                2
-                                            )
-                                        ) }}
-
-                                    </span>
-
-                                    <div class="dest-info">
-
-                                        <span class="dest-name">
-
-                                            {{ $order->fullname ?? 'CLIENT INCONNU' }}
-
-                                            <span class="wilaya-pill">
-
-                                                {{ sprintf('%02d', $order->wilaya_code ?? 16) }}
-                                                —
-                                                {{ strtoupper($order->city ?? 'ALGER') }}
-
-                                            </span>
-
-                                        </span>
-
-                                        <span class="dest-address">
-
-                                            {{ $order->address ?? 'Adresse non renseignée' }}
-
-                                        </span>
-
-                                        <span class="dest-phone">
-
-                                            {{ $order->phone ?? 'Téléphone non renseigné' }}
-
-                                        </span>
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                        </td>
-
-
-                        {{-- Articles --}}
-                        <td>
-
-                            <div class="items-cell">
-
-                                @php
-                                    $firstItem = $order->items->first();
-                                    $secondItem = $order->items->skip(1)->first();
-                                @endphp
-
-                                <span class="item-title">
-
-                                    {{ $firstItem?->product?->name ?? 'ARTICLE NOAD' }}
-
-                                </span>
-
-                                @if($secondItem)
-
-                                    <span class="item-secondary">
-
-                                        + {{ $secondItem->product?->name ?? 'ARTICLE' }}
-
-                                    </span>
-
-                                @endif
-
-                                <span class="item-count-meta">
-
-                                    {{ $order->items->count() }}
-                                    ARTICLE{{ $order->items->count() > 1 ? 'S' : '' }}
-
-                                </span>
-
-                            </div>
-
-                        </td>
-
-
-                        {{-- Prix --}}
-                        <td>
-
-                            <div class="pricing-cell">
-
-                                <span class="total-val">
-
-                                    {{ number_format(
-                                        $order->total ?? 0,
-                                        0,
-                                        ',',
-                                        ' '
-                                    ) }}
-                                    DA
-
-                                </span>
-
-                                @if(($order->payment_method ?? '') === 'cod')
-
-                                    <span class="payment-method cod">
-                                        ● CASH À LA LIVRAISON (COD)
-                                    </span>
-
-                                @else
-
-                                    <span class="payment-method cib">
-                                        ● {{ strtoupper($order->payment_method ?? 'PAIEMENT') }}
-                                    </span>
-
-                                @endif
-
-                                <span class="shipping-fee-meta">
-
-                                    Frais d'envoi :
-                                    {{ number_format(
-                                        $order->shipping_cost ?? 0,
-                                        0,
-                                        ',',
-                                        ' '
-                                    ) }}
-                                    DA
-
-                                </span>
-
-                            </div>
-
-                        </td>
-
-
-                        {{-- Statut --}}
-                        <td>
-
-                            @php
-
-                                $statusClasses = [
-                                    'to_ship'    => 'to-prepare',
-                                    'in_transit' => 'in-transit',
-                                    'delivered'  => 'delivered',
-                                    'cancelled'  => 'incident',
-                                    'incident'   => 'incident',
-                                ];
-
-                                $statusLabels = [
-                                    'to_ship'    => 'À EXPÉDIER',
-                                    'in_transit' => 'EN TRANSIT',
-                                    'delivered'  => 'LIVRÉ & ENCAISSÉ',
-                                    'cancelled'  => 'ANNULÉE',
-                                    'incident'   => 'INCIDENT',
-                                ];
-
-                                $statusClass =
-                                    $statusClasses[$order->status ?? '']
-                                    ?? 'to-prepare';
-
-                                $statusLabel =
-                                    $statusLabels[$order->status ?? '']
-                                    ?? strtoupper($order->status ?? 'À PRÉPARER');
-
-                            @endphp
-
-                            <span class="status-tag {{ $statusClass }}">
-
-                                {{ $statusLabel }}
-
-                            </span>
-
-                            <span class="sub-status-label">
-
-                                {{ $order->status_sub ?? 'SUIVI LOGISTIQUE' }}
-
-                            </span>
-
-                        </td>
-
-
-                        {{-- Actions --}}
-                        <td class="text-right">
-
-                            <div class="action-buttons-group">
-
-                                <a
-                                    href="{{ route('admin.orders.show', $order->id) }}"
-                                    class="btn-action-icon"
-                                    title="Voir le détail"
-                                >
-                                    👁
-                                </a>
-
-                                <button
-                                    type="button"
-                                    class="btn-action-icon"
-                                    title="Bordereau"
-                                >
-                                    📄
-                                </button>
-
-                            </div>
-
-                        </td>
-
-                    </tr>
-
-                @empty
-
-                    {{-- Aucun résultat --}}
-                    <tr>
-
-                        <td
-                            colspan="7"
-                            class="empty-orders"
-                        >
-
-                            <div class="empty-orders-content">
-
-                                <span class="empty-icon">
-                                    ◌
-                                </span>
-
-                                <strong>
-                                    AUCUNE COMMANDE TROUVÉE
-                                </strong>
-
-                                <span>
-                                    Aucun résultat ne correspond aux filtres actuels.
-                                </span>
-
-                            </div>
-
-                        </td>
-
-                    </tr>
-
-                @endforelse
-
-            </tbody>
-
-        </table>
-
-
-        {{-- Pagination Laravel --}}
-        @if($orders instanceof \Illuminate\Pagination\AbstractPaginator)
-
-            <div class="table-pagination-footer">
-
-                <div class="pag-left">
-
-                    <span class="pag-counter">
-
-                        AFFICHAGE :
-                        {{ $orders->firstItem() ?? 0 }}
-                        -
-                        {{ $orders->lastItem() ?? 0 }}
-                        SUR
-                        {{ $orders->total() }}
-                        EXPÉDITIONS
-
-                    </span>
-
-                    <span class="pag-sep">
-                        /
-                    </span>
-
-                    <span class="pag-lines-select">
-
-                        LIGNES PAR PAGE :
-
-                        <strong class="text-white">
-                            {{ $orders->perPage() }}
-                        </strong>
-
-                    </span>
-
-                </div>
-
-
-                <div class="pag-right">
-
-                    {{ $orders->onEachSide(1)->links() }}
-
-                </div>
-
-            </div>
-
-        @endif
-
-    </div>
-
-
-    {{-- =========================================================
-         06. TÉLÉMÉTRIE TRANSPORTEURS & ALERTES
-    ========================================================== --}}
-
-    <section class="bottom-logistics-grid">
-
-
-        {{-- =====================================================
-             TRANSPORTEURS
-        ====================================================== --}}
-
-        <div class="telemetry-box">
-
-            <div class="box-head">
-
-                <div class="box-head-title">
-
-                    <span class="network-icon">
-                        ⬡
-                    </span>
-
-                    <h2 class="box-title">
-                        TÉLÉMÉTRIE TRANSPORTEURS • ALGÉRIE 58 WILAYAS
-                    </h2>
-
-                </div>
-
-                <span class="api-tag">
-                    PASSERELLE API EN TEMPS RÉEL
-                </span>
-
-            </div>
-
-
-            <div class="carriers-sub-grid">
-
-
-                {{-- Algérie Express --}}
-                <div class="carrier-node-card">
-
-                    <div class="carrier-node-head">
-
-                        <span class="carrier-brand-name">
-                            ALGÉRIE EXPRESS
-                        </span>
-
-                        <span class="carrier-dot-ok">
-                            ●
-                        </span>
-
-                    </div>
-
-                    <span class="carrier-zone">
-                        Région Centre &amp; Grand Alger
-                    </span>
-
-                    <div class="carrier-metric-row">
-
-                        <span class="metric-lbl">
-                            CHARGE LOGISTIQUE
-                        </span>
-
-                        <span class="metric-val">
-                            82%
-                        </span>
-
-                    </div>
-
-                    <div class="carrier-metric-row">
-
-                        <span class="metric-lbl">
-                            TEMPS MOYEN
-                        </span>
-
-                        <span class="metric-val highlight">
-                            18 HEURES
-                        </span>
-
-                    </div>
-
-                </div>
-
-
-                {{-- Yalidine --}}
-                <div class="carrier-node-card">
-
-                    <div class="carrier-node-head">
-
-                        <span class="carrier-brand-name">
-                            YALIDINE EXPRESS
-                        </span>
-
-                        <span class="carrier-dot-ok">
-                            ●
-                        </span>
-
-                    </div>
-
-                    <span class="carrier-zone">
-                        Réseau 58 Wilayas &amp; Relais
-                    </span>
-
-                    <div class="carrier-metric-row">
-
-                        <span class="metric-lbl">
-                            FLUX EN COURS
-                        </span>
-
-                        <span class="metric-val">
-                            {{ $inTransitCount ?? 0 }} COLIS
-                        </span>
-
-                    </div>
-
-                    <div class="carrier-metric-row">
-
-                        <span class="metric-lbl">
-                            TAUX LIVRAISON J+1
-                        </span>
-
-                        <span class="metric-val highlight">
-                            94.1%
-                        </span>
-
-                    </div>
-
-                </div>
-
-
-                {{-- Grand Sud --}}
-                <div class="carrier-node-card">
-
-                    <div class="carrier-node-head">
-
-                        <span class="carrier-brand-name">
-                            FLEET GRAND SUD
-                        </span>
-
-                        <span class="carrier-dot-warn">
-                            ●
-                        </span>
-
-                    </div>
-
-                    <span class="carrier-zone">
-                        Wilayas 30, 47, 11, 33, 58
-                    </span>
-
-                    <div class="carrier-metric-row">
-
-                        <span class="metric-lbl">
-                            DÉLAI MOYEN
-                        </span>
-
-                        <span class="metric-val">
-                            48H - 72H
-                        </span>
-
-                    </div>
-
-                    <div class="carrier-metric-row">
-
-                        <span class="metric-lbl">
-                            STABILITÉ RÉSEAU
-                        </span>
-
-                        <span class="metric-val warning">
-                            FLUIDE
-                        </span>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        {{-- =====================================================
-             ALERTES
-        ====================================================== --}}
-
-        <div class="alerts-box">
-
-            <div class="box-head">
-
-                <div class="box-head-title">
-
-                    <span class="alert-icon-head">
-                        ⚠
-                    </span>
-
-                    <h2 class="box-title">
-                        ALERTES &amp; RETENUES
-                    </h2>
-
-                </div>
-
-                <span class="badge-alert-count">
-                    {{ $incidentCount ?? 0 }} ACTIVES
-                </span>
-
-            </div>
-
-
-            <div class="alerts-list-content">
-
-                @if(($incidentCount ?? 0) > 0)
-
-                    <div class="alert-item-row">
-
-                        <div class="alert-item-icon">
-                            ⚡
-                        </div>
-
-                        <div class="alert-item-body">
-
-                            <div class="alert-item-title-row">
-
-                                <span class="alert-client-name">
-                                    INCIDENTS LOGISTIQUES
-                                </span>
-
-                            </div>
-
-                            <p class="alert-client-desc">
-
-                                Des commandes nécessitent une intervention administrative.
-
-                            </p>
-
-                            <span class="alert-delay-tag">
-
-                                ACTION REQUISE
-
-                            </span>
-
-                        </div>
-
-                    </div>
-
-                @else
-
-                    <div class="alert-item-row no-alert">
-
-                        <div class="alert-item-icon success">
-                            ✓
-                        </div>
-
-                        <div class="alert-item-body">
-
-                            <div class="alert-item-title-row">
-
-                                <span class="alert-client-name">
-                                    SYSTÈME NOMINAL
-                                </span>
-
-                            </div>
-
-                            <p class="alert-client-desc">
-
-                                Aucun incident logistique actif.
-
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                @endif
-
-            </div>
-
-
-            <div class="alerts-box-footer">
-
-                <button
-                    type="button"
-                    class="btn-open-incident-mgr"
-                >
-
-                    <span class="icon">
-                        🗂
-                    </span>
-
-                    OUVRIR LE GESTIONNAIRE D'INCIDENTS
-
-                </button>
-
-            </div>
-
-        </div>
-
-    </section>
+    </form>
 
 </div>
 
 
+{{-- =========================================================
+     05. TABLEAU DES COMMANDES
+========================================================== --}}
+
+<div class="orders-table-wrapper">
+
+    <table class="orders-tactical-table">
+
+        <thead>
+
+            <tr>
+
+                <th class="col-check">
+                    <input
+                        type="checkbox"
+                        id="select-all"
+                        class="custom-check"
+                    >
+                </th>
+
+                <th>
+                    COMMANDE &amp; HEURE
+                </th>
+
+                <th>
+                    DESTINATAIRE &amp; DESTINATION
+                </th>
+
+                <th>
+                    ARTICLES &amp; CONTENU
+                </th>
+
+                <th>
+                    TOTAL TTC &amp; RÈGLEMENT
+                </th>
+
+                <th>
+                    STATUT LOGISTIQUE
+                </th>
+
+                <th class="text-right">
+                    ACTIONS
+                </th>
+
+            </tr>
+
+        </thead>
+
+
+        <tbody>
+
+            @forelse($orders as $order)
+
+                <tr>
+
+                    {{-- Checkbox --}}
+
+                    <td class="col-check">
+
+                        <input
+                            type="checkbox"
+                            name="selected_orders[]"
+                            value="{{ $order->id }}"
+                            class="custom-check order-checkbox"
+                        >
+
+                    </td>
+
+
+                    {{-- Commande --}}
+
+                    <td>
+
+                        <div class="order-id-stack">
+
+                            <div class="id-row">
+
+                                <span class="dot-red-select">
+                                    ●
+                                </span>
+
+                                <span class="order-hash">
+                                    {{ $order->reference ?? ('ND-2026-' . $order->id) }}
+                                </span>
+
+                                <span class="hub-badge">
+                                    HUB {{ sprintf('%02d', $order->wilaya_code ?? 16) }}
+                                </span>
+
+                            </div>
+
+                            <span class="order-date-meta">
+
+                                @if($order->created_at)
+
+                                    {{ $order->created_at->diffForHumans() }}
+                                    •
+                                    {{ $order->created_at->format('H:i') }} CET
+
+                                @else
+
+                                    DATE INCONNUE
+
+                                @endif
+
+                            </span>
+
+                            <span class="tracking-code">
+                                TRACK:
+                                {{ $order->tracking_number ?? 'NON ASSIGNÉ' }}
+                            </span>
+
+                        </div>
+
+                    </td>
+
+
+                    {{-- Destinataire --}}
+
+                    <td>
+
+                        <div class="dest-cell">
+
+                            <div class="dest-avatar-row">
+
+                                <span class="avatar-tag">
+
+                                    {{ strtoupper(
+                                        substr(
+                                            $order->fullname ?? 'NA',
+                                            0,
+                                            2
+                                        )
+                                    ) }}
+
+                                </span>
+
+                                <div class="dest-info">
+
+                                    <span class="dest-name">
+
+                                        {{ $order->fullname ?? 'CLIENT INCONNU' }}
+
+                                        <span class="wilaya-pill">
+
+                                            {{ sprintf('%02d', $order->wilaya_code ?? 16) }}
+
+                                            —
+
+                                            {{ strtoupper($order->city ?? 'ALGER') }}
+
+                                        </span>
+
+                                    </span>
+
+                                    <span class="dest-address">
+                                        {{ $order->address ?? 'Adresse non renseignée' }}
+                                    </span>
+
+                                    <span class="dest-phone">
+                                        {{ $order->phone ?? 'Téléphone non renseigné' }}
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </td>
+
+
+                    {{-- Articles --}}
+
+                    <td>
+
+                        <div class="items-cell">
+
+                            @php
+
+                                $firstItem = $order->items->first();
+
+                                $secondItem = $order->items->skip(1)->first();
+
+                            @endphp
+
+                            <span class="item-title">
+                                {{ $firstItem?->product?->name ?? 'ARTICLE NOAD' }}
+                            </span>
+
+                            @if($secondItem)
+
+                                <span class="item-secondary">
+                                    + {{ $secondItem->product?->name ?? 'ARTICLE' }}
+                                </span>
+
+                            @endif
+
+                            <span class="item-count-meta">
+
+                                {{ $order->items->count() }}
+
+                                ARTICLE{{ $order->items->count() > 1 ? 'S' : '' }}
+
+                            </span>
+
+                        </div>
+
+                    </td>
+
+
+                    {{-- Prix --}}
+
+                    <td>
+
+                        <div class="pricing-cell">
+
+                            <span class="total-val">
+
+                                {{ number_format(
+                                    $order->total ?? 0,
+                                    0,
+                                    ',',
+                                    ' '
+                                ) }}
+
+                                DA
+
+                            </span>
+
+                            @if(($order->payment_method ?? '') === 'cod')
+
+                                <span class="payment-method cod">
+                                    ● CASH À LA LIVRAISON (COD)
+                                </span>
+
+                            @else
+
+                                <span class="payment-method cib">
+                                    ● {{ strtoupper($order->payment_method ?? 'PAIEMENT') }}
+                                </span>
+
+                            @endif
+
+                            <span class="shipping-fee-meta">
+
+                                Frais d'envoi :
+
+                                {{ number_format(
+                                    $order->shipping_cost ?? 0,
+                                    0,
+                                    ',',
+                                    ' '
+                                ) }}
+
+                                DA
+
+                            </span>
+
+                        </div>
+
+                    </td>
+
+
+                    {{-- Statut --}}
+
+                    <td>
+
+                        @php
+
+                            $statusClasses = [
+                                'to_ship'    => 'to-prepare',
+                                'in_transit' => 'in-transit',
+                                'delivered'  => 'delivered',
+                                'cancelled'  => 'incident',
+                                'incident'   => 'incident',
+                            ];
+
+                            $statusLabels = [
+                                'to_ship'    => 'À EXPÉDIER',
+                                'in_transit' => 'EN TRANSIT',
+                                'delivered'  => 'LIVRÉ & ENCAISSÉ',
+                                'cancelled'  => 'ANNULÉE',
+                                'incident'   => 'INCIDENT',
+                            ];
+
+                            $statusClass =
+                                $statusClasses[$order->status?->value ?? '']
+                                ?? 'to-prepare';
+
+                            $statusLabel =
+                                $statusLabels[$order->status?->value ?? '']
+                                ?? strtoupper($order->status?->value ?? 'À PRÉPARER');
+
+                        @endphp
+
+                        <span class="status-tag {{ $statusClass }}">
+                            {{ $statusLabel }}
+                        </span>
+
+                        <span class="sub-status-label">
+                            {{ $order->status_sub ?? 'SUIVI LOGISTIQUE' }}
+                        </span>
+
+                    </td>
+
+
+                    {{-- Actions --}}
+
+                    <td class="text-right">
+
+                        <div class="action-buttons-group">
+
+                            <a
+                                href="{{ route('admin.orders.show', $order->id) }}"
+                                class="btn-action-icon"
+                                title="Voir le détail"
+                            >
+                                👁
+                            </a>
+
+                            <button
+                                type="button"
+                                class="btn-action-icon"
+                                title="Bordereau"
+                            >
+                                📄
+                            </button>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+            @empty
+
+                {{-- Aucun résultat --}}
+
+                <tr>
+
+                    <td
+                        colspan="7"
+                        class="empty-orders"
+                    >
+
+                        <div class="empty-orders-content">
+
+                            <span class="empty-icon">
+                                ◌
+                            </span>
+
+                            <strong>
+                                AUCUNE COMMANDE TROUVÉE
+                            </strong>
+
+                            <span>
+                                Aucun résultat ne correspond aux filtres actuels.
+                            </span>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+            @endforelse
+
+        </tbody>
+
+    </table>
+
+
+    {{-- Pagination Laravel --}}
+
+    @if($orders instanceof \Illuminate\Pagination\AbstractPaginator)
+
+        <div class="table-pagination-footer">
+
+            <div class="pag-left">
+
+                <span class="pag-counter">
+
+                    AFFICHAGE :
+
+                    {{ $orders->firstItem() ?? 0 }}
+
+                    -
+
+                    {{ $orders->lastItem() ?? 0 }}
+
+                    SUR
+
+                    {{ $orders->total() }}
+
+                    EXPÉDITIONS
+
+                </span>
+
+                <span class="pag-sep">
+                    /
+                </span>
+
+                <span class="pag-lines-select">
+
+                    LIGNES PAR PAGE :
+
+                    <strong class="text-white">
+                        {{ $orders->perPage() }}
+                    </strong>
+
+                </span>
+
+            </div>
+
+            <div class="pag-right">
+
+                {{ $orders->onEachSide(1)->links() }}
+
+            </div>
+
+        </div>
+
+    @endif
+
+</div>
+
+
+{{-- =========================================================
+     06. TÉLÉMÉTRIE TRANSPORTEURS & ALERTES
+========================================================== --}}
+
+<section class="bottom-logistics-grid">
+
+
+    {{-- =====================================================
+         TRANSPORTEURS
+    ====================================================== --}}
+
+    <div class="telemetry-box">
+
+        <div class="box-head">
+
+            <div class="box-head-title">
+
+                <span class="network-icon">
+                    ⬡
+                </span>
+
+                <h2 class="box-title">
+                    TÉLÉMÉTRIE TRANSPORTEURS • ALGÉRIE 58 WILAYAS
+                </h2>
+
+            </div>
+
+            <span class="api-tag">
+                PASSERELLE API EN TEMPS RÉEL
+            </span>
+
+        </div>
+
+
+        <div class="carriers-sub-grid">
+
+
+            {{-- Algérie Express --}}
+
+            <div class="carrier-node-card">
+
+                <div class="carrier-node-head">
+
+                    <span class="carrier-brand-name">
+                        ALGÉRIE EXPRESS
+                    </span>
+
+                    <span class="carrier-dot-ok">
+                        ●
+                    </span>
+
+                </div>
+
+                <span class="carrier-zone">
+                    Région Centre &amp; Grand Alger
+                </span>
+
+                <div class="carrier-metric-row">
+
+                    <span class="metric-lbl">
+                        CHARGE LOGISTIQUE
+                    </span>
+
+                    <span class="metric-val">
+                        82%
+                    </span>
+
+                </div>
+
+                <div class="carrier-metric-row">
+
+                    <span class="metric-lbl">
+                        TEMPS MOYEN
+                    </span>
+
+                    <span class="metric-val highlight">
+                        18 HEURES
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            {{-- Yalidine --}}
+
+            <div class="carrier-node-card">
+
+                <div class="carrier-node-head">
+
+                    <span class="carrier-brand-name">
+                        YALIDINE EXPRESS
+                    </span>
+
+                    <span class="carrier-dot-ok">
+                        ●
+                    </span>
+
+                </div>
+
+                <span class="carrier-zone">
+                    Réseau 58 Wilayas &amp; Relais
+                </span>
+
+                <div class="carrier-metric-row">
+
+                    <span class="metric-lbl">
+                        FLUX EN COURS
+                    </span>
+
+                    <span class="metric-val">
+                        {{ $inTransitCount ?? 0 }} COLIS
+                    </span>
+
+                </div>
+
+                <div class="carrier-metric-row">
+
+                    <span class="metric-lbl">
+                        TAUX LIVRAISON J+1
+                    </span>
+
+                    <span class="metric-val highlight">
+                        94.1%
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            {{-- Grand Sud --}}
+
+            <div class="carrier-node-card">
+
+                <div class="carrier-node-head">
+
+                    <span class="carrier-brand-name">
+                        FLEET GRAND SUD
+                    </span>
+
+                    <span class="carrier-dot-warn">
+                        ●
+                    </span>
+
+                </div>
+
+                <span class="carrier-zone">
+                    Wilayas 30, 47, 11, 33, 58
+                </span>
+
+                <div class="carrier-metric-row">
+
+                    <span class="metric-lbl">
+                        DÉLAI MOYEN
+                    </span>
+
+                    <span class="metric-val">
+                        48H - 72H
+                    </span>
+
+                </div>
+
+                <div class="carrier-metric-row">
+
+                    <span class="metric-lbl">
+                        STABILITÉ RÉSEAU
+                    </span>
+
+                    <span class="metric-val warning">
+                        FLUIDE
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    {{-- =====================================================
+         ALERTES
+    ====================================================== --}}
+
+    <div class="alerts-box">
+
+        <div class="box-head">
+
+            <div class="box-head-title">
+
+                <span class="alert-icon-head">
+                    ⚠
+                </span>
+
+                <h2 class="box-title">
+                    ALERTES &amp; RETENUES
+                </h2>
+
+            </div>
+
+            <span class="badge-alert-count">
+                {{ $incidentCount ?? 0 }} ACTIVES
+            </span>
+
+        </div>
+
+
+        <div class="alerts-list-content">
+
+            @if(($incidentCount ?? 0) > 0)
+
+                <div class="alert-item-row">
+
+                    <div class="alert-item-icon">
+                        ⚡
+                    </div>
+
+                    <div class="alert-item-body">
+
+                        <div class="alert-item-title-row">
+
+                            <span class="alert-client-name">
+                                INCIDENTS LOGISTIQUES
+                            </span>
+
+                        </div>
+
+                        <p class="alert-client-desc">
+                            Des commandes nécessitent une intervention administrative.
+                        </p>
+
+                        <span class="alert-delay-tag">
+                            ACTION REQUISE
+                        </span>
+
+                    </div>
+
+                </div>
+
+            @else
+
+                <div class="alert-item-row no-alert">
+
+                    <div class="alert-item-icon success">
+                        ✓
+                    </div>
+
+                    <div class="alert-item-body">
+
+                        <div class="alert-item-title-row">
+
+                            <span class="alert-client-name">
+                                SYSTÈME NOMINAL
+                            </span>
+
+                        </div>
+
+                        <p class="alert-client-desc">
+                            Aucun incident logistique actif.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            @endif
+
+        </div>
+
+
+        <div class="alerts-box-footer">
+
+            <button
+                type="button"
+                class="btn-open-incident-mgr"
+            >
+
+                <span class="icon">
+                    🗂
+                </span>
+
+                OUVRIR LE GESTIONNAIRE D'INCIDENTS
+
+            </button>
+
+        </div>
+
+    </div>
+
+</section>
+```
+
+</div>
+
 {{-- =============================================================
-     JAVASCRIPT
+JAVASCRIPT
 ============================================================= --}}
 
 <script>
@@ -1261,9 +1259,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 </script>
 
-
 {{-- =============================================================
-     CSS
+CSS
 ============================================================= --}}
 
 <style>

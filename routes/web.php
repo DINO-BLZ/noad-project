@@ -26,7 +26,8 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/', [HomeController::class, 'index'])
+    ->name('home');
 
 Route::get('/boutique', [ProductController::class, 'index'])
     ->name('shop.index');
@@ -51,8 +52,11 @@ Route::get('/login', [LoginController::class, 'showLoginForm'])
     ->name('login');
 
 Route::middleware('throttle:5,1')->group(function () {
+
     Route::post('/login', [LoginController::class, 'login']);
+
     Route::post('/register', [RegisterController::class, 'register']);
+
 });
 
 Route::post('/logout', [LoginController::class, 'logout'])
@@ -95,7 +99,7 @@ Route::delete('/panier/{variantId}', [CartController::class, 'remove'])
 
 /*
 |--------------------------------------------------------------------------
-| Checkout & compte (auth requis)
+| Checkout & compte
 |--------------------------------------------------------------------------
 */
 
@@ -112,6 +116,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/mes-demandes-whitelist', [WhitelistController::class, 'index'])
         ->name('whitelist.index');
+
 });
 
 /*
@@ -128,7 +133,8 @@ Route::get('/drops/{drop:slug}', [DropController::class, 'show'])
 
 Route::middleware('auth')->group(function () {
 
-    Route::post('/drops/{drop:slug}/request-whitelist',
+    Route::post(
+        '/drops/{drop:slug}/request-whitelist',
         [DropRequestController::class, 'store']
     )->name('drops.request-whitelist');
 
@@ -146,11 +152,19 @@ Route::prefix('admin')
     ->group(function () {
 
         /*
-        | Products
+        |--------------------------------------------------------------------------
+        | Dashboard
+        |--------------------------------------------------------------------------
         */
 
         Route::get('/', [DashboardController::class, 'index'])
             ->name('dashboard');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Products
+        |--------------------------------------------------------------------------
+        */
 
         Route::get('/produits', [AdminProductController::class, 'index'])
             ->name('products.index');
@@ -171,7 +185,9 @@ Route::prefix('admin')
             ->name('products.destroy');
 
         /*
+        |--------------------------------------------------------------------------
         | Categories
+        |--------------------------------------------------------------------------
         */
 
         Route::get('/categories', [AdminCategoryController::class, 'index'])
@@ -187,7 +203,9 @@ Route::prefix('admin')
             ->name('categories.destroy');
 
         /*
+        |--------------------------------------------------------------------------
         | Drops
+        |--------------------------------------------------------------------------
         */
 
         Route::get('/drops', [AdminDropController::class, 'index'])
@@ -209,7 +227,9 @@ Route::prefix('admin')
             ->name('drops.destroy');
 
         /*
+        |--------------------------------------------------------------------------
         | Whitelist
+        |--------------------------------------------------------------------------
         */
 
         Route::post(
@@ -226,7 +246,9 @@ Route::prefix('admin')
             ->name('whitelist.index');
 
         /*
+        |--------------------------------------------------------------------------
         | Orders
+        |--------------------------------------------------------------------------
         */
 
         Route::get('/commandes', [AdminOrderController::class, 'index'])
@@ -237,4 +259,17 @@ Route::prefix('admin')
 
         Route::patch('/commandes/{order}/statut', [AdminOrderController::class, 'updateStatus'])
             ->name('orders.updateStatus');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Order Documents
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/commandes/{order}/bordereau', [AdminOrderController::class, 'label'])
+            ->name('orders.label');
+
+        Route::get('/commandes/{order}/facture', [AdminOrderController::class, 'invoice'])
+            ->name('orders.invoice');
+
     });

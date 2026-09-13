@@ -220,14 +220,13 @@
                 </div>
 
 
-                <div class="cart__summary-total">
-                    <span>TOTAL</span>
-
-                    <strong>
-                        {{ number_format($total, 0, ',', ' ') }}
-                        DA
-                    </strong>
-                </div>
+               <div class="cart__summary-total">
+    <span>TOTAL</span>
+    <strong class="cart__grand-total-value">
+        {{ number_format($total, 0, ',', ' ') }}
+        DA
+    </strong>
+</div>
 
 
                 <a

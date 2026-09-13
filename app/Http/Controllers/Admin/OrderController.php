@@ -15,6 +15,9 @@ use LogicException;
 
 class OrderController extends Controller
 {
+    /**
+     * Affiche la liste des commandes.
+     */
     public function index(Request $request)
     {
         $orders = Order::query()
@@ -26,6 +29,9 @@ class OrderController extends Controller
         return view('admin.orders.index', compact('orders'));
     }
 
+    /**
+     * Affiche le détail d'une commande.
+     */
     public function show(Order $order)
     {
         $order->load('items', 'user');
@@ -33,6 +39,9 @@ class OrderController extends Controller
         return view('admin.orders.show', compact('order'));
     }
 
+    /**
+     * Met à jour le statut d'une commande.
+     */
     public function updateStatus(
         UpdateOrderStatusRequest $request,
         Order $order,
@@ -56,5 +65,33 @@ class OrderController extends Controller
         }
 
         return back()->with('success', 'Statut de la commande mis à jour.');
+    }
+
+    /**
+     * Génération du bordereau de commande.
+     *
+     * Placeholder temporaire :
+     * la génération réelle du document sera ajoutée ultérieurement.
+     */
+    public function label(Order $order)
+    {
+        return back()->with(
+            'error',
+            'La génération du bordereau n’est pas encore disponible.'
+        );
+    }
+
+    /**
+     * Génération de la facture.
+     *
+     * Placeholder temporaire :
+     * la génération réelle du document sera ajoutée ultérieurement.
+     */
+    public function invoice(Order $order)
+    {
+        return back()->with(
+            'error',
+            'La génération de la facture n’est pas encore disponible.'
+        );
     }
 }
