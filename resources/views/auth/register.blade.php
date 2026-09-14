@@ -22,8 +22,13 @@
             <div class="visual-top-strip">
 
                 <span class="sys-auth-tag">
-                    <span class="dot-red-sq">■</span>
+
+                    <span class="dot-red-sq">
+                        ■
+                    </span>
+
                     SYS.AUTH // NOAD-09
+
                 </span>
 
                 <span class="archive-tag">
@@ -31,6 +36,7 @@
                 </span>
 
             </div>
+
 
             {{-- Encadré manifeste whitelist --}}
             <div class="visual-bottom-card">
@@ -72,7 +78,7 @@
 
 
         {{-- =====================================================
-             02. COLONNE DROITE — FORMULAIRE DE CONNEXION
+             02. COLONNE DROITE — FORMULAIRE D'INSCRIPTION
         ====================================================== --}}
 
         <div class="auth-form-col">
@@ -102,7 +108,7 @@
                     </span>
 
                     <span class="breadcrumb-active">
-                        SESSION
+                        INSCRIPTION
                     </span>
 
                 </div>
@@ -113,12 +119,12 @@
                 ================================================== --}}
 
                 <h1 class="auth-title">
-                    CONNEXION
+                    CRÉER UN COMPTE
                 </h1>
 
                 <p class="auth-subtitle">
-                    Accédez à votre compte pour suivre vos commandes
-                    et gérer vos accès whitelist.
+                    Rejoignez NOAD pour suivre vos commandes,
+                    gérer votre profil et accéder aux drops réservés.
                 </p>
 
 
@@ -166,7 +172,7 @@
                 ================================================== --}}
 
                 <form
-                    action="{{ route('login') }}"
+                    action="{{ route('register') }}"
                     method="POST"
                     class="form-tactical-stack"
                 >
@@ -175,7 +181,44 @@
 
 
                     {{-- =================================================
-                         CHAMP 01 — EMAIL
+                         CHAMP 01 — NOM COMPLET
+                    ================================================== --}}
+
+                    <div class="form-field-wrap">
+
+                        <div class="field-label-row">
+
+                            <label for="name">
+                                NOM COMPLET
+                            </label>
+
+                            <span class="label-req">
+                                REQUIS
+                            </span>
+
+                        </div>
+
+                        <div class="input-with-icon">
+
+                            <input
+                                type="text"
+                                id="name"
+                                name="name"
+                                value="{{ old('name') }}"
+                                required
+                                autofocus
+                                autocomplete="name"
+                                placeholder="Votre nom complet"
+                                class="input-auth @error('name') has-error @enderror"
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    {{-- =================================================
+                         CHAMP 02 — EMAIL
                     ================================================== --}}
 
                     <div class="form-field-wrap">
@@ -200,7 +243,6 @@
                                 name="email"
                                 value="{{ old('email') }}"
                                 required
-                                autofocus
                                 autocomplete="email"
                                 placeholder="nom@exemple.dz"
                                 class="input-auth @error('email') has-error @enderror"
@@ -216,7 +258,7 @@
 
 
                     {{-- =================================================
-                         CHAMP 02 — MOT DE PASSE
+                         CHAMP 03 — MOT DE PASSE
                     ================================================== --}}
 
                     <div class="form-field-wrap">
@@ -227,16 +269,9 @@
                                 MOT DE PASSE
                             </label>
 
-                            @if (Route::has('password.request'))
-
-                                <a
-                                    href="{{ route('password.request') }}"
-                                    class="link-forgot-pwd"
-                                >
-                                    MOT DE PASSE OUBLIÉ ?
-                                </a>
-
-                            @endif
+                            <span class="label-req">
+                                REQUIS
+                            </span>
 
                         </div>
 
@@ -247,7 +282,7 @@
                                 id="password"
                                 name="password"
                                 required
-                                autocomplete="current-password"
+                                autocomplete="new-password"
                                 placeholder="••••••••"
                                 class="input-auth @error('password') has-error @enderror"
                             >
@@ -255,8 +290,9 @@
                             <button
                                 type="button"
                                 class="btn-toggle-pwd"
-                                onclick="togglePasswordVisibility()"
+                                onclick="togglePasswordVisibility('password', this)"
                                 title="Afficher/masquer le mot de passe"
+                                aria-label="Afficher/masquer le mot de passe"
                             >
                                 👁
                             </button>
@@ -267,48 +303,65 @@
 
 
                     {{-- =================================================
-                         OPTIONS
+                         CHAMP 04 — CONFIRMATION DU MOT DE PASSE
                     ================================================== --}}
 
-                    <div class="form-options-row">
+                    <div class="form-field-wrap">
 
-                        <label class="checkbox-container">
+                        <div class="field-label-row">
 
-                            <input
-                                type="checkbox"
-                                name="remember"
-                                id="remember"
-                                {{ old('remember') ? 'checked' : '' }}
-                            >
+                            <label for="password_confirmation">
+                                CONFIRMER LE MOT DE PASSE
+                            </label>
 
-                            <span class="checkmark-box"></span>
-
-                            <span class="checkbox-label">
-                                MÉMORISER CET APPAREIL
+                            <span class="label-req">
+                                REQUIS
                             </span>
 
-                        </label>
+                        </div>
 
-                        <span class="location-tag">
-                            DZD • ALGER
-                        </span>
+                        <div class="input-with-icon">
+
+                            <input
+                                type="password"
+                                id="password_confirmation"
+                                name="password_confirmation"
+                                required
+                                autocomplete="new-password"
+                                placeholder="••••••••"
+                                class="input-auth @error('password_confirmation') has-error @enderror"
+                            >
+
+                            <button
+                                type="button"
+                                class="btn-toggle-pwd"
+                                onclick="togglePasswordVisibility('password_confirmation', this)"
+                                title="Afficher/masquer le mot de passe"
+                                aria-label="Afficher/masquer le mot de passe"
+                            >
+                                👁
+                            </button>
+
+                        </div>
 
                     </div>
 
 
                     {{-- =================================================
-                         BOUTON CONNEXION
+                         BOUTON INSCRIPTION
                     ================================================== --}}
 
                     <button
                         type="submit"
                         class="btn-submit-login"
                     >
-                        SE CONNECTER
+
+                        CRÉER MON COMPTE
 
                         <span class="arrow-glyph">
                             →
                         </span>
+
                     </button>
 
                 </form>
@@ -332,27 +385,27 @@
 
 
                 {{-- =================================================
-                     INSCRIPTION
+                     CONNEXION
                 ================================================== --}}
 
                 <div class="register-prompt-row">
 
                     <span>
-                        Pas encore de compte ?
+                        Déjà un compte ?
                     </span>
 
                     <a
-                        href="{{ route('register') }}"
+                        href="{{ route('login') }}"
                         class="link-create-account"
                     >
-                        CRÉER UN COMPTE
+                        SE CONNECTER
                     </a>
 
                 </div>
 
 
                 {{-- =================================================
-                     DROP RÉSERVÉ
+                     DROP TEASER
                 ================================================== --}}
 
                 <div class="drop-teaser-card">
@@ -388,7 +441,7 @@
                             ●
                         </span>
 
-                        CONNEXION SÉCURISÉE •
+                        INSCRIPTION SÉCURISÉE •
                         CHIFFREMENT 256 BITS
 
                     </span>
@@ -413,22 +466,26 @@
 ============================================================= --}}
 
 <script>
+    function togglePasswordVisibility(inputId, button) {
 
-    function togglePasswordVisibility() {
+        const pwd = document.getElementById(inputId);
 
-        const pwd = document.getElementById('password');
+        if (!pwd) {
+            return;
+        }
 
         if (pwd.type === 'password') {
 
             pwd.type = 'text';
+            button.textContent = '🙈';
 
         } else {
 
             pwd.type = 'password';
+            button.textContent = '👁';
 
         }
     }
-
 </script>
 
 
@@ -445,16 +502,13 @@
 .noad-auth-page {
     width: 100%;
     min-height: calc(100vh - 80px);
-
     background-color: #0c0c0c;
     color: var(--text, #e5e5e5);
-
     font-family:
         'Barlow Condensed',
         -apple-system,
         BlinkMacSystemFont,
         sans-serif;
-
     display: flex;
 }
 
@@ -471,7 +525,6 @@
 .auth-split-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
-
     width: 100%;
     min-height: 100%;
 }
@@ -483,24 +536,17 @@
 
 .auth-visual-col {
     position: relative;
-
     background-color: #121212;
-
     background-image:
         url('{{ asset('images/auth/login-hero.jpg') }}');
-
     background-size: cover;
     background-position: center center;
-
     border-right:
         1px solid var(--border, #242424);
-
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-
     padding: 36px 44px;
-
     box-sizing: border-box;
 }
 
@@ -511,12 +557,10 @@
 
 .visual-bg-overlay {
     position: absolute;
-
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-
     background:
         linear-gradient(
             180deg,
@@ -524,7 +568,6 @@
             rgba(12, 12, 12, 0.25) 40%,
             rgba(12, 12, 12, 0.9) 100%
         );
-
     z-index: 1;
 }
 
@@ -543,7 +586,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-
     font-family: monospace;
     font-size: 10px;
     letter-spacing: 0.12em;
@@ -552,10 +594,8 @@
 .sys-auth-tag {
     color: #ffffff;
     font-weight: bold;
-
     display: flex;
     align-items: center;
-
     gap: 6px;
 }
 
@@ -575,23 +615,17 @@
 
 .visual-bottom-card {
     background-color: rgba(16, 16, 16, 0.88);
-
     border:
         1px solid var(--border, #242424);
-
     padding: 24px 28px;
-
     backdrop-filter: blur(6px);
-
     max-width: 520px;
 }
 
 .card-shield-title {
     display: flex;
     align-items: center;
-
     gap: 8px;
-
     margin-bottom: 12px;
 }
 
@@ -602,42 +636,28 @@
 
 .shield-label {
     font-family: monospace;
-
     font-size: 9px;
-
     color: #cccccc;
-
     letter-spacing: 0.15em;
-
     font-weight: bold;
-
     text-transform: uppercase;
 }
 
 .card-quote {
     font-size: 13px;
-
     line-height: 1.5;
-
     color: #dddddd;
-
     margin: 0 0 16px;
-
     font-style: italic;
 }
 
 .card-meta-foot {
     display: flex;
     justify-content: space-between;
-
     font-family: monospace;
-
     font-size: 9px;
-
     color: #777777;
-
     border-top: 1px solid #222222;
-
     padding-top: 12px;
 }
 
@@ -648,13 +668,10 @@
 
 .auth-form-col {
     background-color: #0c0c0c;
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     padding: 48px 36px;
-
     box-sizing: border-box;
 }
 
@@ -670,18 +687,12 @@
 
 .auth-breadcrumb {
     font-family: monospace;
-
     font-size: 10px;
-
     letter-spacing: 0.15em;
-
     color: #777777;
-
     margin-bottom: 16px;
-
     display: flex;
     align-items: center;
-
     gap: 6px;
 }
 
@@ -705,27 +716,18 @@
 
 .auth-title {
     font-size: clamp(38px, 4.8vw, 56px);
-
     font-weight: 900;
-
     letter-spacing: 0.04em;
-
     line-height: 0.95;
-
     margin: 0 0 12px;
-
     color: #ffffff;
-
     text-transform: uppercase;
 }
 
 .auth-subtitle {
     font-size: 13px;
-
     color: #888888;
-
     line-height: 1.45;
-
     margin: 0 0 28px;
 }
 
@@ -737,22 +739,14 @@
 .auth-alert-errors {
     background-color:
         rgba(211, 47, 47, 0.1);
-
     border:
         1px solid var(--accent, #d32f2f);
-
     color: #ffffff;
-
     padding: 12px 14px;
-
     margin-bottom: 20px;
-
     font-size: 12px;
-
     display: flex;
-
     gap: 10px;
-
     align-items: flex-start;
 }
 
@@ -764,16 +758,11 @@
 .auth-alert-success {
     background-color:
         rgba(46, 204, 113, 0.1);
-
     border:
         1px solid #2ecc71;
-
     color: #2ecc71;
-
     padding: 12px 14px;
-
     margin-bottom: 20px;
-
     font-size: 12px;
 }
 
@@ -785,14 +774,12 @@
 .form-tactical-stack {
     display: flex;
     flex-direction: column;
-
     gap: 20px;
 }
 
 .form-field-wrap {
     display: flex;
     flex-direction: column;
-
     gap: 6px;
 }
 
@@ -800,19 +787,14 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-
     font-family: monospace;
-
     font-size: 9px;
-
     letter-spacing: 0.12em;
 }
 
 .field-label-row label {
     color: #999999;
-
     font-weight: bold;
-
     text-transform: uppercase;
 }
 
@@ -822,35 +804,16 @@
 
 
 /* =============================================================
-   12. MOT DE PASSE OUBLIÉ
-============================================================= */
-
-.link-forgot-pwd {
-    color: #888888;
-
-    transition: color 0.2s;
-}
-
-.link-forgot-pwd:hover {
-    color: #ffffff;
-}
-
-
-/* =============================================================
-   13. INPUTS
+   12. INPUTS
 ============================================================= */
 
 .input-with-icon {
     display: flex;
     align-items: center;
-
     background-color: #121212;
-
     border:
         1px solid var(--border, #242424);
-
     padding: 0 14px;
-
     transition: border-color 0.2s;
 }
 
@@ -860,23 +823,16 @@
 
 .input-auth {
     width: 100%;
-
     background: transparent;
-
     border: none;
     outline: none;
-
     color: #ffffff;
-
     font-family:
         'Barlow Condensed',
         -apple-system,
         sans-serif;
-
     font-size: 15px;
-
     padding: 12px 0;
-
     letter-spacing: 0.05em;
 }
 
@@ -886,32 +842,23 @@
 
 .input-icon {
     color: #555555;
-
     font-size: 13px;
-
     margin-left: 8px;
 }
 
 
 /* =============================================================
-   14. TOGGLE PASSWORD
+   13. TOGGLE PASSWORD
 ============================================================= */
 
 .btn-toggle-pwd {
     background: transparent;
-
     border: none;
-
     color: #555555;
-
     font-size: 13px;
-
     cursor: pointer;
-
     padding: 0;
-
     margin-left: 8px;
-
     transition: color 0.2s;
 }
 
@@ -921,118 +868,30 @@
 
 
 /* =============================================================
-   15. OPTIONS & CHECKBOX
-============================================================= */
-
-.form-options-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    margin: 4px 0 6px;
-
-    font-family: monospace;
-
-    font-size: 9px;
-
-    letter-spacing: 0.1em;
-}
-
-.checkbox-container {
-    display: flex;
-    align-items: center;
-
-    gap: 8px;
-
-    cursor: pointer;
-
-    user-select: none;
-
-    color: #888888;
-}
-
-.checkbox-container input {
-    display: none;
-}
-
-.checkmark-box {
-    width: 14px;
-    height: 14px;
-
-    background-color: #121212;
-
-    border:
-        1px solid var(--border, #242424);
-
-    display: inline-block;
-
-    position: relative;
-}
-
-.checkbox-container input:checked ~ .checkmark-box {
-    background-color: var(--accent, #d32f2f);
-
-    border-color:
-        var(--accent, #d32f2f);
-}
-
-.checkbox-container input:checked ~ .checkmark-box::after {
-    content: "✓";
-
-    position: absolute;
-
-    color: #ffffff;
-
-    font-size: 10px;
-
-    top: -1px;
-    left: 2px;
-}
-
-.location-tag {
-    color: #666666;
-}
-
-
-/* =============================================================
-   16. BOUTON CONNEXION
+   14. BOUTON INSCRIPTION
 ============================================================= */
 
 .btn-submit-login {
     width: 100%;
-
     background-color: #ffffff;
-
     color: #000000;
-
     border: 1px solid #ffffff;
-
     padding: 14px 20px;
-
     font-size: 13px;
-
     font-weight: 900;
-
     letter-spacing: 0.15em;
-
     text-transform: uppercase;
-
     cursor: pointer;
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     gap: 10px;
-
     transition: all 0.2s ease;
 }
 
 .btn-submit-login:hover {
     background-color: var(--accent, #d32f2f);
-
     border-color: var(--accent, #d32f2f);
-
     color: #ffffff;
 }
 
@@ -1042,61 +901,47 @@
 
 
 /* =============================================================
-   17. SÉPARATEUR "OU"
+   15. SÉPARATEUR "OU"
 ============================================================= */
 
 .auth-divider-wrap {
     display: flex;
     align-items: center;
-
     margin: 22px 0 18px;
-
     gap: 12px;
 }
 
 .divider-line {
     flex: 1;
-
     height: 1px;
-
     background-color:
         var(--border, #242424);
 }
 
 .divider-text {
     font-family: monospace;
-
     font-size: 9px;
-
     color: #555555;
-
     letter-spacing: 0.15em;
 }
 
 
 /* =============================================================
-   18. CRÉATION DE COMPTE
+   16. CONNEXION
 ============================================================= */
 
 .register-prompt-row {
     text-align: center;
-
     font-size: 12px;
-
     color: #888888;
-
     margin-bottom: 24px;
 }
 
 .link-create-account {
     color: var(--accent, #d32f2f);
-
     font-weight: 800;
-
     margin-left: 6px;
-
     letter-spacing: 0.06em;
-
     transition: color 0.2s;
 }
 
@@ -1106,105 +951,79 @@
 
 
 /* =============================================================
-   19. DROP TEASER
+   17. DROP TEASER
 ============================================================= */
 
 .drop-teaser-card {
     background-color: #101010;
-
     border:
         1px solid var(--border, #242424);
-
     padding: 12px 14px;
-
     display: flex;
     align-items: center;
-
     gap: 12px;
-
     margin-bottom: 24px;
 }
 
 .teaser-icon {
     width: 28px;
     height: 28px;
-
     background-color: #161616;
-
     border:
         1px solid #222222;
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     color: var(--accent, #d32f2f);
-
     font-size: 12px;
-
     flex-shrink: 0;
 }
 
 .teaser-body {
     display: flex;
     flex-direction: column;
-
     gap: 2px;
 }
 
 .teaser-title {
     font-family: monospace;
-
     font-size: 9px;
-
     font-weight: bold;
-
     color: #ffffff;
-
     letter-spacing: 0.08em;
 }
 
 .teaser-meta {
     font-family: monospace;
-
     font-size: 9px;
-
     color: #777777;
 }
 
 
 /* =============================================================
-   20. FOOTER SÉCURITÉ
+   18. FOOTER SÉCURITÉ
 ============================================================= */
 
 .auth-security-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-
     border-top: 1px solid #161616;
-
     padding-top: 14px;
-
     font-family: monospace;
-
     font-size: 9px;
-
     color: #666666;
-
     letter-spacing: 0.08em;
 }
 
 .security-indicator {
     display: flex;
     align-items: center;
-
     gap: 6px;
 }
 
 .dot-green {
     color: #2ecc71;
-
     font-size: 8px;
 }
 
@@ -1214,7 +1033,7 @@
 
 
 /* =============================================================
-   21. RESPONSIVE
+   19. RESPONSIVE
 ============================================================= */
 
 @media (max-width: 960px) {
@@ -1240,21 +1059,9 @@
         font-size: 42px;
     }
 
-    .form-options-row {
-        align-items: flex-start;
-
-        gap: 12px;
-    }
-
-    .location-tag {
-        white-space: nowrap;
-    }
-
     .auth-security-footer {
         flex-direction: column;
-
         align-items: flex-start;
-
         gap: 8px;
     }
 
