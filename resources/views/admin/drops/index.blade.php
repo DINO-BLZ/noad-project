@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('content')
 
@@ -7,8 +7,8 @@
     |--------------------------------------------------------------------------
     | FALLBACKS TEMPORAIRES
     |--------------------------------------------------------------------------
-    | Le backend Drops n'envoie pas encore toutes les variables.
-    | Ces valeurs permettent à la maquette de fonctionner sans erreur.
+    | La vue reste robuste si certaines collections/statistiques
+    | ne sont pas encore fournies par le contrôleur.
     |--------------------------------------------------------------------------
     */
 
@@ -194,7 +194,7 @@
             <div class="kpi-body">
 
                 <h2 class="kpi-title">
-                    {{ $activeDrop?->title ?? 'AUCUN DROP ACTIF' }}
+                    {{ $activeDrop?->name ?? 'AUCUN DROP ACTIF' }}
                 </h2>
 
                 <span class="kpi-sub">
@@ -206,7 +206,7 @@
 
                     <div
                         class="countdown-display"
-                        data-end="{{ optional($activeDrop->ends_at)->toIso8601String() }}"
+                        data-end="{{ optional($activeDrop->end_date)->toIso8601String() }}"
                     >
 
                         <div class="timer-segment">
@@ -326,7 +326,7 @@
 
                 <h2 class="kpi-title">
 
-                    {{ $upcomingDrops->first()?->title
+                    {{ $upcomingDrops->first()?->name
                         ?? 'AUCUN DROP PROGRAMMÉ'
                     }}
 
@@ -339,9 +339,9 @@
 
                 <div class="release-date-display">
 
-                    @if($upcomingDrops->first()?->release_at)
+                    @if($upcomingDrops->first()?->start_date)
 
-                        {{ $upcomingDrops->first()->release_at->format('d.m.Y // H:i') }}
+                        {{ $upcomingDrops->first()->start_date->format('d.m.Y // H:i') }}
 
                     @else
 
@@ -368,9 +368,9 @@
 
                 <span>
 
-                    QUOTA MAX :
+                    SLOTS MAX :
 
-                    {{ $upcomingDrops->first()?->max_quota ?? 0 }}
+                    {{ $upcomingDrops->first()?->max_whitelist_slots ?? '∞' }}
 
                     PCS
 
@@ -398,7 +398,7 @@
                 </span>
 
                 <span class="status-pill soldout">
-                    SOLDOUT
+                    TERMINÉS
                 </span>
 
             </div>
@@ -418,18 +418,14 @@
                         <div class="archive-row">
 
                             <span>
-                                {{ $drop->title }}
+                                {{ $drop->name }}
                             </span>
 
                             <span class="mono">
 
-                                {{ $drop->sold_quantity ?? 0 }}
+                                {{ $drop->max_whitelist_slots ?? '∞' }}
 
-                                /
-
-                                {{ $drop->max_quota }}
-
-                                PCS
+                                SLOTS
 
                             </span>
 
@@ -440,7 +436,7 @@
                         <div class="archive-row">
 
                             <span>
-                                AUCUN ARCHIVE
+                                AUCUNE ARCHIVE
                             </span>
 
                         </div>
@@ -496,7 +492,7 @@
 
                     MONITORING DIRECT //
 
-                    {{ $activeDrop?->title
+                    {{ $activeDrop?->name
                         ?? 'AUCUN DROP ACTIF'
                     }}
 
@@ -533,7 +529,7 @@
 
                             <img
                                 src="{{ asset('storage/' . $activeDrop->image) }}"
-                                alt="{{ $activeDrop->title }}"
+                                alt="{{ $activeDrop->name }}"
                             >
 
                         @else
@@ -545,7 +541,7 @@
                                 </div>
 
                                 <span class="fallback-caption">
-                                    DEFEND YOUR PRINCIPLE
+                                    DEFEND YOUR PRINCIPLES
                                 </span>
 
                             </div>
@@ -564,7 +560,7 @@
                             <br>
 
                             <strong>
-                                {{ $activeDrop->title }}
+                                {{ $activeDrop->name }}
                             </strong>
 
                         </span>
@@ -572,8 +568,9 @@
 
                         <span class="edition-info">
 
-                            ÉDITION
-                            {{ $activeDrop->max_quota }}
+                            SLOTS
+
+                            {{ $activeDrop->max_whitelist_slots ?? '∞' }}
 
                         </span>
 
@@ -606,7 +603,7 @@
 
 
                         <h3 class="data-hero-title">
-                            {{ $activeDrop->title }}
+                            {{ $activeDrop->name }}
                         </h3>
 
                     </div>
@@ -654,7 +651,7 @@
 
                                     /
 
-                                    {{ $activeDrop->max_quota }}
+                                    {{ $activeDropQuota ?: '∞' }}
 
                                 </strong>
 
@@ -683,12 +680,20 @@
 
                                 <strong>
 
-                                    {{ max(
-                                        0,
-                                        $activeDrop->max_quota - $activeDropSold
-                                    ) }}
+                                    @if($activeDropQuota)
 
-                                    UNITÉS DISPONIBLES
+                                        {{ max(
+                                            0,
+                                            $activeDropQuota - $activeDropSold
+                                        ) }}
+
+                                        UNITÉS DISPONIBLES
+
+                                    @else
+
+                                        ∞ UNITÉS DISPONIBLES
+
+                                    @endif
 
                                 </strong>
 
@@ -725,10 +730,6 @@
 
                                     <span class="piece-total">
 
-                                        {{ $product->drop_sold_quantity ?? 0 }}
-
-                                        /
-
                                         {{ $product->pivot->quota ?? 0 }}
 
                                         EX
@@ -741,31 +742,16 @@
                                         $productQuota =
                                             $product->pivot->quota ?? 0;
 
-                                        $productSold =
-                                            $product->drop_sold_quantity ?? 0;
-
-                                        $productRemaining =
-                                            max(
-                                                0,
-                                                $productQuota - $productSold
-                                            );
-
                                     @endphp
 
 
                                     <span
-                                        class="
-                                            piece-rest
-                                            @if($productRemaining <= 2)
-                                                alert
-                                            @elseif($productRemaining <= 12)
-                                                warning
-                                            @endif
-                                        "
+                                        class="piece-rest"
                                     >
 
-                                        RESTE
-                                        {{ $productRemaining }}
+                                        QUOTA
+
+                                        {{ $productQuota }}
 
                                     </span>
 
@@ -912,22 +898,22 @@
                 <a
                     href="{{ route(
                         'admin.drops.index',
-                        ['status' => 'scheduled']
+                        ['status' => 'upcoming']
                     ) }}"
-                    class="btn-filter-tag {{ request('status') === 'scheduled' ? 'active' : '' }}"
+                    class="btn-filter-tag {{ request('status') === 'upcoming' ? 'active' : '' }}"
                 >
-                    PROGRAMMÉS
+                    À VENIR
                 </a>
 
 
                 <a
                     href="{{ route(
                         'admin.drops.index',
-                        ['status' => 'archived']
+                        ['status' => 'ended']
                     ) }}"
-                    class="btn-filter-tag {{ request('status') === 'archived' ? 'active' : '' }}"
+                    class="btn-filter-tag {{ request('status') === 'ended' ? 'active' : '' }}"
                 >
-                    SCELLÉS
+                    TERMINÉS
                 </a>
 
             </div>
@@ -948,7 +934,7 @@
                         </th>
 
                         <th>
-                            LANCEMENT
+                            PÉRIODE
                         </th>
 
                         <th>
@@ -960,7 +946,7 @@
                         </th>
 
                         <th>
-                            QUOTA TOTAL
+                            SLOTS WHITELIST
                         </th>
 
                         <th>
@@ -981,7 +967,7 @@
                     @forelse($drops as $drop)
 
                         <tr
-                            class="{{ $drop->status === 'archived'
+                            class="{{ $drop->status === 'ended'
                                 ? 'row-archived'
                                 : ''
                             }}"
@@ -992,7 +978,7 @@
                                 <div class="series-name-cell">
 
                                     <span class="primary-series">
-                                        {{ $drop->title }}
+                                        {{ $drop->name }}
                                     </span>
 
                                     <span class="series-hash">
@@ -1016,14 +1002,28 @@
 
                                 <div class="datetime-cell">
 
-                                    <span class="date">
+                                    @if($drop->start_date)
 
-                                        {{ $drop->release_at
-                                            ? $drop->release_at->format('d.m.Y // H:i')
-                                            : '—'
-                                        }}
+                                        <span class="date">
 
-                                    </span>
+                                            {{ $drop->start_date->format('d.m.Y') }}
+
+                                            @if($drop->end_date)
+
+                                                →
+                                                {{ $drop->end_date->format('d.m.Y') }}
+
+                                            @endif
+
+                                        </span>
+
+                                    @else
+
+                                        <span class="date">
+                                            —
+                                        </span>
+
+                                    @endif
 
                                 </div>
 
@@ -1032,20 +1032,9 @@
 
                             <td>
 
-                                <span
-                                    class="
-                                        access-pill
-                                        {{ $drop->whitelist_only
-                                            ? 'whitelist'
-                                            : 'public'
-                                        }}
-                                    "
-                                >
+                                <span class="access-pill whitelist">
 
-                                    {{ $drop->whitelist_only
-                                        ? 'WHITELIST PRIORITAIRE'
-                                        : 'PUBLIC OUVERT'
-                                    }}
+                                    WHITELIST
 
                                 </span>
 
@@ -1073,17 +1062,15 @@
 
                                     <span class="quota-val">
 
-                                        {{ $drop->max_quota }}
+                                        {{ $drop->max_whitelist_slots ?? '∞' }}
 
-                                        UNITÉS
+                                        SLOTS
 
                                     </span>
 
                                     <span class="quota-sub">
 
-                                        {{ $drop->sold_quantity ?? 0 }}
-
-                                        VENDUES
+                                        LIMITE WHITELIST
 
                                     </span>
 
@@ -1111,22 +1098,22 @@
                                         @break
 
 
-                                    @case('scheduled')
+                                    @case('upcoming')
 
                                         <span class="operational-status locked">
 
-                                            🔒 VÉRIFICATION PROTOCOLE
+                                            🔒 À VENIR // PROGRAMMÉ
 
                                         </span>
 
                                         @break
 
 
-                                    @case('archived')
+                                    @case('ended')
 
                                         <span class="operational-status sealed">
 
-                                            ARCHIVÉ // ÉPUISÉ
+                                            ARCHIVÉ // TERMINÉ
 
                                         </span>
 
@@ -1273,24 +1260,24 @@
                 <div class="form-col-inputs">
 
 
-                    {{-- TITRE --}}
+                    {{-- NOM --}}
 
                     <div class="input-block">
 
-                        <label for="title">
-                            TITRE DU DROP
+                        <label for="name">
+                            NOM DU DROP
                         </label>
 
                         <input
                             type="text"
-                            id="title"
-                            name="title"
-                            value="{{ old('title') }}"
+                            id="name"
+                            name="name"
+                            value="{{ old('name') }}"
                             required
                             placeholder="Ex: DROP 02 — URBAN ARMOUR"
                         >
 
-                        @error('title')
+                        @error('name')
 
                             <span class="input-error">
                                 {{ $message }}
@@ -1301,45 +1288,25 @@
                     </div>
 
 
-                    {{-- SOUS-TITRE --}}
-
-                    <div class="input-block">
-
-                        <label for="subtitle">
-                            SOUS-TITRE &amp; SLOGAN DE CAMPAGNE
-                        </label>
-
-                        <input
-                            type="text"
-                            id="subtitle"
-                            name="subtitle"
-                            value="{{ old('subtitle') }}"
-                            placeholder="DEFEND YOUR PRINCIPLE"
-                        >
-
-                    </div>
-
-
-                    {{-- DATE + QUOTA --}}
+                    {{-- DATE DE DÉBUT + DATE DE FIN --}}
 
                     <div class="input-row-twin">
 
-
                         <div class="input-block">
 
-                            <label for="release_at">
-                                DATE &amp; HEURE DE RELEASE
+                            <label for="start_date">
+                                DATE &amp; HEURE DE DÉBUT
                             </label>
 
                             <input
                                 type="datetime-local"
-                                id="release_at"
-                                name="release_at"
-                                value="{{ old('release_at') }}"
+                                id="start_date"
+                                name="start_date"
+                                value="{{ old('start_date') }}"
                                 required
                             >
 
-                            @error('release_at')
+                            @error('start_date')
 
                                 <span class="input-error">
                                     {{ $message }}
@@ -1352,33 +1319,19 @@
 
                         <div class="input-block">
 
-                            <label for="max_quota">
-                                VOLUME GLOBAL MAXIMAL
+                            <label for="end_date">
+                                DATE &amp; HEURE DE FIN
                             </label>
 
-                            <div class="quota-input-badge">
+                            <input
+                                type="datetime-local"
+                                id="end_date"
+                                name="end_date"
+                                value="{{ old('end_date') }}"
+                                required
+                            >
 
-                                <span class="prefix">
-                                    #
-                                </span>
-
-                                <input
-                                    type="number"
-                                    id="max_quota"
-                                    name="max_quota"
-                                    value="{{ old('max_quota') }}"
-                                    min="1"
-                                    required
-                                >
-
-                                <span class="suffix">
-                                    PIÈCES
-                                </span>
-
-                            </div>
-
-
-                            @error('max_quota')
+                            @error('end_date')
 
                                 <span class="input-error">
                                     {{ $message }}
@@ -1391,88 +1344,45 @@
                     </div>
 
 
-                    {{-- WHITELIST --}}
+                    {{-- SLOTS WHITELIST --}}
 
-                    <div class="radio-selection-block">
+                    <div class="input-block">
 
-                        <span class="block-label">
-                            FENÊTRE D'EXCLUSIVITÉ WHITELIST
-                        </span>
+                        <label for="max_whitelist_slots">
+                            SLOTS WHITELIST MAXIMUM
+                        </label>
 
+                        <div class="quota-input-badge">
 
-                        <div class="radio-options-stack">
+                            <span class="prefix">
+                                #
+                            </span>
 
+                            <input
+                                type="number"
+                                id="max_whitelist_slots"
+                                name="max_whitelist_slots"
+                                value="{{ old('max_whitelist_slots') }}"
+                                min="1"
+                            >
 
-                            <label class="custom-radio-row">
-
-                                <input
-                                    type="radio"
-                                    name="whitelist_window"
-                                    value="24h"
-                                    {{ old(
-                                        'whitelist_window',
-                                        '24h'
-                                    ) === '24h'
-                                        ? 'checked'
-                                        : ''
-                                    }}
-                                >
-
-                                <span class="radio-bullet"></span>
-
-                                <span class="radio-text">
-                                    24 HEURES AVANT OUVERTURE PUBLIQUE
-                                </span>
-
-                                <span class="reco-tag">
-                                    RECOMMANDÉ
-                                </span>
-
-                            </label>
-
-
-                            <label class="custom-radio-row">
-
-                                <input
-                                    type="radio"
-                                    name="whitelist_window"
-                                    value="12h"
-                                    {{ old('whitelist_window') === '12h'
-                                        ? 'checked'
-                                        : ''
-                                    }}
-                                >
-
-                                <span class="radio-bullet"></span>
-
-                                <span class="radio-text">
-                                    12 HEURES AVANT OUVERTURE PUBLIQUE
-                                </span>
-
-                            </label>
-
-
-                            <label class="custom-radio-row">
-
-                                <input
-                                    type="radio"
-                                    name="whitelist_window"
-                                    value="none"
-                                    {{ old('whitelist_window') === 'none'
-                                        ? 'checked'
-                                        : ''
-                                    }}
-                                >
-
-                                <span class="radio-bullet"></span>
-
-                                <span class="radio-text">
-                                    AUCUN SAS EXCLUSIF
-                                </span>
-
-                            </label>
+                            <span class="suffix">
+                                SLOTS
+                            </span>
 
                         </div>
+
+                        <span class="field-hint">
+                            Laisser vide pour un accès sans limite.
+                        </span>
+
+                        @error('max_whitelist_slots')
+
+                            <span class="input-error">
+                                {{ $message }}
+                            </span>
+
+                        @enderror
 
                     </div>
 
@@ -1481,16 +1391,24 @@
 
                     <div class="input-block">
 
-                        <label for="manifesto">
-                            MANIFESTE DU DROP
+                        <label for="description">
+                            DESCRIPTION DU DROP
                         </label>
 
                         <textarea
-                            id="manifesto"
-                            name="manifesto"
+                            id="description"
+                            name="description"
                             rows="5"
-                            placeholder="Texte du manifeste..."
-                        >{{ old('manifesto') }}</textarea>
+                            placeholder="Description du drop..."
+                        >{{ old('description') }}</textarea>
+
+                        @error('description')
+
+                            <span class="input-error">
+                                {{ $message }}
+                            </span>
+
+                        @enderror
 
                     </div>
 
@@ -2548,12 +2466,6 @@
     white-space: nowrap;
 }
 
-.access-pill.public {
-    background-color: #1a1a1a;
-    border-color: #333;
-    color: #ddd;
-}
-
 .access-pill.whitelist {
     background-color: rgba(176, 46, 38, .15);
     border-color: var(--accent, #b02e26);
@@ -2729,9 +2641,16 @@
     font-size: 9px;
 }
 
+.field-hint {
+    font-family: monospace;
+    font-size: 9px;
+    color: #555;
+    line-height: 1.4;
+}
+
 .input-row-twin {
     display: grid;
-    grid-template-columns: 1.2fr .8fr;
+    grid-template-columns: 1fr 1fr;
     gap: 16px;
 }
 
@@ -2753,7 +2672,7 @@
     border: none;
     background: transparent;
     padding: 12px 6px;
-    width: 70px;
+    width: 100%;
 }
 
 .quota-input-badge .suffix {
@@ -2762,80 +2681,6 @@
     color: #666;
     padding-right: 12px;
     white-space: nowrap;
-}
-
-
-/* =============================================================
-   WHITELIST
-============================================================= */
-
-.radio-selection-block {
-    margin-bottom: 20px;
-    border-top: 1px solid #1a1a1a;
-    padding-top: 16px;
-}
-
-.block-label {
-    font-family: monospace;
-    font-size: 9px;
-    letter-spacing: .12em;
-    color: #888;
-    display: block;
-    margin-bottom: 10px;
-}
-
-.radio-options-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.custom-radio-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background-color: #0c0c0c;
-    border: 1px solid var(--border, #242424);
-    padding: 10px 14px;
-    cursor: pointer;
-    position: relative;
-}
-
-.custom-radio-row input {
-    position: absolute;
-    opacity: 0;
-}
-
-.radio-bullet {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    border: 1px solid #444;
-    background-color: #0c0c0c;
-}
-
-.custom-radio-row input:checked + .radio-bullet {
-    background-color: var(--accent, #b02e26);
-    border-color: var(--accent, #b02e26);
-    box-shadow:
-        0 0 0 2px #0c0c0c,
-        0 0 0 3px var(--accent, #b02e26);
-}
-
-.radio-text {
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: .08em;
-    color: #ccc;
-    flex: 1;
-}
-
-.reco-tag {
-    font-family: monospace;
-    font-size: 8px;
-    color: var(--accent, #b02e26);
-    font-weight: bold;
-    letter-spacing: .1em;
 }
 
 
@@ -3280,12 +3125,13 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('selected-products-count');
 
     const maxQuotaInput =
-        document.getElementById('max_quota');
+        document.getElementById('max_whitelist_slots');
 
 
     function updateQuota() {
 
         let total = 0;
+
         let selected = 0;
 
 
