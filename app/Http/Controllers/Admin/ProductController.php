@@ -12,15 +12,35 @@ use App\Models\Product;
 
 class ProductController extends Controller
 {
-    public function index()
-    {
-        $products = Product::query()
-            ->with('category')
-            ->latest()
-            ->get();
+   public function index()
+{
+    $products = Product::query()
+        ->with([
+            'category',
+            'variants',
+        ])
+        ->latest()
+        ->get();
 
-        return view('admin.products.index', compact('products'));
-    }
+    $activeReferences = $products->count();
+
+    $outOfStock = $products->filter(function ($product) {
+        return $product->variants->sum('stock') <= 0;
+    })->count();
+
+    $stockValue = $products->sum(function ($product) {
+        $totalStock = $product->variants->sum('stock');
+
+        return (float) $product->price * $totalStock;
+    });
+
+    return view('admin.products.index', compact(
+        'products',
+        'activeReferences',
+        'outOfStock',
+        'stockValue'
+    ));
+}
 
     public function create()
     {
