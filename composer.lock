@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5d37ac3f98645da40a2bd8663453fd1b",
+    "content-hash": "2cace60836552385c582e24078901dbd",
     "packages": [
         {
             "name": "babenkoivan/elastic-adapter",
@@ -141,6 +141,81 @@
                 }
             ],
             "time": "2025-11-16T12:13:35+00:00"
+        },
+        {
+            "name": "babenkoivan/elastic-migrations",
+            "version": "v5.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/babenkoivan/elastic-migrations.git",
+                "reference": "e352a6e905cc1969afdee76d4fadb05837c23406"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/babenkoivan/elastic-migrations/zipball/e352a6e905cc1969afdee76d4fadb05837c23406",
+                "reference": "e352a6e905cc1969afdee76d4fadb05837c23406",
+                "shasum": ""
+            },
+            "require": {
+                "babenkoivan/elastic-adapter": "^5.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "dg/bypass-finals": "^1.7",
+                "friendsofphp/php-cs-fixer": "^3.14",
+                "orchestra/testbench": "^10.0",
+                "phpstan/phpstan": "^1.10",
+                "phpunit/phpunit": "^11.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Elastic\\Migrations\\ServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/helpers.php"
+                ],
+                "psr-4": {
+                    "Elastic\\Migrations\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ivan Babenko",
+                    "email": "babenko.i.a@gmail.com"
+                }
+            ],
+            "description": "Elasticsearch migrations for Laravel",
+            "keywords": [
+                "elastic",
+                "elasticsearch",
+                "laravel",
+                "migrations",
+                "php"
+            ],
+            "support": {
+                "issues": "https://github.com/babenkoivan/elastic-migrations/issues",
+                "source": "https://github.com/babenkoivan/elastic-migrations/tree/v5.0.0"
+            },
+            "funding": [
+                {
+                    "url": "https://ko-fi.com/ivanbabenko",
+                    "type": "ko-fi"
+                },
+                {
+                    "url": "https://paypal.me/babenkoi",
+                    "type": "paypal"
+                }
+            ],
+            "time": "2025-11-16T12:22:07+00:00"
         },
         {
             "name": "babenkoivan/elastic-scout-driver",
