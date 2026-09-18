@@ -33,6 +33,18 @@ class DropRequest extends FormRequest
             'new_products.*.sizes.*.stock' => 'nullable|integer|min:0',
             'new_products.*.sizes.*.sku' => 'nullable|string|max:50',
             'new_products.*.sizes.*.color' => 'nullable|string|max:50',
+        
+'product_quotas' => [
+    'nullable',
+    'array',
+],
+
+'product_quotas.*' => [
+    'nullable',
+    'integer',
+    'min:0',
+],
+
         ];
     }
 }

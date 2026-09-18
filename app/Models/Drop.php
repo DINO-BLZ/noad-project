@@ -4,10 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Drop extends Model
 {
-    protected $fillable = ['name', 'slug', 'description', 'start_date', 'end_date', 'max_whitelist_slots'];
+    protected $fillable = [
+        'name',
+        'slug',
+        'description',
+        'start_date',
+        'end_date',
+        'max_whitelist_slots',
+    ];
 
     protected $casts = [
         'start_date' => 'datetime',
@@ -19,9 +27,14 @@ class Drop extends Model
         return 'slug';
     }
 
-    public function products()
+    public function products(): BelongsToMany
     {
-        return $this->belongsToMany(Product::class);
+        return $this->belongsToMany(
+            Product::class,
+            'drop_product'
+        )
+            ->withTimestamps()
+            ->withPivot('quota');
     }
 
     public function whitelists()
@@ -31,7 +44,8 @@ class Drop extends Model
 
     public function approvedWhitelists()
     {
-        return $this->hasMany(DropWhitelist::class)->where('status', 'approved');
+        return $this->hasMany(DropWhitelist::class)
+            ->where('status', 'approved');
     }
 
     /**
@@ -100,6 +114,7 @@ class Drop extends Model
             return true; // pas de limite définie
         }
 
-        return $this->approvedWhitelists()->count() < $this->max_whitelist_slots;
+        return $this->approvedWhitelists()->count()
+            < $this->max_whitelist_slots;
     }
 }

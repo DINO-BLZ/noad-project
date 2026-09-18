@@ -9,82 +9,140 @@ use Illuminate\Http\Request;
 class WhitelistController extends Controller
 {
     /**
-     * Affiche la liste des candidatures whitelist.
+     * ============================================================
+     * INDEX
+     * ============================================================
+     *
+     * Affiche la liste des candidatures whitelist avec :
+     * - filtre par statut
+     * - recherche utilisateur
+     * - pagination
+     * - KPI globaux
      */
     public function index(Request $request)
     {
-        $query = DropWhitelist::with(['user', 'drop.products'])
-            ->latest();
+        /*
+         * --------------------------------------------------------
+         * REQUÊTE PRINCIPALE
+         * --------------------------------------------------------
+         *
+         * Chargement anticipé des relations utilisées par la vue.
+         */
+        $query = DropWhitelist::with([
+            'user',
+            'drop.products',
+        ])->latest();
 
         /*
-        |--------------------------------------------------------------------------
-        | Filtre statut
-        |--------------------------------------------------------------------------
-        */
-
+         * --------------------------------------------------------
+         * FILTRE PAR STATUT
+         * --------------------------------------------------------
+         *
+         * Exemples :
+         * - pending
+         * - approved
+         * - rejected
+         */
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $query->where(
+                'status',
+                $request->status
+            );
         }
 
         /*
-        |--------------------------------------------------------------------------
-        | Recherche
-        |--------------------------------------------------------------------------
-        */
-
+         * --------------------------------------------------------
+         * RECHERCHE
+         * --------------------------------------------------------
+         *
+         * La recherche porte sur :
+         * - nom de l'utilisateur
+         * - email de l'utilisateur
+         *
+         * Les informations utilisateur sont stockées
+         * dans la table users.
+         */
         if ($request->filled('search')) {
+            $term = trim(
+                $request->search
+            );
 
-            $term = trim($request->search);
-
-            $query->where(function ($q) use ($term) {
-
-                $q->where('fullname', 'LIKE', "%{$term}%")
-                    ->orWhere('email', 'LIKE', "%{$term}%")
-                    ->orWhere('phone', 'LIKE', "%{$term}%")
-                    ->orWhere('wilaya', 'LIKE', "%{$term}%");
-
-            });
+            if ($term !== '') {
+                $query->whereHas(
+                    'user',
+                    function ($userQuery) use ($term) {
+                        $userQuery->where(
+                            function ($q) use ($term) {
+                                $q->where(
+                                    'name',
+                                    'LIKE',
+                                    "%{$term}%"
+                                )->orWhere(
+                                    'email',
+                                    'LIKE',
+                                    "%{$term}%"
+                                );
+                            }
+                        );
+                    }
+                );
+            }
         }
 
         /*
-        |--------------------------------------------------------------------------
-        | Pagination
-        |--------------------------------------------------------------------------
-        */
-
+         * --------------------------------------------------------
+         * PAGINATION
+         * --------------------------------------------------------
+         *
+         * 25 candidatures par page.
+         *
+         * withQueryString() permet de conserver les filtres
+         * et la recherche lorsqu'on change de page.
+         */
         $candidates = $query
             ->paginate(25)
             ->withQueryString();
 
         /*
-        |--------------------------------------------------------------------------
-        | KPI
-        |--------------------------------------------------------------------------
-        */
+         * --------------------------------------------------------
+         * KPI
+         * --------------------------------------------------------
+         */
 
-        $totalCount = DropWhitelist::with(['user', 'drop.products'])->count();
+        /*
+         * Nombre total de candidatures.
+         */
+        $totalCount = DropWhitelist::count();
 
-        $approvedCount = DropWhitelist::with(['user', 'drop.products'])->where(
+        /*
+         * Nombre de candidatures approuvées.
+         */
+        $approvedCount = DropWhitelist::where(
             'status',
             'approved'
         )->count();
 
-        $pendingCount = DropWhitelist::with(['user', 'drop.products'])->where(
+        /*
+         * Nombre de candidatures en attente.
+         */
+        $pendingCount = DropWhitelist::where(
             'status',
             'pending'
         )->count();
 
-        $rejectedCount = DropWhitelist::with(['user', 'drop.products'])->where(
+        /*
+         * Nombre de candidatures refusées.
+         */
+        $rejectedCount = DropWhitelist::where(
             'status',
             'rejected'
         )->count();
 
         /*
-        |--------------------------------------------------------------------------
-        | Vue
-        |--------------------------------------------------------------------------
-        */
-
+         * --------------------------------------------------------
+         * VUE
+         * --------------------------------------------------------
+         */
         return view(
             'admin.whitelist.index',
             compact(
