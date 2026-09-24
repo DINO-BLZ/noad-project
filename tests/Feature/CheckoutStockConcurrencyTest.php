@@ -64,13 +64,19 @@ class CheckoutStockConcurrencyTest extends TestCase
     public function test_cart_update_accepts_valid_quantity()
     {
         $user = User::factory()->create();
-        $category = Category::create(['name' => 'Test', 'slug' => 'cart-valid']);
+
+        $category = Category::create([
+            'name' => 'Test',
+            'slug' => 'cart-valid',
+        ]);
+
         $product = Product::create([
             'name' => 'T-shirt',
             'slug' => 'tshirt-valid',
             'price' => 25.00,
             'category_id' => $category->id,
         ]);
+
         $variant = Variant::create([
             'product_id' => $product->id,
             'size' => 'M',
@@ -86,11 +92,16 @@ class CheckoutStockConcurrencyTest extends TestCase
             'quantity' => 2,
         ]);
 
-        $response = $this->actingAs($user)->patch(route('cart.update', $variant->id), [
-            'quantity' => 3,
-        ]);
+        $response = $this->actingAs($user)
+            ->withHeaders([
+                'Accept' => 'application/json',
+            ])
+            ->patch(route('cart.update', $variant->id), [
+                'quantity' => 3,
+            ]);
 
         $response->assertOk();
+
         $this->assertDatabaseHas('cart_items', [
             'user_id' => $user->id,
             'variant_id' => $variant->id,
@@ -101,13 +112,19 @@ class CheckoutStockConcurrencyTest extends TestCase
     public function test_cart_update_rejects_quantity_above_stock()
     {
         $user = User::factory()->create();
-        $category = Category::create(['name' => 'Test', 'slug' => 'cart-stock']);
+
+        $category = Category::create([
+            'name' => 'Test',
+            'slug' => 'cart-stock',
+        ]);
+
         $product = Product::create([
             'name' => 'T-shirt',
             'slug' => 'tshirt-stock',
             'price' => 25.00,
             'category_id' => $category->id,
         ]);
+
         $variant = Variant::create([
             'product_id' => $product->id,
             'size' => 'M',
@@ -128,6 +145,7 @@ class CheckoutStockConcurrencyTest extends TestCase
         ]);
 
         $response->assertStatus(422);
+
         $this->assertDatabaseHas('cart_items', [
             'user_id' => $user->id,
             'variant_id' => $variant->id,
@@ -138,13 +156,19 @@ class CheckoutStockConcurrencyTest extends TestCase
     public function test_cart_update_allows_quantity_equal_to_stock()
     {
         $user = User::factory()->create();
-        $category = Category::create(['name' => 'Test', 'slug' => 'cart-equal']);
+
+        $category = Category::create([
+            'name' => 'Test',
+            'slug' => 'cart-equal',
+        ]);
+
         $product = Product::create([
             'name' => 'T-shirt',
             'slug' => 'tshirt-equal',
             'price' => 25.00,
             'category_id' => $category->id,
         ]);
+
         $variant = Variant::create([
             'product_id' => $product->id,
             'size' => 'M',
@@ -160,11 +184,16 @@ class CheckoutStockConcurrencyTest extends TestCase
             'quantity' => 1,
         ]);
 
-        $response = $this->actingAs($user)->patch(route('cart.update', $variant->id), [
-            'quantity' => 4,
-        ]);
+        $response = $this->actingAs($user)
+            ->withHeaders([
+                'Accept' => 'application/json',
+            ])
+            ->patch(route('cart.update', $variant->id), [
+                'quantity' => 4,
+            ]);
 
         $response->assertOk();
+
         $this->assertDatabaseHas('cart_items', [
             'user_id' => $user->id,
             'variant_id' => $variant->id,
@@ -187,13 +216,19 @@ class CheckoutStockConcurrencyTest extends TestCase
     {
         $owner = User::factory()->create();
         $currentUser = User::factory()->create();
-        $category = Category::create(['name' => 'Test', 'slug' => 'cart-other-user']);
+
+        $category = Category::create([
+            'name' => 'Test',
+            'slug' => 'cart-other-user',
+        ]);
+
         $product = Product::create([
             'name' => 'T-shirt',
             'slug' => 'tshirt-other-user',
             'price' => 25.00,
             'category_id' => $category->id,
         ]);
+
         $variant = Variant::create([
             'product_id' => $product->id,
             'size' => 'M',
@@ -209,11 +244,16 @@ class CheckoutStockConcurrencyTest extends TestCase
             'quantity' => 2,
         ]);
 
-        $response = $this->actingAs($currentUser)->patch(route('cart.update', $variant->id), [
-            'quantity' => 3,
-        ]);
+        $response = $this->actingAs($currentUser)
+            ->withHeaders([
+                'Accept' => 'application/json',
+            ])
+            ->patch(route('cart.update', $variant->id), [
+                'quantity' => 3,
+            ]);
 
         $response->assertStatus(403);
+
         $this->assertDatabaseHas('cart_items', [
             'user_id' => $owner->id,
             'variant_id' => $variant->id,
@@ -226,13 +266,19 @@ class CheckoutStockConcurrencyTest extends TestCase
         Mail::fake();
 
         $user = User::factory()->create();
-        $category = Category::create(['name' => 'Test', 'slug' => 'checkout-valid']);
+
+        $category = Category::create([
+            'name' => 'Test',
+            'slug' => 'checkout-valid',
+        ]);
+
         $product = Product::create([
             'name' => 'T-shirt',
             'slug' => 'tshirt-checkout-valid',
             'price' => 25.00,
             'category_id' => $category->id,
         ]);
+
         $variant = Variant::create([
             'product_id' => $product->id,
             'size' => 'M',
@@ -266,9 +312,11 @@ class CheckoutStockConcurrencyTest extends TestCase
         ]);
 
         $order = Order::first();
+
         $this->assertNotNull($order);
         $this->assertEquals(50.00, (float) $order->total);
         $this->assertCount(1, $order->items);
+
         $this->assertDatabaseHas('order_items', [
             'order_id' => $order->id,
             'variant_id' => $variant->id,
@@ -279,25 +327,35 @@ class CheckoutStockConcurrencyTest extends TestCase
             'variant_color' => 'Blue',
             'product_name' => 'T-shirt',
         ]);
+
         $this->assertDatabaseMissing('cart_items', [
             'user_id' => $user->id,
             'variant_id' => $variant->id,
         ]);
+
         $variant->refresh();
+
         $this->assertEquals(8, $variant->stock);
+
         Mail::assertQueued(OrderConfirmationMail::class);
     }
 
     public function test_repeated_checkout_submission_with_same_token_returns_same_order(): void
     {
         $user = User::factory()->create();
-        $category = Category::create(['name' => 'Test', 'slug' => 'checkout-idempotent']);
+
+        $category = Category::create([
+            'name' => 'Test',
+            'slug' => 'checkout-idempotent',
+        ]);
+
         $product = Product::create([
             'name' => 'T-shirt',
             'slug' => 'tshirt-checkout-idempotent',
             'price' => 25.00,
             'category_id' => $category->id,
         ]);
+
         $variant = Variant::create([
             'product_id' => $product->id,
             'size' => 'M',
@@ -305,6 +363,7 @@ class CheckoutStockConcurrencyTest extends TestCase
             'sku' => 'SKU-CHECKOUT-IDEMPOTENT',
             'color' => 'Blue',
         ]);
+
         CartItem::create([
             'user_id' => $user->id,
             'variant_id' => $variant->id,
@@ -325,6 +384,7 @@ class CheckoutStockConcurrencyTest extends TestCase
 
         $firstResponse->assertRedirect();
         $secondResponse->assertRedirect($firstResponse->headers->get('Location'));
+
         $this->assertDatabaseCount('orders', 1);
         $this->assertSame(1, $variant->fresh()->stock);
     }
@@ -335,13 +395,19 @@ class CheckoutStockConcurrencyTest extends TestCase
 
         $owner = User::factory()->create();
         $attacker = User::factory()->create();
-        $category = Category::create(['name' => 'Test', 'slug' => 'checkout-token-scope']);
+
+        $category = Category::create([
+            'name' => 'Test',
+            'slug' => 'checkout-token-scope',
+        ]);
+
         $product = Product::create([
             'name' => 'T-shirt',
             'slug' => 'tshirt-checkout-token-scope',
             'price' => 25.00,
             'category_id' => $category->id,
         ]);
+
         $ownerVariant = Variant::create([
             'product_id' => $product->id,
             'size' => 'M',
@@ -349,6 +415,7 @@ class CheckoutStockConcurrencyTest extends TestCase
             'sku' => 'SKU-TOKEN-OWNER',
             'color' => 'Blue',
         ]);
+
         $attackerVariant = Variant::create([
             'product_id' => $product->id,
             'size' => 'L',
@@ -375,6 +442,7 @@ class CheckoutStockConcurrencyTest extends TestCase
         ])->assertRedirect();
 
         $ownerOrder = Order::where('user_id', $owner->id)->first();
+
         $this->assertNotNull($ownerOrder);
 
         CartItem::create([
@@ -393,12 +461,15 @@ class CheckoutStockConcurrencyTest extends TestCase
         ]);
 
         $response->assertRedirectBackWithErrors('checkout');
+
         $this->assertDatabaseCount('orders', 1);
+
         $this->assertDatabaseHas('cart_items', [
             'user_id' => $attacker->id,
             'variant_id' => $attackerVariant->id,
             'quantity' => 1,
         ]);
+
         $this->assertSame(4, $ownerVariant->fresh()->stock);
         $this->assertSame(5, $attackerVariant->fresh()->stock);
     }
@@ -416,19 +487,26 @@ class CheckoutStockConcurrencyTest extends TestCase
         ]);
 
         $response->assertRedirect(route('cart.index'));
+
         $this->assertDatabaseCount('orders', 0);
     }
 
     public function test_checkout_keeps_cart_when_stock_is_insufficient_and_rollback_occurs()
     {
         $user = User::factory()->create();
-        $category = Category::create(['name' => 'Test', 'slug' => 'checkout-rollback']);
+
+        $category = Category::create([
+            'name' => 'Test',
+            'slug' => 'checkout-rollback',
+        ]);
+
         $product = Product::create([
             'name' => 'T-shirt',
             'slug' => 'tshirt-checkout-rollback',
             'price' => 25.00,
             'category_id' => $category->id,
         ]);
+
         $variant = Variant::create([
             'product_id' => $product->id,
             'size' => 'M',
@@ -453,26 +531,36 @@ class CheckoutStockConcurrencyTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors('checkout');
+
         $this->assertDatabaseCount('orders', 0);
+
         $this->assertDatabaseHas('cart_items', [
             'user_id' => $user->id,
             'variant_id' => $variant->id,
             'quantity' => 2,
         ]);
+
         $variant->refresh();
+
         $this->assertEquals(1, $variant->stock);
     }
 
     public function test_checkout_rejects_when_quantity_equals_stock()
     {
         $user = User::factory()->create();
-        $category = Category::create(['name' => 'Test', 'slug' => 'checkout-equal']);
+
+        $category = Category::create([
+            'name' => 'Test',
+            'slug' => 'checkout-equal',
+        ]);
+
         $product = Product::create([
             'name' => 'T-shirt',
             'slug' => 'tshirt-checkout-equal',
             'price' => 25.00,
             'category_id' => $category->id,
         ]);
+
         $variant = Variant::create([
             'product_id' => $product->id,
             'size' => 'M',
@@ -483,7 +571,6 @@ class CheckoutStockConcurrencyTest extends TestCase
 
         CartItem::create([
             'user_id' => $user->id,
-            'session_id' => null,
             'variant_id' => $variant->id,
             'quantity' => 3,
         ]);
@@ -497,8 +584,13 @@ class CheckoutStockConcurrencyTest extends TestCase
         ]);
 
         $response->assertRedirect();
+
         $variant->refresh();
+
         $this->assertEquals(0, $variant->stock);
-        $this->assertDatabaseHas('orders', ['user_id' => $user->id]);
+
+        $this->assertDatabaseHas('orders', [
+            'user_id' => $user->id,
+        ]);
     }
 }
