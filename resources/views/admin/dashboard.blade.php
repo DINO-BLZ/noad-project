@@ -1,412 +1,441 @@
 @extends('layouts.admin')
 
 @section('content')
+
+@php
+
+    /*
+    |--------------------------------------------------------------------------
+    | Données du graphique des ventes
+    |--------------------------------------------------------------------------
+    */
+
+    $maxSalesByDay = $salesByDay->max(
+        fn ($sale) => (float) $sale->total
+    ) ?? 0;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Monitoring du Drop actif
+    |--------------------------------------------------------------------------
+    */
+
+    $hasActiveDrop = $activeDrop !== null;
+
+    $dropName = $activeDrop?->name ?? 'AUCUN DROP ACTIF';
+
+    $dropQuota = (int) ($dropMonitoring['quota'] ?? 0);
+    $dropSold = (int) ($dropMonitoring['sold'] ?? 0);
+    $dropRemaining = (int) ($dropMonitoring['remaining'] ?? 0);
+    $dropPercentage = (int) ($dropMonitoring['percentage'] ?? 0);
+    $dropQuotaDefined = (bool) ($dropMonitoring['quota_defined'] ?? false);
+
+@endphp
+
+
 <div class="admin-dashboard-view">
 
-    <!-- Barre Supérieure d'Opérations Back-Office -->
-    <header class="admin-top-panel">
-        <div class="panel-left">
-            <span class="system-tag">
-                NOAD / BACK-OFFICE OPERATIONS
-                <span class="dept">DEPT 01</span>
+    {{-- =========================================================
+         HEADER
+    ========================================================== --}}
+
+    <div class="dashboard-header">
+
+        <div class="dashboard-header-left">
+
+            <div class="dashboard-kicker font-mono">
+                NOAD / ADMIN
+            </div>
+
+            <h1 class="dashboard-title">
+                CENTRE DE CONTRÔLE
+            </h1>
+
+            <p class="dashboard-subtitle">
+                Vue opérationnelle de votre activité.
+            </p>
+
+        </div>
+
+
+        <div class="dashboard-header-meta font-mono">
+
+            <span class="server-status">
+                <span class="server-dot"></span>
+                SERVEUR LIVE
             </span>
 
-            <div class="server-status">
-                <span class="pulse-indicator"></span>
-                <span class="server-text">
-                    SERVEUR LIVE • DROP 01 ACTIF • WHITELIST OUVERTE
-                </span>
-            </div>
+            <span class="header-separator">•</span>
+
+            <span>
+                {{ now('Africa/Algiers')->format('H:i:s') }}
+                UTC+1
+            </span>
+
         </div>
 
-        <div class="panel-right">
-            <div class="admin-profile-badge">
-                <span class="admin-shield-icon">🛡</span>
+    </div>
 
-                <div class="admin-identity">
-                    <span class="admin-role">SYS_ADMIN</span>
-                    <span class="admin-hub">ALGER / LONDON HQ</span>
-                </div>
-            </div>
 
-            <div class="sys-clock">
-                <span class="clock-time">{{ now()->format('H:i:s') }}</span>
-                <span class="clock-tz">UTC+1</span>
-            </div>
-        </div>
-    </header>
+    {{-- =========================================================
+         NAVIGATION ADMIN
+    ========================================================== --}}
 
-    <!-- Navigation Interne Admin -->
-    <nav class="admin-navigation-bar">
-        <div class="nav-links-stack">
+    <nav class="dashboard-nav font-mono">
 
-            <a href="{{ route('admin.dashboard') }}" class="admin-nav-item active">
-                DASHBOARD
-            </a>
+        <a
+            href="{{ route('admin.dashboard') }}"
+            class="dashboard-nav-item active"
+        >
+            DASHBOARD
+        </a>
 
-            <a href="{{ route('admin.orders.index') }}" class="admin-nav-item">
+        <a
+            href="{{ route('admin.products.index') }}"
+            class="dashboard-nav-item"
+        >
+            PRODUITS
+        </a>
+
+        @if(Route::has('admin.orders.index'))
+
+            <a
+                href="{{ route('admin.orders.index') }}"
+                class="dashboard-nav-item"
+            >
                 COMMANDES
-                <span class="nav-pill-badge">
-                    {{ $pendingOrdersCount ?? 18 }}
+
+                <span class="nav-count">
+                    {{ $pendingOrders }}
                 </span>
             </a>
 
-            <a href="{{ route('admin.products.index') }}" class="admin-nav-item">
-                PRODUITS &amp; STOCKS
-            </a>
+        @else
 
-            <a href="{{ route('admin.drops.index') }}" class="admin-nav-item">
-                DROPS
-                <span class="nav-dot-red"></span>
-            </a>
+            <span class="dashboard-nav-item">
 
-            <a href="{{ route('admin.whitelist.index') }}" class="admin-nav-item">
+                COMMANDES
+
+                <span class="nav-count">
+                    {{ $pendingOrders }}
+                </span>
+
+            </span>
+
+        @endif
+
+
+        @if(Route::has('admin.whitelist.index'))
+
+            <a
+                href="{{ route('admin.whitelist.index') }}"
+                class="dashboard-nav-item"
+            >
                 WHITELIST
-                <span class="nav-pill-dim">
-                    {{ $whitelistCount ?? 342 }}
+
+                <span class="nav-count">
+                    {{ $pendingReviews }}
                 </span>
             </a>
 
-            <a href="#" class="admin-nav-item">
-                CLIENTS
-            </a>
+        @else
 
-            <a href="#" class="admin-nav-item">
-                LOGISTIQUE / WILAYAS
-            </a>
-        </div>
+            <span class="dashboard-nav-item">
 
-        <div class="nav-config-action">
-            <a href="#" class="btn-config">
-                <span>⚙</span> CONFIG
-            </a>
-        </div>
+                WHITELIST
+
+                <span class="nav-count">
+                    {{ $pendingReviews }}
+                </span>
+
+            </span>
+
+        @endif
+
     </nav>
 
 
-    <!-- =========================================================
-         KPIs OPÉRATIONNELS
-    ========================================================== -->
+    {{-- =========================================================
+         KPI
+    ========================================================== --}}
 
     <section class="kpi-metrics-grid">
 
-        <!-- KPI 1 : CHIFFRE D'AFFAIRES GLOBAL -->
-        <article class="metric-card">
+        <div class="kpi-card">
 
-            <div class="metric-header">
-                <span class="metric-label">
-                    CHIFFRE D'AFFAIRES GLOBAL
-                </span>
+            <span class="kpi-label font-mono">
+                CHIFFRE D'AFFAIRES
+            </span>
 
-                <span class="metric-glyph">💵</span>
-            </div>
+            <strong class="kpi-value">
 
-            <div class="metric-figure">
-                <span class="val">
-                    {{ number_format($totalRevenue, 0, ',', ' ') }}
-                </span>
+                {{ number_format($totalRevenue, 0, ',', ' ') }}
 
-                <span class="currency">
+                <span class="kpi-unit">
                     DA
                 </span>
-            </div>
 
-            <div class="metric-footer">
-                <span class="meta-tag">
-                    VENTES CONFIRMÉES
-                </span>
+            </strong>
 
-                <span class="cadence-tag">
-                    {{ $confirmedOrders }} COMMANDES
-                </span>
-            </div>
+            <span class="kpi-meta font-mono">
+                COMMANDES CONFIRMÉES
+            </span>
 
-        </article>
+        </div>
 
 
-        <!-- KPI 2 : COMMANDES TOTALES -->
-        <article class="metric-card">
+        <div class="kpi-card">
 
-            <div class="metric-header">
-                <span class="metric-label">
-                    COMMANDES TOTALES
-                </span>
+            <span class="kpi-label font-mono">
+                COMMANDES
+            </span>
 
-                <span class="metric-glyph">📦</span>
-            </div>
+            <strong class="kpi-value">
+                {{ $totalOrders }}
+            </strong>
 
-            <div class="metric-figure">
-                <span class="val">
-                    {{ $totalOrders }}
-                </span>
-            </div>
+            <span class="kpi-meta font-mono">
+                {{ $confirmedOrders }} CONFIRMÉES
+            </span>
 
-            <div class="metric-footer">
-
-                <span class="meta-tag">
-                    <strong class="highlight-txt">
-                        {{ $confirmedOrders }}
-                    </strong>
-                    CONFIRMÉES
-                </span>
-
-                <span class="meta-tag alert">
-                    <strong class="alert-txt">
-                        {{ $pendingOrders }}
-                    </strong>
-                    EN ATTENTE
-                </span>
-
-            </div>
-
-        </article>
+        </div>
 
 
-        <!-- KPI 3 : STOCK GLOBAL -->
-        <article class="metric-card alert-mode">
+        <div class="kpi-card">
 
-            <div class="metric-header">
-                <span class="metric-label">
-                    STOCK GLOBAL DISPONIBLE
-                </span>
+            <span class="kpi-label font-mono">
+                STOCK DISPONIBLE
+            </span>
 
-                <span class="metric-glyph alert-icon">
-                    ▲
-                </span>
-            </div>
+            <strong class="kpi-value">
+                {{ $totalStock }}
+            </strong>
 
-            <div class="metric-figure">
+            <span class="kpi-meta font-mono">
+                UNITÉS
+            </span>
 
-                <span class="val alert-val">
-                    {{ number_format($totalStock, 0, ',', ' ') }}
-                </span>
-
-                <span class="sub-alert-tag">
-                    UNITÉS
-                </span>
-
-            </div>
-
-            <div class="metric-footer">
-
-                <span class="meta-tag">
-                    STOCK RÉEL ACTUEL
-                </span>
-
-                <span class="critical-tag">
-                    POURCENTAGE NON DÉFINI
-                </span>
-
-            </div>
-
-        </article>
+        </div>
 
 
-        <!-- KPI 4 : WHITELIST -->
-        <article class="metric-card">
+        <div class="kpi-card">
 
-            <div class="metric-header">
+            <span class="kpi-label font-mono">
+                WHITELIST
+            </span>
 
-                <span class="metric-label">
-                    CANDIDATURES WHITELIST
-                </span>
+            <strong class="kpi-value">
+                {{ $whitelistApplications }}
+            </strong>
 
-                <span class="metric-glyph">
-                    👥
-                </span>
+            <span class="kpi-meta font-mono">
+                {{ $pendingReviews }} EN ATTENTE
+            </span>
 
-            </div>
-
-            <div class="metric-figure">
-
-                <span class="val">
-                    {{ number_format($whitelistApplications, 0, ',', ' ') }}
-                </span>
-
-            </div>
-
-            <div class="metric-footer">
-
-                <span class="meta-tag">
-                    <strong class="highlight-txt">
-                        {{ $pendingReviews }}
-                    </strong>
-                    EN ATTENTE
-                </span>
-
-                <a
-                    href="{{ route('admin.whitelist.index') }}"
-                    class="action-link-red"
-                >
-                    ACTION REQUISE →
-                </a>
-
-            </div>
-
-        </article>
+        </div>
 
     </section>
 
 
-    <!-- =========================================================
-         GRILLE PRINCIPALE 2 COLONNES
-    ========================================================== -->
+    {{-- =========================================================
+         GRILLE PRINCIPALE
+    ========================================================== --}}
 
     <div class="dashboard-main-grid">
 
-        <!-- =====================================================
-             COLONNE GAUCHE
-        ====================================================== -->
+
+        {{-- =====================================================
+             COLONNE PRINCIPALE
+        ====================================================== --}}
 
         <div class="grid-primary-column">
 
 
-            <!-- 1. Dernières commandes à traiter -->
-            <section class="admin-data-card">
+            {{-- =================================================
+                 COMMANDES RÉCENTES
+            ================================================== --}}
 
-                <div class="card-top-bar">
+            <section class="dashboard-card">
 
-                    <div class="bar-title-group">
+                <div class="card-header">
 
-                        <span class="dot-square-red">
-                            ■
+                    <div class="card-title-wrap">
+
+                        <span class="card-index font-mono">
+                            01
                         </span>
 
-                        <h2 class="card-heading">
-                            DERNIÈRES COMMANDES À TRAITER
+                        <h2 class="card-title">
+                            COMMANDES RÉCENTES
                         </h2>
-
-                        <span class="queue-tag">
-                            18 EN ATTENTE
-                        </span>
 
                     </div>
 
-                    <div class="bar-actions-group">
-
-                        <button
-                            type="button"
-                            class="btn-tool-sm"
-                        >
-                            FILTRER
-                        </button>
+                    @if(Route::has('admin.orders.index'))
 
                         <a
                             href="{{ route('admin.orders.index') }}"
-                            class="btn-tool-sm"
+                            class="card-link font-mono"
                         >
-                            TOUT VOIR
+                            VOIR LES COMMANDES →
                         </a>
 
-                    </div>
+                    @endif
 
                 </div>
 
 
                 <div class="table-responsive">
 
-                    <table class="dashboard-orders-table">
+                    <table class="orders-table">
 
                         <thead>
 
                             <tr>
-                                <th>N° COMMANDE</th>
-                                <th>CLIENT</th>
-                                <th>WILAYA</th>
-                                <th>ARTICLES</th>
-                                <th>TOTAL (DA)</th>
-                                <th>STATUT</th>
-                                <th class="text-right">ACTION</th>
+
+                                <th>
+                                    CLIENT
+                                </th>
+
+                                <th>
+                                    LOCALISATION
+                                </th>
+
+                                <th>
+                                    ARTICLES
+                                </th>
+
+                                <th>
+                                    TOTAL
+                                </th>
+
+                                <th>
+                                    STATUT
+                                </th>
+
+                                <th>
+                                    DATE
+                                </th>
+
                             </tr>
 
                         </thead>
 
+
                         <tbody>
 
-                            @forelse($recentOrders ?? [] as $order)
+                            @forelse($recentOrders as $order)
+
+                                @php
+
+                                    $orderStatus = $order->status instanceof \BackedEnum
+                                        ? $order->status->value
+                                        : (string) $order->status;
+
+                                    $statusConfig = match ($orderStatus) {
+
+                                        'pending' => [
+                                            'label' => 'EN ATTENTE',
+                                            'class' => 'pending',
+                                        ],
+
+                                        'paid' => [
+                                            'label' => 'À EXPÉDIER',
+                                            'class' => 'to-ship',
+                                        ],
+
+                                        'shipped' => [
+                                            'label' => 'EXPÉDIÉE',
+                                            'class' => 'shipped',
+                                        ],
+
+                                        'delivered' => [
+                                            'label' => 'LIVRÉE',
+                                            'class' => 'delivered',
+                                        ],
+
+                                        'cancelled' => [
+                                            'label' => 'ANNULÉE',
+                                            'class' => 'cancelled',
+                                        ],
+
+                                        default => [
+                                            'label' => strtoupper($orderStatus),
+                                            'class' => 'pending',
+                                        ],
+
+                                    };
+
+                                @endphp
+
 
                                 <tr>
 
                                     <td>
-                                        <span class="mono-code">
-                                            {{ $order->reference ?? ('ND-2026-' . $order->id) }}
-                                        </span>
-                                    </td>
 
-                                    <td>
+                                        <div class="customer-cell">
 
-                                        <div class="client-cell">
+                                            <strong>
+                                                {{ $order->full_name }}
+                                            </strong>
 
-                                            <span class="client-name">
-                                                {{ $order->fullname ?? 'Client' }}
-                                            </span>
-
-                                            <span class="client-email">
-                                                {{ $order->email ?? '' }}
+                                            <span class="customer-email">
+                                                {{ $order->user?->email ?? '—' }}
                                             </span>
 
                                         </div>
 
                                     </td>
 
+
                                     <td>
 
                                         <span class="wilaya-cell">
-                                            {{ sprintf('%02d', $order->wilaya_code ?? 16) }}
-                                            -
-                                            {{ $order->city ?? 'Alger' }}
+                                            {{ $order->wilaya }}
                                         </span>
 
                                     </td>
 
-                                    <td class="text-center">
-
-                                        <span class="qty-bubble">
-                                            {{ $order->items_count ?? 1 }}
-                                        </span>
-
-                                    </td>
 
                                     <td>
 
-                                        <span class="price-cell">
-                                            {{ number_format($order->total, 0, ',', ' ') }} DA
+                                        <span class="articles-count">
+                                            {{ $order->items_count }}
                                         </span>
 
                                     </td>
 
+
                                     <td>
 
-                                        @if(($order->status ?? 'pending') === 'pending')
+                                        <strong>
 
-                                            <span class="badge-status to-ship">
-                                                À EXPÉDIER
-                                            </span>
+                                            {{ number_format($order->total, 0, ',', ' ') }}
 
-                                        @elseif(($order->status ?? '') === 'transit')
+                                            DA
 
-                                            <span class="badge-status in-transit">
-                                                EN TRANSIT
-                                            </span>
-
-                                        @else
-
-                                            <span class="badge-status delivered">
-                                                LIVRÉ
-                                            </span>
-
-                                        @endif
+                                        </strong>
 
                                     </td>
 
-                                    <td class="text-right">
 
-                                        <a
-                                            href="{{ route('admin.orders.show', $order->id) }}"
-                                            class="btn-detail-order"
+                                    <td>
+
+                                        <span
+                                            class="badge-status {{ $statusConfig['class'] }}"
                                         >
-                                            DÉTAIL
-                                        </a>
+                                            {{ $statusConfig['label'] }}
+                                        </span>
+
+                                    </td>
+
+
+                                    <td>
+
+                                        <span class="order-date font-mono">
+                                            {{ $order->created_at?->format('d/m/Y H:i') }}
+                                        </span>
 
                                     </td>
 
@@ -414,11 +443,16 @@
 
                             @empty
 
-                                <!--
-                                    Aucun mock de commande affiché.
-                                    La vue reste vide si le controller
-                                    ne fournit aucune commande.
-                                -->
+                                <tr>
+
+                                    <td
+                                        colspan="6"
+                                        class="empty-orders-cell"
+                                    >
+                                        AUCUNE COMMANDE ENREGISTRÉE
+                                    </td>
+
+                                </tr>
 
                             @endforelse
 
@@ -428,191 +462,139 @@
 
                 </div>
 
-
-                <div class="card-pagination-bar">
-
-                    <span class="pagination-info">
-                        AFFICHAGE 5 SUR 18 COMMANDES
-                    </span>
-
-                    <div class="pagination-buttons">
-
-                        <button
-                            type="button"
-                            class="btn-pag disabled"
-                        >
-                            PRÉCÉDENT
-                        </button>
-
-                        <button
-                            type="button"
-                            class="btn-pag"
-                        >
-                            SUIVANT
-                        </button>
-
-                    </div>
-
-                </div>
-
             </section>
 
 
-            <!-- 2. Actions Rapides Opérateur -->
-            <section class="admin-data-card">
+            {{-- =================================================
+                 VENTES
+            ================================================== --}}
 
-                <div class="card-top-bar">
+            <section class="dashboard-card">
 
-                    <div class="bar-title-group">
+                <div class="card-header">
 
-                        <span class="flash-glyph">
-                            ⚡
+                    <div class="card-title-wrap">
+
+                        <span class="card-index font-mono">
+                            02
                         </span>
 
-                        <h2 class="card-heading">
-                            ACTIONS RAPIDES OPÉRATEUR
+                        <h2 class="card-title">
+                            VENTES DES 7 DERNIERS JOURS
                         </h2>
 
                     </div>
 
-                    <span class="mono-meta">
-                        EXEC_MODE: DIRECT
-                    </span>
-
                 </div>
 
 
-                <div class="quick-actions-bar">
+                <div class="sales-list">
 
-                    <a
-                        href="{{ route('admin.products.create') }}"
-                        class="btn-quick-action primary"
-                    >
-                        <span>
-                            + NOUVEAU PRODUIT
-                        </span>
-                    </a>
+                    @forelse($salesByDay as $sale)
 
-                    <a
-                        href="{{ route('admin.drops.index') }}"
-                        class="btn-quick-action"
-                    >
-                        <span>
-                            🚀 CRÉER UN DROP
-                        </span>
-                    </a>
+                        @php
 
-                    <form
-                        action="{{ route('admin.whitelist.index') }}"
-                        method="GET"
-                        class="action-form-wrap"
-                    >
+                            $saleTotal = (float) $sale->total;
 
-                        <button
-                            type="submit"
-                            class="btn-quick-action red-border"
-                        >
-                            <span>
-                                ✓ APPROUVER (50)
+                            $salesBarWidth = $maxSalesByDay > 0
+                                ? min(
+                                    100,
+                                    ($saleTotal / $maxSalesByDay) * 100
+                                )
+                                : 0;
+
+                        @endphp
+
+
+                        <div class="sales-row">
+
+                            <span class="sales-day font-mono">
+
+                                {{ \Carbon\Carbon::parse($sale->day)->format('d/m') }}
+
                             </span>
-                        </button>
 
-                    </form>
 
-                    <a
-                        href="#"
-                        class="btn-quick-action"
-                    >
-                        <span>
-                            ⤓ EXPORTER LOGISTIQUE
-                        </span>
-                    </a>
+                            <span class="sales-bar-wrap">
+
+                                <span
+                                    class="sales-bar"
+                                    style="width: {{ $salesBarWidth }}%;"
+                                ></span>
+
+                            </span>
+
+
+                            <strong class="sales-value font-mono">
+
+                                {{ number_format($saleTotal, 0, ',', ' ') }}
+
+                                DA
+
+                            </strong>
+
+                        </div>
+
+                    @empty
+
+                        <div class="empty-state">
+                            AUCUNE VENTE CONFIRMÉE SUR LA PÉRIODE.
+                        </div>
+
+                    @endforelse
 
                 </div>
 
             </section>
 
 
-            <!-- 3. Répartition Expéditions par Zone Algérie -->
-            <section class="admin-data-card">
+            {{-- =================================================
+                 TOP PRODUITS
+            ================================================== --}}
 
-                <div class="card-top-bar">
+            <section class="dashboard-card">
 
-                    <div class="bar-title-group">
+                <div class="card-header">
 
-                        <h2 class="card-heading">
-                            RÉPARTITION DES EXPÉDITIONS PAR ZONE
+                    <div class="card-title-wrap">
+
+                        <span class="card-index font-mono">
+                            03
+                        </span>
+
+                        <h2 class="card-title">
+                            PRODUITS LES PLUS VENDUS
                         </h2>
 
                     </div>
 
-                    <span class="mono-meta">
-                        FLUX NATIONAL ALGERIA
-                    </span>
-
                 </div>
 
 
-                <div class="geo-breakdown-grid">
+                <div class="top-products-list">
 
-                    <div class="geo-cell">
-                        <span class="geo-title">
-                            ALGER &amp; CENTRE
-                        </span>
+                    @forelse($topProducts as $product)
 
-                        <span class="geo-val">
-                            58%
-                        </span>
+                        <div class="top-product-row">
 
-                        <span class="geo-sub">
-                            82 COLIS
-                        </span>
-                    </div>
+                            <span class="top-product-name">
+                                {{ $product->product_name }}
+                            </span>
 
+                            <span class="top-product-sales font-mono">
+                                {{ $product->total_sold }}
+                                VENDUES
+                            </span>
 
-                    <div class="geo-cell">
-                        <span class="geo-title">
-                            ORAN &amp; OUEST
-                        </span>
+                        </div>
 
-                        <span class="geo-val">
-                            22%
-                        </span>
+                    @empty
 
-                        <span class="geo-sub">
-                            31 COLIS
-                        </span>
-                    </div>
+                        <div class="empty-state">
+                            AUCUNE VENTE ENREGISTRÉE.
+                        </div>
 
-
-                    <div class="geo-cell">
-                        <span class="geo-title">
-                            EST &amp; CONSTANTINE
-                        </span>
-
-                        <span class="geo-val">
-                            14%
-                        </span>
-
-                        <span class="geo-sub">
-                            20 COLIS
-                        </span>
-                    </div>
-
-
-                    <div class="geo-cell">
-                        <span class="geo-title">
-                            SUD &amp; SAHARA
-                        </span>
-
-                        <span class="geo-val">
-                            06%
-                        </span>
-
-                        <span class="geo-sub">
-                            9 COLIS
-                        </span>
-                    </div>
+                    @endforelse
 
                 </div>
 
@@ -621,441 +603,424 @@
         </div>
 
 
-        <!-- =====================================================
+        {{-- =====================================================
              COLONNE DROITE
-        ====================================================== -->
+        ====================================================== --}}
 
-        <aside class="grid-sidebar-column">
+        <aside class="dashboard-sidebar">
 
 
-            <!-- 1. Monitoring Drop 01 -->
-            <section class="admin-data-card">
+            {{-- =================================================
+                 DROP ACTIF
+            ================================================== --}}
 
-                <div class="card-top-bar">
+            <section class="dashboard-card sidebar-card">
 
-                    <div class="bar-title-group">
+                <div class="card-header">
 
-                        <span class="live-dot-red">
-                            ●
+                    <div class="card-title-wrap">
+
+                        <span class="card-index font-mono">
+                            01
                         </span>
 
-                        <h2 class="card-heading">
-                            MONITORING DROP 01
+                        <h2 class="card-title">
+                            MONITORING DROP
                         </h2>
 
                     </div>
 
-                    <span class="badge-status-red">
-                        EN COURS
-                    </span>
+
+                    @if($hasActiveDrop)
+
+                        <span class="card-badge-live font-mono">
+                            LIVE
+                        </span>
+
+                    @else
+
+                        <span class="card-badge-live card-badge-neutral font-mono">
+                            INACTIF
+                        </span>
+
+                    @endif
 
                 </div>
 
 
-                <div class="drop-monitor-body">
+                <div class="drop-monitor">
 
-                    <div class="drop-identity-row">
+                    @if($hasActiveDrop)
 
-                        <span class="drop-series-name">
-                            THE RESISTANCE (SERIES 01)
-                        </span>
-
-                        <span class="closure-tag">
-                            CLÔTURE DANS:
-                        </span>
-
-                    </div>
-
-
-                    <div class="countdown-strip">
-
-                        <div class="time-block">
-
-                            <span class="digits">
-                                02
-                            </span>
-
-                            <span class="unit">
-                                JOURS
-                            </span>
-
+                        <div class="drop-monitor-name">
+                            {{ $dropName }}
                         </div>
 
 
-                        <div class="time-block">
+                        @if($dropQuotaDefined)
 
-                            <span class="digits">
-                                14
-                            </span>
+                            <div class="drop-monitor-grid">
 
-                            <span class="unit">
-                                HEURES
-                            </span>
+                                <div>
+
+                                    <span class="monitor-label font-mono">
+                                        VENDUES
+                                    </span>
+
+                                    <strong>
+                                        {{ $dropSold }} / {{ $dropQuota }}
+                                    </strong>
+
+                                </div>
+
+
+                                <div>
+
+                                    <span class="monitor-label font-mono">
+                                        TAUX
+                                    </span>
+
+                                    <strong>
+                                        {{ $dropPercentage }}%
+                                    </strong>
+
+                                </div>
+
+
+                                <div>
+
+                                    <span class="monitor-label font-mono">
+                                        RESTANTES
+                                    </span>
+
+                                    <strong>
+                                        {{ $dropRemaining }}
+                                    </strong>
+
+                                </div>
+
+
+                                <div>
+
+                                    <span class="monitor-label font-mono">
+                                        FIN
+                                    </span>
+
+                                    <strong>
+                                        {{ $activeDrop->end_date?->format('d/m/Y H:i') ?? '—' }}
+                                    </strong>
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="drop-progress">
+
+                                <div class="drop-progress-header">
+
+                                    <span class="monitor-label font-mono">
+                                        PROGRESSION DU QUOTA
+                                    </span>
+
+                                    <span class="drop-progress-value font-mono">
+                                        {{ $dropPercentage }}%
+                                    </span>
+
+                                </div>
+
+
+                                <div class="drop-progress-track">
+
+                                    <span
+                                        class="drop-progress-fill"
+                                        style="width: {{ min(100, max(0, $dropPercentage)) }}%;"
+                                    ></span>
+
+                                </div>
+
+                            </div>
+
+
+                            @if($dropCountdown)
+
+                                <div class="drop-countdown">
+
+                                    <span class="monitor-label font-mono">
+                                        TEMPS RESTANT
+                                    </span>
+
+
+                                    <div class="drop-countdown-values">
+
+                                        <div>
+
+                                            <strong>
+                                                {{ $dropCountdown['days'] }}
+                                            </strong>
+
+                                            <span class="font-mono">
+                                                J
+                                            </span>
+
+                                        </div>
+
+
+                                        <span class="countdown-separator">
+                                            :
+                                        </span>
+
+
+                                        <div>
+
+                                            <strong>
+                                                {{ $dropCountdown['hours'] }}
+                                            </strong>
+
+                                            <span class="font-mono">
+                                                H
+                                            </span>
+
+                                        </div>
+
+
+                                        <span class="countdown-separator">
+                                            :
+                                        </span>
+
+
+                                        <div>
+
+                                            <strong>
+                                                {{ $dropCountdown['minutes'] }}
+                                            </strong>
+
+                                            <span class="font-mono">
+                                                MIN
+                                            </span>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            @endif
+
+                        @else
+
+                            <div class="drop-monitor-empty">
+
+                                <span class="monitor-label font-mono">
+                                    QUOTA
+                                </span>
+
+                                <strong>
+                                    NON DÉFINI
+                                </strong>
+
+                                <p>
+                                    Aucun quota produit n'est actuellement
+                                    défini pour ce Drop.
+                                </p>
+
+                            </div>
+
+                        @endif
+
+                    @else
+
+                        <div class="drop-monitor-empty">
+
+                            <strong>
+                                AUCUN DROP ACTIF
+                            </strong>
+
+                            <p>
+                                Aucun Drop n'est actuellement actif.
+                            </p>
 
                         </div>
 
-
-                        <div class="time-block">
-
-                            <span class="digits alert">
-                                32
-                            </span>
-
-                            <span class="unit">
-                                MINUTES
-                            </span>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="progress-section">
-
-                        <div class="progress-labels">
-
-                            <span class="progress-title">
-                                ALLOCATION VENDUE : 246 / 300 PIÈCES
-                            </span>
-
-                            <span class="progress-percent">
-                                82%
-                            </span>
-
-                        </div>
-
-
-                        <div class="progress-track">
-
-                            <div
-                                class="progress-fill"
-                                style="width: 82%;"
-                            ></div>
-
-                        </div>
-
-
-                        <div class="progress-foot">
-
-                            <span>
-                                Plafond: 300 ex. exclusifs
-                            </span>
-
-                            <span>
-                                Restants: 54 pièces
-                            </span>
-
-                        </div>
-
-                    </div>
+                    @endif
 
                 </div>
 
             </section>
 
 
-            <!-- 2. Niveaux de Stock Critiques -->
-            <section class="admin-data-card">
+            {{-- =================================================
+                 STOCKS CRITIQUES
+            ================================================== --}}
 
-                <div class="card-top-bar">
+            <section class="dashboard-card sidebar-card">
 
-                    <div class="bar-title-group">
+                <div class="card-header">
 
-                        <span class="box-glyph">
-                            🚨
+                    <div class="card-title-wrap">
+
+                        <span class="card-index font-mono">
+                            02
                         </span>
 
-                        <h2 class="card-heading">
+                        <h2 class="card-title">
                             NIVEAUX DE STOCK CRITIQUES
                         </h2>
 
                     </div>
 
-                    <span class="badge-alert-count">
-                        3 ALERTES
+
+                    <span class="card-alert-badge font-mono">
+
+                        {{ $criticalStockAlertsCount }}
+
+                        {{ $criticalStockAlertsCount === 1 ? 'ALERTE' : 'ALERTES' }}
+
                     </span>
 
                 </div>
 
 
-                <div class="critical-stocks-list">
+                <div class="stock-alert-list">
 
-                    <div class="stock-item">
+                    @forelse($lowStockVariants as $alert)
 
-                        <div class="stock-icon">
-                            🧥
-                        </div>
+                        <div class="stock-item">
 
-                        <div class="stock-info">
-
-                            <span class="stock-name">
-                                HARRINGTON JACKET
-                            </span>
-
-                            <span class="stock-variant">
-                                Noir Brut • Taille L
-                            </span>
-
-                        </div>
-
-                        <div class="stock-action">
-
-                            <span class="stock-qty-val alert">
-                                2 RESTANTS
-                            </span>
-
-                            <span class="stock-sub-status">
-                                ÉPUISÉ SOUS PEU
-                            </span>
-
-                        </div>
-
-                    </div>
+                            <div
+                                class="stock-item-icon"
+                                aria-hidden="true"
+                            >
+                                ▪
+                            </div>
 
 
-                    <div class="stock-item">
+                            <div class="stock-item-info">
 
-                        <div class="stock-icon">
-                            👕
-                        </div>
+                                <strong class="stock-item-name">
+                                    {{ $alert['product_name'] }}
+                                </strong>
 
-                        <div class="stock-info">
 
-                            <span class="stock-name">
-                                SIGNATURE HEAVY POLO
-                            </span>
+                                <span class="stock-item-variant font-mono">
 
-                            <span class="stock-variant">
-                                Burgundy / Noir • Taille XL
-                            </span>
+                                    @if(filled($alert['color']))
 
-                        </div>
+                                        {{ $alert['color'] }}
 
-                        <div class="stock-action">
+                                        <span class="variant-separator">
+                                            •
+                                        </span>
 
-                            <span class="stock-qty-val alert">
-                                1 RESTANT
-                            </span>
+                                    @endif
 
-                            <span class="stock-sub-status">
-                                DERNIÈRE PIÈCE
-                            </span>
+                                    {{ $alert['size'] }}
+
+                                </span>
+
+                            </div>
+
+
+                            <div class="stock-item-status">
+
+                                <span
+                                    class="stock-status {{ $alert['status_class'] }}"
+                                >
+                                    {{ $alert['status_label'] }}
+                                </span>
+
+
+                                <span class="stock-item-quantity font-mono">
+                                    {{ $alert['label'] }}
+                                </span>
+
+                            </div>
 
                         </div>
 
-                    </div>
+                    @empty
 
-
-                    <div class="stock-item">
-
-                        <div class="stock-icon">
-                            👖
+                        <div class="stock-empty-state font-mono">
+                            AUCUNE ALERTE DE STOCK
                         </div>
 
-                        <div class="stock-info">
-
-                            <span class="stock-name">
-                                TECHNICAL CARGO PANT
-                            </span>
-
-                            <span class="stock-variant">
-                                Olive Concrete • Taille M
-                            </span>
-
-                        </div>
-
-                        <div class="stock-action">
-
-                            <span class="stock-qty-val warning">
-                                4 RESTANTS
-                            </span>
-
-                            <span class="stock-sub-status">
-                                RÉSERVE FAIBLE
-                            </span>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="stock-footer-action">
-
-                    <a
-                        href="{{ route('admin.products.index') }}"
-                        class="btn-reajust"
-                    >
-                        RÉAJUSTER LES QUOTAS D'INVENTAIRE
-                    </a>
+                    @endforelse
 
                 </div>
 
             </section>
 
 
-            <!-- 3. Journal d'Activité Système -->
-            <section class="admin-data-card">
+            {{-- =================================================
+                 JOURNAL
+            ================================================== --}}
 
-                <div class="card-top-bar">
+            <section class="dashboard-card sidebar-card">
 
-                    <div class="bar-title-group">
+                <div class="card-header">
 
-                        <span class="terminal-glyph">
-                            🗂
+                    <div class="card-title-wrap">
+
+                        <span class="card-index font-mono">
+                            03
                         </span>
 
-                        <h2 class="card-heading">
-                            JOURNAL D'ACTIVITÉ SYSTÈME
+                        <h2 class="card-title">
+                            JOURNAL D'ACTIVITÉ
                         </h2>
 
                     </div>
 
-                    <span class="live-feed-tag">
-                        LIVE_FEED
-                    </span>
-
                 </div>
 
 
-                <div class="activity-timeline">
+                <div class="activity-list">
 
-                    <div class="activity-log-row">
+                    <div class="activity-empty-state">
 
-                        <span class="log-time">
-                            14:36
+                        <span class="activity-empty-icon">
+                            —
                         </span>
 
-                        <div class="log-details">
+                        <strong>
+                            JOURNAL NON DISPONIBLE
+                        </strong>
 
-                            <span class="log-text">
-                                Nouvelle commande confirmée
-                                <strong class="code">
-                                    #ND-8942
-                                </strong>
-                                (34 500 DA) — Alger
-                            </span>
-
-                            <span class="log-sub">
-                                PAIEMENT CIB VÉRIFIÉ
-                            </span>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="activity-log-row">
-
-                        <span class="log-time">
-                            14:31
+                        <span class="font-mono">
+                            AUCUNE ACTIVITÉ HISTORISÉE
                         </span>
-
-                        <div class="log-details">
-
-                            <span class="log-text">
-                                Demande Whitelist validée pour
-                                <strong class="code">
-                                    karim.b@...
-                                </strong>
-                            </span>
-
-                            <span class="log-sub">
-                                ACCÈS DROP DÉLIVRÉ PAR SMS/MAIL
-                            </span>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="activity-log-row">
-
-                        <span class="log-time alert-time">
-                            14:18
-                        </span>
-
-                        <div class="log-details">
-
-                            <span class="log-text alert-text">
-                                Alerte stock bas :
-                                Harrington Jacket Taille L
-                                (2 unités)
-                            </span>
-
-                            <span class="log-sub">
-                                SEUIL D'ALERTE CRITIQUE DÉPASSÉ
-                            </span>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="activity-log-row">
-
-                        <span class="log-time">
-                            13:54
-                        </span>
-
-                        <div class="log-details">
-
-                            <span class="log-text">
-                                Colis groupé expédié vers Centre de Tri
-                                Yalidine (31 Oran)
-                            </span>
-
-                            <span class="log-sub">
-                                BORDEREAU #YAL-88219-DZ
-                            </span>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="activity-log-row">
-
-                        <span class="log-time">
-                            13:22
-                        </span>
-
-                        <div class="log-details">
-
-                            <span class="log-text">
-                                Nouvelle commande confirmée
-                                <strong class="code">
-                                    #ND-8941
-                                </strong>
-                                (19 000 DA) — Oran
-                            </span>
-
-                            <span class="log-sub">
-                                PAIEMENT À LA LIVRAISON CONFIRMÉ
-                            </span>
-
-                        </div>
 
                     </div>
 
                 </div>
 
+            </section>
 
-                <div class="activity-footer-bar">
 
-                    <span class="status-sys-ok">
-                        STATUT: SYSTÈME NOMINAL
-                    </span>
+            {{-- =================================================
+                 ACTION RAPIDE
+            ================================================== --}}
+
+            <section class="dashboard-card quick-action-card">
+
+                @if(Route::has('admin.whitelist.index'))
 
                     <a
-                        href="#"
-                        class="link-full-log"
+                        href="{{ route('admin.whitelist.index') }}"
+                        class="quick-action-link"
                     >
-                        VOIR HISTORIQUE COMPLET →
+
+                        <span>
+                            ✓ GÉRER LA WHITELIST
+                        </span>
+
+                        <span>
+                            →
+                        </span>
+
                     </a>
 
-                </div>
+                @endif
 
             </section>
 
@@ -1068,1049 +1033,748 @@
 
 <style>
 
-/* =========================================================
-   Scoped Admin Dashboard Styles
-========================================================= */
-
 .admin-dashboard-view {
     width: 100%;
-    max-width: 1440px;
+    max-width: 1600px;
     margin: 0 auto;
-    padding: 24px 32px 80px 32px;
-    box-sizing: border-box;
-    color: var(--text, #e5e5e5);
-    font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: #0c0c0c;
+    padding: 32px 28px 80px;
+    color: #f5f5f0;
 }
 
-.admin-dashboard-view a {
-    color: inherit;
-    text-decoration: none;
+.font-mono {
+    font-family: monospace;
 }
 
-
-/* =========================================================
-   1. HEADER / TOP PANEL
-========================================================= */
-
-.admin-top-panel {
+.dashboard-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--border, #242424);
-    padding-bottom: 14px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 16px;
-}
-
-.panel-left {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
-.system-tag {
-    font-family: monospace;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    color: #fff;
-}
-
-.system-tag .dept {
-    color: #666;
-    margin-left: 8px;
-}
-
-.server-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background-color: #141414;
-    border: 1px solid var(--border, #242424);
-    padding: 4px 10px;
-}
-
-.pulse-indicator {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background-color: var(--accent, #d32f2f);
-    box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.3);
-}
-
-.server-text {
-    font-family: monospace;
-    font-size: 9px;
-    color: #aaa;
-    letter-spacing: 0.1em;
-}
-
-.panel-right {
-    display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 24px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid #222;
+    padding-bottom: 24px;
 }
 
-.admin-profile-badge {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background-color: #121212;
-    border: 1px solid var(--border, #242424);
-    padding: 6px 12px;
+.dashboard-kicker {
+    color: #d32f2f;
+    font-size: 10px;
+    letter-spacing: .18em;
+    margin-bottom: 8px;
 }
 
-.admin-shield-icon {
-    color: var(--accent, #d32f2f);
+.dashboard-title {
+    margin: 0;
+    font-size: 42px;
+    line-height: 1;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+}
+
+.dashboard-subtitle {
+    margin: 10px 0 0;
+    color: #777;
     font-size: 13px;
 }
 
-.admin-identity {
+.dashboard-header-meta {
     display: flex;
-    flex-direction: column;
-}
-
-.admin-role {
-    font-family: monospace;
-    font-size: 10px;
-    font-weight: 800;
-    color: #ffffff;
-    letter-spacing: 0.1em;
-}
-
-.admin-hub {
-    font-family: monospace;
-    font-size: 8px;
-    color: #666;
-    letter-spacing: 0.08em;
-}
-
-.sys-clock {
-    font-family: monospace;
-    font-size: 11px;
-    color: #888;
-    display: flex;
-    gap: 6px;
-    align-items: baseline;
-}
-
-.clock-time {
-    color: #fff;
-    font-weight: bold;
-}
-
-.clock-tz {
-    font-size: 9px;
-    color: #555;
-}
-
-
-/* =========================================================
-   2. NAVIGATION INTERNE
-========================================================= */
-
-.admin-navigation-bar {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--border, #242424);
-    margin-bottom: 28px;
-    padding-bottom: 0;
-    overflow-x: auto;
-}
-
-.nav-links-stack {
-    display: flex;
-    gap: 24px;
-}
-
-.admin-nav-item {
-    padding: 12px 0 14px 0;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.15em;
+    gap: 10px;
     color: #777;
-    position: relative;
-    display: flex;
+    font-size: 10px;
+    letter-spacing: .08em;
+}
+
+.server-status {
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    white-space: nowrap;
-    transition: color 0.2s;
+    gap: 7px;
+    color: #aaa;
 }
 
-.admin-nav-item:hover {
-    color: #ffffff;
-}
-
-.admin-nav-item.active {
-    color: #ffffff;
-}
-
-.admin-nav-item.active::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background-color: var(--accent, #d32f2f);
-}
-
-.nav-pill-badge {
-    background-color: #1a1a1a;
-    border: 1px solid var(--border, #242424);
-    font-family: monospace;
-    font-size: 9px;
-    padding: 1px 5px;
-    color: var(--accent, #d32f2f);
-    font-weight: bold;
-}
-
-.nav-dot-red {
+.server-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background-color: var(--accent, #d32f2f);
+    background: #2ecc71;
 }
 
-.nav-pill-dim {
-    background-color: #1a1a1a;
-    border: 1px solid var(--border, #242424);
-    font-family: monospace;
-    font-size: 9px;
-    padding: 1px 5px;
-    color: #888;
+.header-separator {
+    color: #333;
 }
 
-.btn-config {
-    font-family: monospace;
-    font-size: 11px;
-    color: #666;
-    letter-spacing: 0.12em;
+.dashboard-nav {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 12px;
-    border: 1px solid var(--border, #242424);
-    background-color: #101010;
-    transition: all 0.2s;
+    margin-bottom: 24px;
+    overflow-x: auto;
 }
 
-.btn-config:hover {
+.dashboard-nav-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 14px;
+    border: 1px solid #222;
+    color: #777;
+    text-decoration: none;
+    font-size: 9px;
+    letter-spacing: .12em;
+    white-space: nowrap;
+}
+
+.dashboard-nav-item:hover,
+.dashboard-nav-item.active {
     color: #fff;
-    border-color: #555;
+    border-color: #444;
 }
 
+.dashboard-nav-item.active {
+    background: #141414;
+}
 
-/* =========================================================
-   3. KPI CARDS
-========================================================= */
+.nav-count {
+    min-width: 18px;
+    padding: 2px 5px;
+    text-align: center;
+    background: #222;
+    color: #aaa;
+}
 
 .kpi-metrics-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-    margin-bottom: 32px;
-}
-
-@media (max-width: 1100px) {
-    .kpi-metrics-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 600px) {
-    .kpi-metrics-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-.metric-card {
-    background-color: #101010;
-    border: 1px solid var(--border, #242424);
-    padding: 20px 22px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 140px;
-}
-
-.metric-card.alert-mode {
-    border-left: 3px solid var(--accent, #d32f2f);
-}
-
-.metric-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.metric-label {
-    font-family: monospace;
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    color: #888;
-    text-transform: uppercase;
-}
-
-.metric-glyph {
-    font-size: 13px;
-    opacity: 0.6;
-}
-
-.metric-glyph.alert-icon {
-    color: var(--accent, #d32f2f);
-    font-size: 11px;
-    opacity: 1;
-}
-
-.metric-figure {
-    margin: 10px 0;
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-}
-
-.metric-figure .val {
-    font-family: monospace;
-    font-size: 34px;
-    font-weight: 900;
-    color: #ffffff;
-    line-height: 1;
-}
-
-.metric-figure .currency {
-    font-family: monospace;
-    font-size: 15px;
-    font-weight: 800;
-    color: #888;
-}
-
-.val.alert-val {
-    color: var(--accent, #d32f2f);
-}
-
-.sub-alert-tag {
-    font-family: monospace;
-    font-size: 9px;
-    color: #777;
-    letter-spacing: 0.1em;
-}
-
-.metric-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-family: monospace;
-    font-size: 10px;
-    border-top: 1px solid #1a1a1a;
-    padding-top: 10px;
-}
-
-.growth-tag.positive {
-    color: var(--accent, #d32f2f);
-    font-weight: bold;
-}
-
-.cadence-tag {
-    color: #666;
-}
-
-.meta-tag {
-    color: #777;
-}
-
-.highlight-txt {
-    color: #fff;
-}
-
-.alert-txt {
-    color: #f39c12;
-}
-
-.critical-tag {
-    color: var(--accent, #d32f2f);
-    font-weight: bold;
-}
-
-.action-link-red {
-    color: var(--accent, #d32f2f);
-    font-weight: bold;
-    letter-spacing: 0.08em;
-}
-
-
-/* =========================================================
-   4. LAYOUT PRINCIPAL 2 COLONNES
-========================================================= */
-
-.dashboard-main-grid {
-    display: grid;
-    grid-template-columns: 1.3fr 0.7fr;
-    gap: 28px;
-    align-items: flex-start;
-}
-
-@media (max-width: 1100px) {
-    .dashboard-main-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-
-/* =========================================================
-   BLOCS COMMUNS
-========================================================= */
-
-.admin-data-card {
-    background-color: #101010;
-    border: 1px solid var(--border, #242424);
+    gap: 12px;
     margin-bottom: 24px;
 }
 
-.card-top-bar {
+.kpi-card {
+    min-height: 125px;
+    padding: 20px;
+    background: #111;
+    border: 1px solid #222;
     display: flex;
+    flex-direction: column;
     justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border, #242424);
-    background-color: #121212;
 }
 
-.bar-title-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.dot-square-red {
-    color: var(--accent, #d32f2f);
-    font-size: 10px;
-}
-
-.live-dot-red {
-    color: var(--accent, #d32f2f);
-    font-size: 10px;
-}
-
-.flash-glyph,
-.box-glyph,
-.terminal-glyph {
-    font-size: 12px;
-}
-
-.card-heading {
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    margin: 0;
-    color: #ffffff;
-    text-transform: uppercase;
-}
-
-.queue-tag {
-    background-color: #1a1a1a;
-    border: 1px solid var(--border, #242424);
-    font-family: monospace;
-    font-size: 9px;
-    padding: 2px 6px;
-    color: #aaa;
-    margin-left: 6px;
-}
-
-.bar-actions-group {
-    display: flex;
-    gap: 8px;
-}
-
-.btn-tool-sm {
-    border: 1px solid var(--border, #242424);
-    background-color: #0c0c0c;
-    color: #888;
-    padding: 4px 10px;
-    font-family: monospace;
-    font-size: 9px;
-    letter-spacing: 0.1em;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-tool-sm:hover {
-    color: #fff;
-    border-color: #666;
-}
-
-.mono-meta {
-    font-family: monospace;
-    font-size: 9px;
+.kpi-label,
+.kpi-meta {
     color: #666;
-    letter-spacing: 0.12em;
+    font-size: 9px;
+    letter-spacing: .12em;
 }
 
+.kpi-value {
+    font-size: 27px;
+    letter-spacing: .02em;
+}
 
-/* =========================================================
-   5. TABLEAU DES COMMANDES
-========================================================= */
+.kpi-unit {
+    font-size: 12px;
+    color: #777;
+}
+
+.dashboard-main-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 24px;
+    align-items: start;
+}
+
+.grid-primary-column {
+    min-width: 0;
+}
+
+.dashboard-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.dashboard-card {
+    background: #111;
+    border: 1px solid #222;
+    margin-bottom: 24px;
+}
+
+.sidebar-card {
+    margin-bottom: 0;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    border-bottom: 1px solid #222;
+}
+
+.card-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.card-index {
+    color: #d32f2f;
+    font-size: 10px;
+}
+
+.card-title {
+    margin: 0;
+    font-size: 12px;
+    letter-spacing: .12em;
+    font-weight: 800;
+}
+
+.card-link {
+    color: #888;
+    text-decoration: none;
+    font-size: 9px;
+    letter-spacing: .1em;
+}
+
+.card-link:hover {
+    color: #fff;
+}
+
+.card-badge-live {
+    color: #2ecc71;
+    font-size: 9px;
+    letter-spacing: .1em;
+}
+
+.card-badge-neutral {
+    color: #666;
+}
+
+.card-alert-badge {
+    color: #d32f2f;
+    border: 1px solid #441818;
+    background: #220e0e;
+    padding: 5px 7px;
+    font-size: 8px;
+    letter-spacing: .1em;
+}
 
 .table-responsive {
-    width: 100%;
     overflow-x: auto;
 }
 
-.dashboard-orders-table {
+.orders-table {
     width: 100%;
     border-collapse: collapse;
+}
+
+.orders-table th {
+    padding: 12px 16px;
+    color: #555;
+    background: #0d0d0d;
+    border-bottom: 1px solid #222;
     font-family: monospace;
-    font-size: 11px;
+    font-size: 8px;
+    letter-spacing: .12em;
     text-align: left;
+    white-space: nowrap;
 }
 
-.dashboard-orders-table th {
-    background-color: #0c0c0c;
-    padding: 12px 18px;
-    color: #666;
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    border-bottom: 1px solid var(--border, #242424);
-    font-weight: 600;
+.orders-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #1d1d1d;
+    font-size: 12px;
+    white-space: nowrap;
 }
 
-.dashboard-orders-table td {
-    padding: 14px 18px;
-    border-bottom: 1px solid #181818;
-    vertical-align: middle;
-}
-
-.dashboard-orders-table tr:hover td {
-    background-color: #141414;
-}
-
-.mono-code {
-    color: #ddd;
-    font-weight: bold;
-}
-
-.client-cell {
+.customer-cell {
     display: flex;
     flex-direction: column;
+    gap: 3px;
 }
 
-.client-name {
-    color: #fff;
-    font-weight: bold;
-    font-size: 12px;
-}
-
-.client-email {
-    font-size: 9px;
+.customer-email {
     color: #666;
+    font-size: 10px;
 }
 
 .wilaya-cell {
     color: #aaa;
-    font-size: 10px;
 }
 
-.qty-bubble {
-    color: #aaa;
-}
-
-.price-cell {
-    font-weight: 800;
+.articles-count {
     color: #fff;
+    font-family: monospace;
+}
+
+.order-date {
+    color: #666;
+    font-size: 9px;
 }
 
 .badge-status {
     display: inline-block;
-    padding: 3px 6px;
+    padding: 5px 7px;
+    font-family: monospace;
     font-size: 8px;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    border: 1px solid transparent;
+    letter-spacing: .1em;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.badge-status.pending {
+    color: #e67e22;
+    background: #21190c;
+    border: 1px solid #443216;
 }
 
 .badge-status.to-ship {
-    background-color: rgba(211, 47, 47, 0.12);
-    border-color: var(--accent, #d32f2f);
-    color: var(--accent, #d32f2f);
+    color: #f39c12;
+    background: #21190c;
+    border: 1px solid #443216;
 }
 
-.badge-status.in-transit {
-    background-color: #1c1c1c;
-    border-color: #333;
-    color: #aaa;
+.badge-status.shipped {
+    color: #5dade2;
+    background: #101c26;
+    border: 1px solid #20394d;
 }
 
 .badge-status.delivered {
-    background-color: rgba(46, 204, 113, 0.1);
-    border-color: #2ecc71;
     color: #2ecc71;
+    background: #0e1c12;
+    border: 1px solid #1a3823;
 }
 
-.btn-detail-order {
-    border: 1px solid var(--border, #242424);
-    background-color: #161616;
-    color: #888;
-    padding: 4px 10px;
+.badge-status.cancelled {
+    color: #d32f2f;
+    background: #220e0e;
+    border: 1px solid #441818;
+}
+
+.empty-orders-cell {
+    padding: 36px 20px !important;
+    color: #666;
+    text-align: center;
+    font-family: monospace;
     font-size: 9px;
-    transition: all 0.2s;
-    display: inline-block;
+    letter-spacing: .1em;
 }
 
-.btn-detail-order:hover {
-    color: #fff;
-    border-color: #666;
+.sales-list,
+.top-products-list,
+.stock-alert-list,
+.activity-list {
+    padding: 4px 20px 16px;
 }
 
-.card-pagination-bar {
+.sales-row {
+    display: grid;
+    grid-template-columns: 55px minmax(80px, 1fr) 100px;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 0;
+    border-bottom: 1px solid #1d1d1d;
+}
+
+.sales-day {
+    color: #777;
+    font-size: 9px;
+}
+
+.sales-bar-wrap {
+    height: 4px;
+    background: #1c1c1c;
+}
+
+.sales-bar {
+    display: block;
+    height: 100%;
+    background: #d32f2f;
+}
+
+.sales-value {
+    color: #aaa;
+    font-size: 9px;
+    text-align: right;
+}
+
+.top-product-row {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    padding: 12px 20px;
-    font-family: monospace;
-    font-size: 10px;
-    color: #666;
+    gap: 20px;
+    padding: 14px 0;
+    border-bottom: 1px solid #1d1d1d;
 }
 
-.pagination-buttons {
-    display: flex;
-    gap: 8px;
+.top-product-name {
+    font-size: 12px;
 }
 
-.btn-pag {
-    background-color: #0c0c0c;
-    border: 1px solid var(--border, #242424);
-    color: #aaa;
-    padding: 3px 8px;
+.top-product-sales {
+    color: #777;
     font-size: 9px;
-    cursor: pointer;
+    white-space: nowrap;
 }
 
-.btn-pag.disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-
-/* =========================================================
-   6. ACTIONS RAPIDES
-========================================================= */
-
-.quick-actions-bar {
-    padding: 16px 20px;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-}
-
-@media (max-width: 700px) {
-    .quick-actions-bar {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-.btn-quick-action {
-    background-color: #0c0c0c;
-    border: 1px solid var(--border, #242424);
-    color: #fff;
-    padding: 12px 10px;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-quick-action.primary {
-    background-color: #fff;
-    color: #000;
-    border-color: #fff;
-}
-
-.btn-quick-action.primary:hover {
-    background-color: var(--accent, #d32f2f);
-    border-color: var(--accent, #d32f2f);
-    color: #fff;
-}
-
-.btn-quick-action.red-border {
-    border-color: var(--accent, #d32f2f);
-    color: var(--accent, #d32f2f);
-    width: 100%;
-}
-
-.btn-quick-action.red-border:hover {
-    background-color: var(--accent, #d32f2f);
-    color: #fff;
-}
-
-.btn-quick-action:hover {
-    border-color: #666;
-}
-
-.action-form-wrap {
-    margin: 0;
+.empty-state {
+    padding: 25px 0;
+    color: #666;
+    font-family: monospace;
+    font-size: 9px;
+    letter-spacing: .08em;
 }
 
 
 /* =========================================================
-   7. GÉOGRAPHIE & ZONES
+   DROP MONITORING
 ========================================================= */
 
-.geo-breakdown-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
+.drop-monitor {
     padding: 20px;
 }
 
-@media (max-width: 650px) {
-    .geo-breakdown-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
+.drop-monitor-name {
+    margin-bottom: 18px;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: .04em;
 }
 
-.geo-cell {
-    background-color: #0c0c0c;
-    border: 1px solid var(--border, #242424);
-    padding: 14px;
+.drop-monitor-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 12px;
+}
+
+.drop-monitor-grid > div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.monitor-label {
+    color: #666;
+    font-size: 8px;
+    letter-spacing: .1em;
+}
+
+.drop-monitor-grid strong {
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.drop-progress {
+    margin-top: 22px;
+}
+
+.drop-progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.drop-progress-value {
+    color: #aaa;
+    font-size: 8px;
+}
+
+.drop-progress-track {
+    width: 100%;
+    height: 5px;
+    background: #1c1c1c;
+    overflow: hidden;
+}
+
+.drop-progress-fill {
+    display: block;
+    height: 100%;
+    background: #d32f2f;
+}
+
+.drop-countdown {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid #1d1d1d;
+}
+
+.drop-countdown-values {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    margin-top: 9px;
+}
+
+.drop-countdown-values > div {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.drop-countdown-values strong {
+    font-family: monospace;
+    font-size: 20px;
+}
+
+.drop-countdown-values span {
+    color: #666;
+    font-size: 7px;
+    letter-spacing: .08em;
+}
+
+.countdown-separator {
+    color: #444 !important;
+    font-family: monospace;
+    font-size: 15px !important;
+}
+
+.drop-monitor-empty {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 0 6px;
+}
+
+.drop-monitor-empty strong {
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.drop-monitor-empty p {
+    margin: 0;
+    color: #666;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   STOCK
+========================================================= */
+
+.stock-alert-list {
+    padding-top: 6px;
+}
+
+.stock-item {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 0;
+    border-bottom: 1px solid #1d1d1d;
+}
+
+.stock-item:last-child {
+    border-bottom: 0;
+}
+
+.stock-item-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #292929;
+    color: #777;
+    font-size: 10px;
+}
+
+.stock-item-info {
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
-.geo-title {
-    font-family: monospace;
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    color: #666;
-}
-
-.geo-val {
-    font-family: monospace;
-    font-size: 24px;
-    font-weight: 900;
-    color: #fff;
-}
-
-.geo-sub {
-    font-family: monospace;
-    font-size: 9px;
-    color: #888;
-}
-
-
-/* =========================================================
-   8. SIDEBAR DROITE : DROP 01 & STOCKS
-========================================================= */
-
-.badge-status-red {
-    background-color: var(--accent, #d32f2f);
-    color: #fff;
-    font-family: monospace;
-    font-size: 8px;
-    font-weight: 800;
-    padding: 2px 6px;
-    letter-spacing: 0.1em;
-}
-
-.drop-monitor-body {
-    padding: 20px;
-}
-
-.drop-identity-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    font-family: monospace;
-    font-size: 10px;
-    margin-bottom: 14px;
-}
-
-.drop-series-name {
-    color: #fff;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-}
-
-.closure-tag {
-    color: #666;
-    font-size: 9px;
-    letter-spacing: 0.1em;
-}
-
-.countdown-strip {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
-.time-block {
-    background-color: #0c0c0c;
-    border: 1px solid var(--border, #242424);
-    padding: 12px 6px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-}
-
-.time-block .digits {
-    font-family: monospace;
-    font-size: 26px;
-    font-weight: 900;
-    color: #fff;
-    line-height: 1;
-}
-
-.time-block .digits.alert {
-    color: var(--accent, #d32f2f);
-}
-
-.time-block .unit {
-    font-family: monospace;
-    font-size: 8px;
-    letter-spacing: 0.15em;
-    color: #666;
-    margin-top: 6px;
-}
-
-.progress-section {
-    border-top: 1px solid #1a1a1a;
-    padding-top: 14px;
-}
-
-.progress-labels {
-    display: flex;
-    justify-content: space-between;
-    font-family: monospace;
-    font-size: 9px;
-    color: #aaa;
-    margin-bottom: 6px;
-}
-
-.progress-track {
-    width: 100%;
-    height: 4px;
-    background-color: #1a1a1a;
+.stock-item-name {
     overflow: hidden;
-    margin-bottom: 8px;
+    color: #eee;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.progress-fill {
-    height: 100%;
-    background-color: var(--accent, #d32f2f);
-}
-
-.progress-foot {
-    display: flex;
-    justify-content: space-between;
-    font-family: monospace;
-    font-size: 9px;
+.stock-item-variant {
     color: #666;
-}
-
-
-/* =========================================================
-   STOCKS CRITIQUES
-========================================================= */
-
-.badge-alert-count {
-    font-family: monospace;
-    font-size: 9px;
-    color: var(--accent, #d32f2f);
-    letter-spacing: 0.12em;
-    font-weight: bold;
-}
-
-.critical-stocks-list {
-    padding: 16px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.stock-item {
-    background-color: #0c0c0c;
-    border: 1px solid var(--border, #242424);
-    padding: 12px 14px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-
-.stock-icon {
-    font-size: 16px;
-    opacity: 0.7;
-}
-
-.stock-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.stock-name {
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    color: #fff;
+    font-size: 8px;
+    letter-spacing: .08em;
     text-transform: uppercase;
 }
 
-.stock-variant {
-    font-family: monospace;
-    font-size: 9px;
-    color: #777;
+.variant-separator {
+    color: #444;
+    padding: 0 3px;
 }
 
-.stock-action {
-    text-align: right;
+.stock-item-status {
     display: flex;
     flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    text-align: right;
 }
 
-.stock-qty-val {
+.stock-status {
+    padding: 4px 6px;
     font-family: monospace;
-    font-size: 11px;
-    font-weight: 900;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    white-space: nowrap;
 }
 
-.stock-qty-val.alert {
-    color: var(--accent, #d32f2f);
+.stock-status.exhausted {
+    color: #d32f2f;
+    background: #220e0e;
+    border: 1px solid #441818;
 }
 
-.stock-qty-val.warning {
-    color: #f39c12;
+.stock-status.critical {
+    color: #e67e22;
+    background: #21190c;
+    border: 1px solid #443216;
 }
 
-.stock-sub-status {
-    font-family: monospace;
+.stock-item-quantity {
+    color: #777;
     font-size: 8px;
-    color: #555;
-    letter-spacing: 0.08em;
+    white-space: nowrap;
 }
 
-.stock-footer-action {
-    padding: 0 20px 16px 20px;
-}
-
-.btn-reajust {
-    display: block;
-    width: 100%;
-    background-color: #0c0c0c;
-    border: 1px solid var(--border, #242424);
-    padding: 10px;
+.stock-empty-state {
+    padding: 30px 0;
+    color: #666;
     text-align: center;
-    font-family: monospace;
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    color: #888;
-    transition: all 0.2s;
-    box-sizing: border-box;
-}
-
-.btn-reajust:hover {
-    color: #fff;
-    border-color: #666;
+    font-size: 8px;
+    letter-spacing: .1em;
 }
 
 
 /* =========================================================
-   JOURNAL D'ACTIVITÉ LIVE
+   JOURNAL
 ========================================================= */
 
-.live-feed-tag {
-    font-family: monospace;
-    font-size: 9px;
-    color: #666;
-    letter-spacing: 0.12em;
+.activity-list {
+    padding-top: 8px;
 }
 
-.activity-timeline {
-    padding: 16px 20px;
+.activity-empty-state {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-}
-
-.activity-log-row {
-    display: flex;
-    gap: 14px;
-    font-family: monospace;
-    font-size: 10px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #161616;
-}
-
-.activity-log-row:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.log-time {
-    color: var(--accent, #d32f2f);
-    font-weight: bold;
-    flex-shrink: 0;
-}
-
-.log-time.alert-time {
-    color: var(--accent, #d32f2f);
-}
-
-.log-details {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.log-text {
-    color: #bbb;
-    line-height: 1.35;
-}
-
-.log-text .code {
-    color: #fff;
-}
-
-.log-text.alert-text {
-    color: #ff6b6b;
-}
-
-.log-sub {
-    font-size: 8px;
-    color: #555;
-    letter-spacing: 0.08em;
-}
-
-.activity-footer-bar {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 12px 20px;
-    border-top: 1px solid var(--border, #242424);
+    gap: 8px;
+    padding: 28px 10px;
+    color: #666;
+    text-align: center;
+}
+
+.activity-empty-icon {
+    color: #444;
+    font-family: monospace;
+    font-size: 18px;
+}
+
+.activity-empty-state strong {
+    color: #777;
     font-family: monospace;
     font-size: 9px;
+    letter-spacing: .08em;
 }
 
-.status-sys-ok {
-    color: #666;
+.activity-empty-state span:last-child {
+    color: #4f4f4f;
+    font-size: 8px;
+    letter-spacing: .08em;
 }
 
-.link-full-log {
-    color: #888;
-    letter-spacing: 0.08em;
+
+/* =========================================================
+   ACTION RAPIDE
+========================================================= */
+
+.quick-action-card {
+    padding: 0;
 }
 
-.link-full-log:hover {
+.quick-action-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 16px 18px;
+    color: #aaa;
+    text-decoration: none;
+    font-family: monospace;
+    font-size: 9px;
+    letter-spacing: .1em;
+}
+
+.quick-action-link:hover {
     color: #fff;
+    background: #161616;
+}
+
+
+@media (max-width: 1100px) {
+
+    .kpi-metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .dashboard-main-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-sidebar {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+}
+
+
+@media (max-width: 700px) {
+
+    .admin-dashboard-view {
+        padding: 24px 14px 60px;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .dashboard-title {
+        font-size: 32px;
+    }
+
+    .kpi-metrics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-sidebar {
+        display: flex;
+    }
+
+    .sales-row {
+        grid-template-columns: 45px minmax(50px, 1fr);
+    }
+
+    .sales-value {
+        grid-column: 2;
+        text-align: left;
+    }
+
+    .drop-monitor-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
 }
 
 </style>
+
 @endsection

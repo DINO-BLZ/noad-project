@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Drop;
 use App\Models\DropWhitelist;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -17,32 +18,24 @@ class DashboardController extends Controller
     public function index()
     {
         /*
-         * ============================================================
-         * STATUTS CONSIDÉRÉS COMME DES VENTES CONFIRMÉES
-         * ============================================================
-         *
-         * Même règle que dans Admin/DropController :
-         *
-         * paid      = commande payée
-         * shipped   = commande expédiée
-         * delivered = commande livrée
-         *
-         * pending et cancelled ne sont donc pas comptés dans le CA.
-         */
+        |--------------------------------------------------------------------------
+        | STATUTS CONSIDÉRÉS COMME DU CA CONFIRMÉ
+        |--------------------------------------------------------------------------
+        */
+
         $confirmedStatuses = [
             OrderStatus::Paid->value,
             OrderStatus::Shipped->value,
             OrderStatus::Delivered->value,
         ];
 
+
         /*
-         * ============================================================
-         * KPI 1 — CHIFFRE D'AFFAIRES GLOBAL
-         * ============================================================
-         *
-         * On utilise OrderItem.price afin de conserver le prix
-         * réellement enregistré au moment de la commande.
-         */
+        |--------------------------------------------------------------------------
+        | CHIFFRE D'AFFAIRES
+        |--------------------------------------------------------------------------
+        */
+
         $totalRevenue = (float) (
             OrderItem::query()
                 ->whereHas(
@@ -56,78 +49,199 @@ class DashboardController extends Controller
                 ->value('total') ?? 0
         );
 
-        /*
-         * ============================================================
-         * KPI 2 — COMMANDES
-         * ============================================================
-         */
 
-        // Toutes les commandes existantes.
+        /*
+        |--------------------------------------------------------------------------
+        | COMMANDES
+        |--------------------------------------------------------------------------
+        */
+
         $totalOrders = Order::count();
 
-        // Commandes encore en attente.
         $pendingOrders = Order::where(
             'status',
             OrderStatus::Pending->value
         )->count();
 
-        // Commandes effectivement confirmées.
         $confirmedOrders = Order::whereIn(
             'status',
             $confirmedStatuses
         )->count();
 
+
         /*
-         * ============================================================
-         * KPI 3 — STOCK GLOBAL
-         * ============================================================
-         *
-         * Il n'existe actuellement pas de stock initial permettant
-         * de calculer honnêtement un pourcentage de stock restant.
-         *
-         * On expose donc le stock réel disponible en unités.
-         */
+        |--------------------------------------------------------------------------
+        | STOCK TOTAL
+        |--------------------------------------------------------------------------
+        */
+
         $totalStock = (int) Variant::sum('stock');
 
+
         /*
-         * Variantes avec stock faible.
-         */
-        $lowStockVariants = Variant::where('stock', '<=', 5)
-            ->where('stock', '>', 0)
+        |--------------------------------------------------------------------------
+        | STOCKS CRITIQUES
+        |--------------------------------------------------------------------------
+        |
+        | Règle métier du dashboard :
+        |
+        | 0       => ÉPUISÉE
+        | 1 à 5   => STOCK CRITIQUE
+        | > 5     => aucune alerte
+        |
+        | Le compteur est volontairement calculé séparément de la liste
+        | affichée afin que la limitation à 3 lignes ne fausse jamais
+        | le nombre réel d'alertes.
+        |
+        */
+
+        $criticalStockAlertsCount = Variant::query()
+            ->whereBetween('stock', [0, 5])
+            ->count();
+
+        $lowStockVariants = Variant::query()
+            ->whereBetween('stock', [0, 5])
             ->with('product')
-            ->get();
+            ->orderBy('stock')
+            ->orderBy(
+                Product::select('name')
+                    ->whereColumn(
+                        'products.id',
+                        'variants.product_id'
+                    )
+            )
+            ->orderBy('id')
+            ->take(3)
+            ->get()
+            ->map(function (Variant $variant) {
+                $isOutOfStock = (int) $variant->stock === 0;
+
+                return [
+                    'variant' => $variant,
+                    'product_name' => $variant->product?->name ?? 'PRODUIT INCONNU',
+                    'color' => $variant->color,
+                    'size' => $variant->size,
+                    'stock' => (int) $variant->stock,
+                    'label' => $isOutOfStock
+                        ? 'ÉPUISÉE'
+                        : ((int) $variant->stock === 1
+                            ? '1 RESTANT'
+                            : $variant->stock . ' RESTANTS'),
+                    'status_label' => $isOutOfStock
+                        ? 'ÉPUISÉE'
+                        : 'STOCK CRITIQUE',
+                    'status_class' => $isOutOfStock
+                        ? 'exhausted'
+                        : 'critical',
+                ];
+            });
+
 
         /*
-         * ============================================================
-         * KPI 4 — WHITELIST
-         * ============================================================
-         */
+        |--------------------------------------------------------------------------
+        | MONITORING DU DROP ACTIF
+        |--------------------------------------------------------------------------
+        |
+        | S'il existe plusieurs drops actifs, on prend celui dont
+        | la date de début est la plus récente.
+        |
+        | Le calcul du quota / vendu / restant / pourcentage est centralisé
+        | dans Drop::quotaMonitoring().
+        |
+        */
 
-        // Toutes les candidatures existantes.
+        $activeDrop = Drop::query()
+            ->active()
+            ->orderByDesc('start_date')
+            ->first();
+
+        $dropMonitoring = $activeDrop?->quotaMonitoring();
+
+        /*
+         * Aucun drop actif :
+         * on transmet un état neutre afin que la vue puisse afficher
+         * proprement son état vide sans valeurs fictives.
+         */
+        if ($dropMonitoring === null) {
+            $dropMonitoring = [
+                'quota_defined' => false,
+                'quota' => 0,
+                'sold' => 0,
+                'remaining' => 0,
+                'percentage' => 0,
+            ];
+        }
+
+        /*
+         * Compte à rebours basé directement sur end_date.
+         *
+         * %a = nombre total de jours restants
+         * %h = heures restantes après les jours
+         * %i = minutes restantes après les heures
+         *
+         * Exemple :
+         * 2 jours, 14 heures, 32 minutes
+         * => 02 / 14 / 32
+         */
+        $dropCountdown = null;
+
+        if ($activeDrop !== null) {
+            $interval = now()->diff($activeDrop->end_date);
+
+            $dropCountdown = [
+                'days' => str_pad(
+                    (string) $interval->days,
+                    2,
+                    '0',
+                    STR_PAD_LEFT
+                ),
+                'hours' => str_pad(
+                    (string) $interval->h,
+                    2,
+                    '0',
+                    STR_PAD_LEFT
+                ),
+                'minutes' => str_pad(
+                    (string) $interval->i,
+                    2,
+                    '0',
+                    STR_PAD_LEFT
+                ),
+            ];
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | WHITELIST
+        |--------------------------------------------------------------------------
+        */
+
         $whitelistApplications = DropWhitelist::count();
 
-        // Candidatures qui nécessitent encore une décision.
         $pendingReviews = DropWhitelist::where(
             'status',
             'pending'
         )->count();
 
+
         /*
-         * ============================================================
-         * AUTRES DONNÉES DU DASHBOARD
-         * ============================================================
-         */
+        |--------------------------------------------------------------------------
+        | UTILISATEURS / PRODUITS
+        |--------------------------------------------------------------------------
+        */
 
         $totalUsers = User::count();
 
         $totalProducts = Product::count();
 
+
         /*
-         * Produits les plus vendus.
-         *
-         * On applique la même définition de vente confirmée
-         * que pour le CA.
-         */
+        |--------------------------------------------------------------------------
+        | TOP PRODUITS
+        |--------------------------------------------------------------------------
+        */
+
         $topProducts = DB::table('order_items')
             ->join(
                 'orders',
@@ -148,18 +262,27 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+
         /*
-         * Dernières commandes.
-         */
-        $recentOrders = Order::latest()
+        |--------------------------------------------------------------------------
+        | COMMANDES RÉCENTES
+        |--------------------------------------------------------------------------
+        */
+
+        $recentOrders = Order::query()
+            ->with('user')
+            ->withCount('items')
+            ->latest()
             ->take(5)
             ->get();
 
+
         /*
-         * Ventes des 7 derniers jours.
-         *
-         * Même règle : uniquement les commandes confirmées.
-         */
+        |--------------------------------------------------------------------------
+        | VENTES DES 7 DERNIERS JOURS
+        |--------------------------------------------------------------------------
+        */
+
         $salesByDay = Order::where(
             'created_at',
             '>=',
@@ -177,6 +300,13 @@ class DashboardController extends Controller
             ->orderBy('day')
             ->get();
 
+
+        /*
+        |--------------------------------------------------------------------------
+        | VUE
+        |--------------------------------------------------------------------------
+        */
+
         return view(
             'admin.dashboard',
             compact(
@@ -185,14 +315,18 @@ class DashboardController extends Controller
                 'pendingOrders',
                 'confirmedOrders',
                 'totalStock',
+                'criticalStockAlertsCount',
+                'lowStockVariants',
                 'whitelistApplications',
                 'pendingReviews',
                 'totalUsers',
                 'totalProducts',
-                'lowStockVariants',
                 'topProducts',
                 'recentOrders',
-                'salesByDay'
+                'salesByDay',
+                'activeDrop',
+                'dropMonitoring',
+                'dropCountdown'
             )
         );
     }

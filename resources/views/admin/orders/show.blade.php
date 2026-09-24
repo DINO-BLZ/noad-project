@@ -2,6 +2,50 @@
 
 @section('content')
 
+@php
+    use App\Enums\OrderStatus;
+
+    $currentStatus = $order->status instanceof OrderStatus
+        ? $order->status
+        : OrderStatus::tryFrom((string) $order->status);
+
+    $statusLabels = [
+        OrderStatus::Pending->value => 'EN ATTENTE DE PAIEMENT',
+        OrderStatus::Paid->value => 'COMMANDE PAYÉE',
+        OrderStatus::Shipped->value => 'EXPÉDIÉE',
+        OrderStatus::Delivered->value => 'LIVRÉE',
+        OrderStatus::Cancelled->value => 'COMMANDE ANNULÉE',
+    ];
+
+    $statusClasses = [
+        OrderStatus::Pending->value => 'pending',
+        OrderStatus::Paid->value => 'paid',
+        OrderStatus::Shipped->value => 'shipped',
+        OrderStatus::Delivered->value => 'delivered',
+        OrderStatus::Cancelled->value => 'cancelled',
+    ];
+
+    $currentStatusValue = $currentStatus?->value;
+
+    $currentStatusLabel = $statusLabels[$currentStatusValue ?? '']
+        ?? 'STATUT INCONNU';
+
+    $currentStatusClass = $statusClasses[$currentStatusValue ?? '']
+        ?? 'unknown';
+
+    $allowedTransitions = [];
+
+    if ($currentStatus instanceof OrderStatus) {
+        foreach (OrderStatus::cases() as $candidateStatus) {
+            if ($currentStatus->canTransitionTo($candidateStatus)) {
+                $allowedTransitions[] = $candidateStatus;
+            }
+        }
+    }
+
+    $itemsCount = $order->items?->count() ?? 0;
+@endphp
+
 <div class="admin-order-detail-page">
 
     {{-- =========================================================
@@ -26,7 +70,7 @@
                 <span class="bread-sep">/</span>
 
                 <span class="bread-current">
-                    #{{ $order->reference ?? 'ND-2026-8942' }}
+                    #{{ $order->reference ?? $order->id }}
                 </span>
 
             </nav>
@@ -43,7 +87,7 @@
 
             <span class="sys-clock">
                 HORODATAGE SYSTÈME :
-                {{ now()->format('d.m.Y H:i') }} CET
+                {{ now()->format('d.m.Y H:i') }}
             </span>
 
         </div>
@@ -62,7 +106,7 @@
             <div class="order-title-stack">
 
                 <h1 class="order-code-title">
-                    COMMANDE #{{ $order->reference ?? 'ND-2026-8942' }}
+                    COMMANDE #{{ $order->reference ?? $order->id }}
                 </h1>
 
                 <span class="order-sub-proto">
@@ -74,25 +118,19 @@
 
             <div class="badges-meta-row">
 
-                <span class="status-pill in-prep">
+                <span class="status-pill {{ $currentStatusClass }}">
                     <span class="icon-tag">📦</span>
-                    EN PRÉPARATION EN ATELIER
+                    {{ $currentStatusLabel }}
                 </span>
 
                 <span class="gen-meta">
                     GÉNÉRÉ LE
                     <strong>
                         {{ $order->created_at
-                            ? $order->created_at->format('d OCTOBRE Y À H:i')
-                            : '12 OCTOBRE 2026 À 14:32'
+                            ? $order->created_at->format('d/m/Y À H:i')
+                            : 'DATE INCONNUE'
                         }}
-                        CET
                     </strong>
-                    (PORTAIL SÉCURISÉ DROP 01)
-                </span>
-
-                <span class="priority-badge">
-                    PRIORITÉ ÉLEVÉE
                 </span>
 
             </div>
@@ -103,16 +141,16 @@
         <div class="head-actions-grid">
 
             <a
-                href="{{ route('admin.orders.label', $order->id ?? 1) }}"
+                href="{{ route('admin.orders.label', $order->id) }}"
                 target="_blank"
                 class="btn-head-action"
             >
                 <span class="btn-icon">🖨</span>
-                BORDEREAU YALIDINE / EXPRESS
+                BORDEREAU
             </a>
 
             <a
-                href="{{ route('admin.orders.invoice', $order->id ?? 1) }}"
+                href="{{ route('admin.orders.invoice', $order->id) }}"
                 target="_blank"
                 class="btn-head-action"
             >
@@ -120,28 +158,57 @@
                 FACTURE PDF
             </a>
 
-            <button type="button" class="btn-head-action">
-                <span class="btn-icon">💬</span>
-                SMS DESTINATAIRE
-            </button>
+            @if($order->phone)
+                <a
+                    href="tel:{{ $order->phone }}"
+                    class="btn-head-action"
+                >
+                    <span class="btn-icon">📞</span>
+                    APPELER
+                </a>
+            @endif
 
-            <form
-                action="{{ route('admin.orders.cancel', $order->id ?? 1) }}"
-                method="POST"
-                class="inline-form"
-                onsubmit="return confirm('Confirmer l\'annulation ou le blocage de cette commande ?');"
-            >
-                @csrf
+            @if(
+                $currentStatus instanceof OrderStatus
+                && $currentStatus->canTransitionTo(OrderStatus::Cancelled)
+            )
+                <form
+                    action="{{ route('admin.orders.cancel', $order->id) }}"
+                    method="POST"
+                    class="inline-form"
+                    onsubmit="return confirm('Confirmer l\'annulation de cette commande ?');"
+                >
+                    @csrf
 
-                <button type="submit" class="btn-head-danger">
-                    <span class="btn-icon">✕</span>
-                    ANNULER / BLOQUER
-                </button>
-            </form>
+                    <button type="submit" class="btn-head-danger">
+                        <span class="btn-icon">✕</span>
+                        ANNULER
+                    </button>
+                </form>
+            @endif
 
         </div>
 
     </header>
+
+
+    {{-- =========================================================
+         MESSAGES
+    ========================================================== --}}
+
+    @if(session('success'))
+        <div class="admin-feedback success">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="admin-feedback error">
+            @foreach($errors->all() as $error)
+                <div>{{ $error }}</div>
+            @endforeach
+        </div>
+    @endif
 
 
     {{-- =========================================================
@@ -172,13 +239,13 @@
 
                         <h2 class="panel-title">
                             ARTICLES COMMANDÉS
-                            ({{ sprintf('%02d', isset($order->items) ? $order->items->count() : 3) }} PIÈCES)
+                            ({{ sprintf('%02d', $itemsCount) }} UNITÉS)
                         </h2>
 
                     </div>
 
                     <span class="panel-meta-tag">
-                        PACK DROP 01 / ÉDITION LIMITÉE
+                        COMMANDE #{{ $order->reference ?? $order->id }}
                     </span>
 
                 </div>
@@ -186,217 +253,83 @@
 
                 <div class="order-items-list">
 
-                    {{-- ARTICLE 1 --}}
+                    @forelse($order->items as $item)
 
-                    <div class="order-item-row">
+                        <div class="order-item-row">
 
-                        <div class="item-thumb-col">
+                            <div class="item-thumb-col">
 
-                            <span class="scelle-tag">
-                                SCELLÉ
-                            </span>
-
-                            <div class="thumb-box">
-                                <span class="thumb-placeholder">
-                                    NOAD
-                                </span>
-                            </div>
-
-                        </div>
-
-
-                        <div class="item-info-col">
-
-                            <h3 class="item-product-name">
-                                HARRINGTON JACKET — BLACK
-                            </h3>
-
-                            <div class="item-specs-line">
-
-                                <span>
-                                    TAILLE :
-                                    <strong>L</strong>
+                                <span class="stock-tag">
+                                    ARTICLE
                                 </span>
 
-                                <span class="sep">/</span>
-
-                                <span>
-                                    SKU :
-                                    <span class="mono">ND-JKT-01</span>
-                                </span>
-
-                                <span class="sep">/</span>
-
-                                <span>
-                                    LOT :
-                                    <span class="mono">#042-TERRACE</span>
-                                </span>
+                                <div class="thumb-box">
+                                    <span class="thumb-placeholder">
+                                        NOAD
+                                    </span>
+                                </div>
 
                             </div>
 
-                            <span class="item-fabric-desc">
-                                Tissu gabardine technique imperméable 380 GSM —
-                                Col montant double bouton.
-                            </span>
 
-                        </div>
+                            <div class="item-info-col">
 
+                                <h3 class="item-product-name">
+                                    {{ $item->product_name ?? 'ARTICLE NOAD' }}
+                                </h3>
 
-                        <div class="item-numbers-col">
+                                <div class="item-specs-line">
 
-                            <span class="item-qty">
-                                QTÉ : 1
-                            </span>
+                                    @if(!empty($item->size))
+                                        <span>
+                                            TAILLE :
+                                            <strong>{{ $item->size }}</strong>
+                                        </span>
 
-                            <span class="item-price">
-                                16 000 DA
-                            </span>
+                                        <span class="sep">/</span>
+                                    @endif
 
-                        </div>
+                                    @if(!empty($item->variant_id))
+                                        <span>
+                                            VARIANTE :
+                                            <span class="mono">
+                                                #{{ $item->variant_id }}
+                                            </span>
+                                        </span>
+                                    @endif
 
-                    </div>
+                                </div>
 
-
-                    {{-- ARTICLE 2 --}}
-
-                    <div class="order-item-row">
-
-                        <div class="item-thumb-col">
-
-                            <span class="stock-tag">
-                                STOCK OK
-                            </span>
-
-                            <div class="thumb-box">
-                                <span class="thumb-placeholder">
-                                    NOAD
-                                </span>
-                            </div>
-
-                        </div>
-
-
-                        <div class="item-info-col">
-
-                            <h3 class="item-product-name">
-                                LOGO HOODIE — STONE
-                            </h3>
-
-                            <div class="item-specs-line">
-
-                                <span>
-                                    TAILLE :
-                                    <strong>L</strong>
-                                </span>
-
-                                <span class="sep">/</span>
-
-                                <span>
-                                    SKU :
-                                    <span class="mono">ND-HOD-04</span>
-                                </span>
-
-                                <span class="sep">/</span>
-
-                                <span>
-                                    GRAMMAGE :
-                                    <strong>500 GSM</strong>
+                                <span class="item-fabric-desc">
+                                    Article enregistré dans la commande.
                                 </span>
 
                             </div>
 
-                            <span class="item-fabric-desc">
-                                Molleton brossé lourd, sérigraphie haute densité
-                                noire au dos, broderie torse.
-                            </span>
 
-                        </div>
+                            <div class="item-numbers-col">
 
-
-                        <div class="item-numbers-col">
-
-                            <span class="item-qty">
-                                QTÉ : 1
-                            </span>
-
-                            <span class="item-price">
-                                9 000 DA
-                            </span>
-
-                        </div>
-
-                    </div>
-
-
-                    {{-- ARTICLE 3 --}}
-
-                    <div class="order-item-row">
-
-                        <div class="item-thumb-col">
-
-                            <span class="stock-tag">
-                                CONTRÔLÉ
-                            </span>
-
-                            <div class="thumb-box">
-                                <span class="thumb-placeholder">
-                                    NOAD
-                                </span>
-                            </div>
-
-                        </div>
-
-
-                        <div class="item-info-col">
-
-                            <h3 class="item-product-name">
-                                CARGO PANT — OLIVE
-                            </h3>
-
-                            <div class="item-specs-line">
-
-                                <span>
-                                    TAILLE :
-                                    <strong>L</strong>
+                                <span class="item-qty">
+                                    QTÉ :
+                                    {{ (int) $item->quantity }}
                                 </span>
 
-                                <span class="sep">/</span>
-
-                                <span>
-                                    SKU :
-                                    <span class="mono">ND-PNT-02</span>
-                                </span>
-
-                                <span class="sep">/</span>
-
-                                <span>
-                                    COUPE :
-                                    <strong>TAPERED FIT</strong>
+                                <span class="item-price">
+                                    {{ number_format((float) $item->price, 0, ',', ' ') }}
+                                    DA
                                 </span>
 
                             </div>
 
-                            <span class="item-fabric-desc">
-                                Ripstop armé militaire, 6 poches soufflets tactiques,
-                                cordons élastiques chevilles.
-                            </span>
-
                         </div>
 
+                    @empty
 
-                        <div class="item-numbers-col">
-
-                            <span class="item-qty">
-                                QTÉ : 1
-                            </span>
-
-                            <span class="item-price">
-                                9 500 DA
-                            </span>
-
+                        <div class="empty-items-state">
+                            AUCUN ARTICLE ASSOCIÉ À CETTE COMMANDE
                         </div>
 
-                    </div>
+                    @endforelse
 
                 </div>
 
@@ -410,11 +343,12 @@
                     <div class="fin-row">
 
                         <span class="fin-lbl">
-                            SOUS-TOTAL ARTICLES (3 UNITÉS)
+                            TOTAL DE LA COMMANDE
                         </span>
 
                         <span class="fin-val">
-                            34 500 DA
+                            {{ number_format((float) $order->total, 0, ',', ' ') }}
+                            DA
                         </span>
 
                     </div>
@@ -423,18 +357,11 @@
                     <div class="fin-row">
 
                         <span class="fin-lbl">
-
-                            FRAIS D'EXPÉDITION 58 WILAYAS
-                            (ALGÉRIE EXPRESS)
-
-                            <span class="discount-code">
-                                CODE: DROP01-OFFERT
-                            </span>
-
+                            MODE DE PAIEMENT
                         </span>
 
-                        <span class="fin-val green">
-                            OFFERT
+                        <span class="fin-val">
+                            {{ strtoupper($order->payment_method ?? 'NON DÉFINI') }}
                         </span>
 
                     </div>
@@ -443,12 +370,11 @@
                     <div class="fin-row">
 
                         <span class="fin-lbl">
-                            ASSURANCE TRANSPORT &amp;
-                            SCELLÉ ANTI-FRAUDE
+                            STATUT DU PAIEMENT
                         </span>
 
                         <span class="fin-val">
-                            INCLUS
+                            {{ strtoupper($order->payment_status?->value ?? $order->payment_status ?? 'NON DÉFINI') }}
                         </span>
 
                     </div>
@@ -460,17 +386,17 @@
 
                             <span class="hero-total-label">
                                 TOTAL À PERCEVOIR
-                                (ESPÈCES À LA LIVRAISON)
                             </span>
 
                             <span class="hero-total-sub">
-                                Montant exigible par coursier lors de la remise
+                                Montant enregistré sur la commande
                             </span>
 
                         </div>
 
                         <span class="hero-total-amount">
-                            34 500 DA
+                            {{ number_format((float) $order->total, 0, ',', ' ') }}
+                            DA
                         </span>
 
                     </div>
@@ -499,14 +425,14 @@
                     </div>
 
                     <span class="panel-meta-tag">
-                        MODULE ATELIER ACTIF
+                        WORKFLOW COMMANDE
                     </span>
 
                 </div>
 
 
                 <form
-                    action="{{ route('admin.orders.updateStatus', $order->id ?? 1) }}"
+                    action="{{ route('admin.orders.updateStatus', $order->id) }}"
                     method="POST"
                     class="dispatch-form-body"
                 >
@@ -530,7 +456,7 @@
                                 </label>
 
                                 <span class="carrier-tag">
-                                    YALIDINE / ALG-EXPRESS
+                                    SUIVI
                                 </span>
 
                             </div>
@@ -542,25 +468,30 @@
                                     type="text"
                                     id="tracking-id"
                                     name="tracking_number"
-                                    value="{{ $order->tracking_number ?? 'ALG-EXP-99281034-DZ' }}"
+                                    value="{{ $order->tracking_number ?? '' }}"
                                     readonly
                                 >
 
-                                <button
-                                    type="button"
-                                    class="btn-copy-input"
-                                    title="Copier le tracking"
-                                    onclick="navigator.clipboard.writeText(document.getElementById('tracking-id').value)"
-                                >
-                                    ⎘
-                                </button>
+                                @if($order->tracking_number)
+                                    <button
+                                        type="button"
+                                        class="btn-copy-input"
+                                        title="Copier le tracking"
+                                        onclick="navigator.clipboard.writeText(document.getElementById('tracking-id').value)"
+                                    >
+                                        ⎘
+                                    </button>
+                                @endif
 
                             </div>
 
 
                             <span class="field-subtext">
-                                Ce matricule est automatiquement injecté
-                                dans le SMS de confirmation client.
+                                @if($order->tracking_number)
+                                    Numéro de suivi enregistré sur la commande.
+                                @else
+                                    Aucun numéro de suivi enregistré.
+                                @endif
                             </span>
 
                         </div>
@@ -579,50 +510,50 @@
                                 <select
                                     id="order-status-select"
                                     name="status"
+                                    @if(count($allowedTransitions) === 0) disabled @endif
                                 >
 
-                                    <option
-                                        value="in_preparation"
-                                        {{ $order->status === 'in_preparation' ? 'selected' : '' }}
-                                    >
-                                        EN PRÉPARATION EN ATELIER
-                                    </option>
+                                    @if(count($allowedTransitions) > 0)
 
-                                    <option
-                                        value="ready_pickup"
-                                        {{ $order->status === 'ready_pickup' ? 'selected' : '' }}
-                                    >
-                                        PRÊT RAMASSAGE COURSIER
-                                    </option>
+                                        @foreach($allowedTransitions as $nextStatus)
 
-                                    <option
-                                        value="in_transit"
-                                        {{ $order->status === 'in_transit' ? 'selected' : '' }}
-                                    >
-                                        EN COURS D'ACHEMINEMENT (HUB)
-                                    </option>
+                                            <option
+                                                value="{{ $nextStatus->value }}"
+                                                {{ old('status') === $nextStatus->value ? 'selected' : '' }}
+                                            >
+                                                {{ $statusLabels[$nextStatus->value] }}
+                                            </option>
 
-                                    <option
-                                        value="delivered"
-                                        {{ $order->status === 'delivered' ? 'selected' : '' }}
-                                    >
-                                        LIVRÉ ET ENCAISSÉ
-                                    </option>
+                                        @endforeach
 
-                                    <option
-                                        value="cancelled"
-                                        {{ $order->status === 'cancelled' ? 'selected' : '' }}
-                                    >
-                                        COMMANDE ANNULÉE / REJETÉE
-                                    </option>
+                                    @else
+
+                                        <option value="" selected disabled>
+                                            AUCUNE TRANSITION DISPONIBLE
+                                        </option>
+
+                                    @endif
 
                                 </select>
 
                             </div>
 
                             <span class="field-subtext">
-                                Toute modification déclenche
-                                un journal d'événement.
+
+                                @if($currentStatus === OrderStatus::Pending)
+                                    Actions disponibles : paiement confirmé ou annulation.
+                                @elseif($currentStatus === OrderStatus::Paid)
+                                    Actions disponibles : expédition ou annulation.
+                                @elseif($currentStatus === OrderStatus::Shipped)
+                                    Action disponible : livraison.
+                                @elseif($currentStatus === OrderStatus::Delivered)
+                                    Commande livrée. Aucun changement de statut autorisé.
+                                @elseif($currentStatus === OrderStatus::Cancelled)
+                                    Commande annulée. Aucun changement de statut autorisé.
+                                @else
+                                    Statut de commande invalide.
+                                @endif
+
                             </span>
 
                         </div>
@@ -659,13 +590,23 @@
 
                     <div class="dispatch-submit-row">
 
-                        <button
-                            type="submit"
-                            class="btn-submit-status"
-                        >
-                            <span class="btn-icon">↻</span>
-                            ACTUALISER L'ÉTAT ET ENVOYER NOTIFICATION
-                        </button>
+                        @if(count($allowedTransitions) > 0)
+
+                            <button
+                                type="submit"
+                                class="btn-submit-status"
+                            >
+                                <span class="btn-icon">↻</span>
+                                ACTUALISER L'ÉTAT ET ENVOYER NOTIFICATION
+                            </button>
+
+                        @else
+
+                            <span class="no-transition-message">
+                                AUCUNE ACTION DE STATUT DISPONIBLE
+                            </span>
+
+                        @endif
 
                     </div>
 
@@ -694,7 +635,7 @@
                     </div>
 
                     <span class="panel-meta-tag mono">
-                        SERVEUR ALG-HUB-NODE-04
+                        COMMANDE #{{ $order->reference ?? $order->id }}
                     </span>
 
                 </div>
@@ -730,7 +671,7 @@
                                     <span class="entry-time {{ $loop->first ? 'red' : '' }}">
 
                                         {{ $log->created_at
-                                            ? $log->created_at->format('H:i CET — d.m.Y')
+                                            ? $log->created_at->format('H:i — d.m.Y')
                                             : 'DATE INCONNUE'
                                         }}
 
@@ -822,10 +763,6 @@
 
                     </div>
 
-                    <span class="kyc-badge">
-                        KYC VALIDÉ
-                    </span>
-
                 </div>
 
 
@@ -843,23 +780,21 @@
                             </span>
 
                             <h3 class="dest-hero-name">
-                                {{ $order->fullname ?? 'MOUAAD BELHOCINE' }}
+                                {{ $order->full_name ?? 'NOM NON RENSEIGNÉ' }}
                             </h3>
-
-                            <span class="dest-client-tag">
-                                Client Noad Privilège #DZ-894
-                            </span>
 
                         </div>
 
 
-                        <a
-                            href="tel:{{ $order->phone ?? '+213555123456' }}"
-                            class="btn-call-dest"
-                            title="Appeler"
-                        >
-                            📞
-                        </a>
+                        @if($order->phone)
+                            <a
+                                href="tel:{{ $order->phone }}"
+                                class="btn-call-dest"
+                                title="Appeler"
+                            >
+                                📞
+                            </a>
+                        @endif
 
                     </div>
 
@@ -869,31 +804,18 @@
                     <div class="dest-field-block">
 
                         <span class="dest-sub-label">
-                            TERRITOIRE &amp; WILAYA
+                            WILAYA
                         </span>
 
                         <div class="wilaya-highlight-box">
 
-                            <span class="wilaya-num-box">
-                                {{ sprintf('%02d', $order->wilaya_code ?? 16) }}
-                            </span>
-
                             <div class="wilaya-text-col">
 
                                 <span class="wilaya-name">
-                                    WILAYA D'ALGER
-                                </span>
-
-                                <span class="commune-name">
-                                    COMMUNE :
-                                    {{ $order->commune ?? 'BAB EL OUED / CASBAH' }}
+                                    {{ $order->wilaya ?? 'WILAYA NON RENSEIGNÉE' }}
                                 </span>
 
                             </div>
-
-                            <span class="zone-tag">
-                                ZONE URBAINE A
-                            </span>
 
                         </div>
 
@@ -905,7 +827,7 @@
                     <div class="dest-field-block">
 
                         <span class="dest-sub-label">
-                            ADRESSE PRÉCISE DE REMISE
+                            ADRESSE DE LIVRAISON
                         </span>
 
                         <div class="address-box">
@@ -917,17 +839,8 @@
                             <div class="address-lines">
 
                                 <strong class="text-white">
-                                    {{ $order->address ?? 'Cité 2000 Logts, Bâtiment 12, Étage 4' }}
+                                    {{ $order->address ?? 'ADRESSE NON RENSEIGNÉE' }}
                                 </strong>
-
-                                <span class="address-detail">
-                                    {{ $order->address_detail ?? 'Palier Droit — Interphone Belhocine' }}
-                                </span>
-
-                                <span class="address-postal">
-                                    {{ $order->postal_code ?? '16000' }}
-                                    {{ $order->city ?? 'Bab El Oued, Alger' }}
-                                </span>
 
                             </div>
 
@@ -947,11 +860,7 @@
                         <div class="contact-info-row">
 
                             <span class="phone-number">
-                                {{ $order->phone ?? '+213 (0) 555 12 34 56' }}
-                            </span>
-
-                            <span class="otp-pill">
-                                VÉRIFIÉ OTP
+                                {{ $order->phone ?? 'NON RENSEIGNÉ' }}
                             </span>
 
                         </div>
@@ -961,29 +870,33 @@
 
                     {{-- EMAIL --}}
 
-                    <div class="dest-field-block">
+                    @if($order->user)
 
-                        <span class="dest-sub-label">
-                            ADRESSE COURRIEL
-                        </span>
+                        <div class="dest-field-block">
 
-                        <div class="contact-info-row">
-
-                            <span class="email-address">
-                                {{ $order->email ?? 'client@example.com' }}
+                            <span class="dest-sub-label">
+                                ADRESSE COURRIEL
                             </span>
 
-                            <a
-                                href="mailto:{{ $order->email ?? 'client@example.com' }}"
-                                class="btn-mini-send"
-                                title="Envoyer mail"
-                            >
-                                ✉
-                            </a>
+                            <div class="contact-info-row">
+
+                                <span class="email-address">
+                                    {{ $order->user->email }}
+                                </span>
+
+                                <a
+                                    href="mailto:{{ $order->user->email }}"
+                                    class="btn-mini-send"
+                                    title="Envoyer mail"
+                                >
+                                    ✉
+                                </a>
+
+                            </div>
 
                         </div>
 
-                    </div>
+                    @endif
 
                 </div>
 
@@ -1009,7 +922,7 @@
                     </div>
 
                     <span class="panel-meta-tag">
-                        {{ strtoupper($order->payment_method ?? 'ESPÈCES (COD)') }}
+                        {{ strtoupper($order->payment_method ?? 'NON DÉFINI') }}
                     </span>
 
                 </div>
@@ -1026,12 +939,11 @@
                         <div class="method-text">
 
                             <span class="method-title">
-                                PAIEMENT EN ESPÈCES À LA LIVRAISON (COD)
+                                {{ strtoupper($order->payment_method ?? 'MODE DE PAIEMENT NON DÉFINI') }}
                             </span>
 
                             <p class="method-desc">
-                                Le montant intégral doit être perçu par le coursier
-                                avant ouverture du scellé d'inviolabilité.
+                                Mode de paiement enregistré sur la commande.
                             </p>
 
                         </div>
@@ -1048,7 +960,10 @@
                             </span>
 
                             <span class="coll-badge">
-                                EXIGIBLE
+                                {{ $currentStatus === OrderStatus::Delivered
+                                    ? 'ENCAISSÉ'
+                                    : 'EXIGIBLE'
+                                }}
                             </span>
 
                         </div>
@@ -1057,7 +972,7 @@
                         <div class="coll-amount-row">
 
                             <span class="coll-amount">
-                                {{ number_format($order->total ?? 0, 0, ',', ' ') }}
+                                {{ number_format((float) $order->total, 0, ',', ' ') }}
                             </span>
 
                             <span class="coll-curr">
@@ -1068,11 +983,10 @@
 
 
                         <span class="coll-sub">
-                            STATUT ENCAISSEMENT :
-                            {{ $order->status === 'delivered'
-                                ? 'ENCAISSÉ'
-                                : 'EN ATTENTE VERSEMENT COURSIER'
-                            }}
+
+                            STATUT COMMANDE :
+                            {{ $currentStatusLabel }}
+
                         </span>
 
                     </div>
@@ -1082,13 +996,13 @@
 
                         <span class="reconcil-status">
                             <span class="dot-dim">●</span>
-                            BORDEREAU D'ENCAISSEMENT
+                            STATUT ENCAISSEMENT
                         </span>
 
                         <span class="reconcil-val">
-                            {{ $order->status === 'delivered'
-                                ? 'RÉCONCILIÉ'
-                                : 'NON-RÉCONCILIÉ'
+                            {{ $currentStatus === OrderStatus::Delivered
+                                ? 'ENCAISSÉ'
+                                : 'EN ATTENTE'
                             }}
                         </span>
 
@@ -1100,7 +1014,7 @@
 
 
             {{-- =================================================
-                 CARTE 3 : CERTIFICAT DROP
+                 CARTE 3 : INFORMATIONS COMMANDE
             ================================================== --}}
 
             <section class="ops-panel side-panel cert-panel">
@@ -1110,19 +1024,14 @@
                     <div class="panel-title-group">
 
                         <span class="panel-icon red">
-                            🛡
+                            #
                         </span>
 
                         <h2 class="panel-title">
-                            CERTIFICAT &amp;
-                            CRYPTOGRAPHIE DROP
+                            INFORMATIONS COMMANDE
                         </h2>
 
                     </div>
-
-                    <span class="edition-limit-tag">
-                        LIMITED 300 PCS
-                    </span>
 
                 </div>
 
@@ -1132,24 +1041,24 @@
                     <div class="collection-tag-row">
 
                         <span class="cert-coll-label">
-                            COLLECTION OFFICIELLE
+                            RÉFÉRENCE
                         </span>
 
                         <span class="drop-pill">
-                            DROP 01
+                            #{{ $order->reference ?? $order->id }}
                         </span>
 
                     </div>
 
 
                     <h3 class="series-hero-name">
-                        SÉRIE : THE RESISTANCE
+                        {{ $currentStatusLabel }}
                     </h3>
 
 
                     <p class="series-desc">
-                        Pièces issues de la première capsule architecturale NOAD.
-                        Confection numérotée dans notre atelier d'Alger.
+                        Cette commande utilise le workflow officiel
+                        des statuts NOAD.
                     </p>
 
 
@@ -1158,20 +1067,16 @@
                         <div class="spec-node">
 
                             <span class="spec-lbl">
-                                CERTIFICAT NOAD
+                                STATUT ACTUEL
                             </span>
 
                             <div class="spec-val-row">
 
                                 <span class="spec-val">
-                                    N° 042 / 300
+                                    {{ strtoupper($currentStatusValue ?? 'INCONNU') }}
                                 </span>
 
                             </div>
-
-                            <span class="spec-sub">
-                                GRAVURE LASER SUR ZIP
-                            </span>
 
                         </div>
 
@@ -1179,24 +1084,16 @@
                         <div class="spec-node">
 
                             <span class="spec-lbl">
-                                STATUT JETON NFC
+                                ARTICLES
                             </span>
 
                             <div class="spec-val-row">
 
-                                <span class="nfc-chip-glyph">
-                                    📶
-                                </span>
-
-                                <span class="spec-val green">
-                                    ACTIF
+                                <span class="spec-val">
+                                    {{ $itemsCount }}
                                 </span>
 
                             </div>
-
-                            <span class="spec-sub">
-                                PUCE NTAG213 SHA-256
-                            </span>
 
                         </div>
 
@@ -1206,11 +1103,11 @@
                     <div class="hash-block">
 
                         <span class="hash-label">
-                            EMPREINTE NUMÉRIQUE SHA-256
+                            CRÉÉE LE
                         </span>
 
                         <code class="hash-code">
-                            e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855#042
+                            {{ $order->created_at?->format('d/m/Y H:i:s') ?? 'DATE INCONNUE' }}
                         </code>
 
                     </div>
@@ -1233,19 +1130,13 @@
         <div class="footer-left">
 
             <span>
-                NOAD ATELIER SYSTEM OS V4.2
+                NOAD ADMINISTRATION
             </span>
 
             <span class="sep">/</span>
 
             <span>
-                TERMINAL ID : ALG-DESK-09
-            </span>
-
-            <span class="sep">/</span>
-
-            <span>
-                RÉSEAU SÉCURISÉ VPN IPSEC
+                COMMANDE #{{ $order->reference ?? $order->id }}
             </span>
 
         </div>
@@ -1288,6 +1179,30 @@
 
 .mono {
     font-family: monospace;
+}
+
+
+/* =============================================================
+   MESSAGES
+============================================================= */
+
+.admin-feedback {
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    border: 1px solid var(--border, #242424);
+    font-family: monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+}
+
+.admin-feedback.success {
+    border-color: #2ecc71;
+    color: #2ecc71;
+}
+
+.admin-feedback.error {
+    border-color: var(--accent, #d32f2f);
+    color: var(--accent, #d32f2f);
 }
 
 
@@ -1413,10 +1328,8 @@
     flex-wrap: wrap;
 }
 
-.status-pill.in-prep {
-    background-color: rgba(211, 47, 47, 0.15);
-    border: 1px solid var(--accent, #d32f2f);
-    color: var(--accent, #d32f2f);
+.status-pill {
+    border: 1px solid;
     font-family: monospace;
     font-size: 9px;
     font-weight: bold;
@@ -1427,6 +1340,37 @@
     gap: 6px;
 }
 
+.status-pill.pending {
+    background-color: rgba(180, 140, 40, 0.12);
+    border-color: #b48c28;
+    color: #b48c28;
+}
+
+.status-pill.paid {
+    background-color: rgba(46, 204, 113, 0.12);
+    border-color: #2ecc71;
+    color: #2ecc71;
+}
+
+.status-pill.shipped {
+    background-color: rgba(80, 130, 200, 0.12);
+    border-color: #5082c8;
+    color: #5082c8;
+}
+
+.status-pill.delivered {
+    background-color: rgba(46, 204, 113, 0.12);
+    border-color: #2ecc71;
+    color: #2ecc71;
+}
+
+.status-pill.cancelled,
+.status-pill.unknown {
+    background-color: rgba(211, 47, 47, 0.15);
+    border-color: var(--accent, #d32f2f);
+    color: var(--accent, #d32f2f);
+}
+
 .gen-meta {
     font-size: 11px;
     color: #777;
@@ -1434,17 +1378,6 @@
 
 .gen-meta strong {
     color: #aaa;
-}
-
-.priority-badge {
-    background-color: #1a1a1a;
-    border: 1px solid #333;
-    color: #bbb;
-    font-family: monospace;
-    font-size: 8px;
-    padding: 2px 6px;
-    letter-spacing: 0.1em;
-    font-weight: bold;
 }
 
 .head-actions-grid {
@@ -1623,7 +1556,6 @@
     font-weight: bold;
 }
 
-.scelle-tag,
 .stock-tag {
     position: absolute;
     top: -6px;
@@ -1632,16 +1564,6 @@
     font-size: 7px;
     padding: 1px 4px;
     z-index: 2;
-}
-
-.scelle-tag {
-    background-color: var(--accent, #d32f2f);
-    color: #fff;
-    font-weight: bold;
-    letter-spacing: 0.05em;
-}
-
-.stock-tag {
     background-color: #1a1a1a;
     border: 1px solid #333;
     color: #aaa;
@@ -1701,6 +1623,15 @@
     color: #fff;
 }
 
+.empty-items-state {
+    padding: 30px 15px;
+    border: 1px dashed #333;
+    text-align: center;
+    font-family: monospace;
+    font-size: 10px;
+    color: #666;
+}
+
 
 /* =============================================================
    FINANCES
@@ -1724,23 +1655,10 @@
     gap: 20px;
 }
 
-.discount-code {
-    background-color: #1a1a1a;
-    border: 1px solid #333;
-    color: #fff;
-    padding: 1px 5px;
-    font-size: 9px;
-    margin-left: 6px;
-}
-
 .fin-val {
     color: #fff;
     font-weight: bold;
     white-space: nowrap;
-}
-
-.fin-val.green {
-    color: #2ecc71;
 }
 
 .fin-total-hero {
@@ -1878,6 +1796,11 @@
     background-position: right 12px center;
 }
 
+.select-box select:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
 .field-block textarea {
     background-color: #0c0c0c;
     border: 1px solid var(--border, #242424);
@@ -1898,6 +1821,7 @@
 .dispatch-submit-row {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
 }
 
 .btn-submit-status {
@@ -1919,6 +1843,13 @@
     background-color: var(--accent, #d32f2f);
     border-color: var(--accent, #d32f2f);
     color: #fff;
+}
+
+.no-transition-message {
+    font-family: monospace;
+    font-size: 9px;
+    color: #666;
+    letter-spacing: 0.08em;
 }
 
 
@@ -2020,17 +1951,6 @@
    DESTINATAIRE
 ============================================================= */
 
-.kyc-badge {
-    background-color: rgba(46, 204, 113, 0.12);
-    border: 1px solid #2ecc71;
-    color: #2ecc71;
-    font-family: monospace;
-    font-size: 8px;
-    font-weight: bold;
-    padding: 2px 6px;
-    letter-spacing: 0.1em;
-}
-
 .dest-top-row {
     display: flex;
     justify-content: space-between;
@@ -2056,12 +1976,6 @@
     letter-spacing: 0.06em;
     color: #fff;
     margin: 0 0 2px;
-}
-
-.dest-client-tag {
-    font-family: monospace;
-    font-size: 9px;
-    color: #555;
 }
 
 .btn-call-dest {
@@ -2095,15 +2009,6 @@
     padding: 10px 14px;
 }
 
-.wilaya-num-box {
-    background-color: var(--accent, #d32f2f);
-    color: #fff;
-    font-family: monospace;
-    font-size: 14px;
-    font-weight: 900;
-    padding: 4px 8px;
-}
-
 .wilaya-text-col {
     display: flex;
     flex-direction: column;
@@ -2114,21 +2019,6 @@
     font-size: 12px;
     font-weight: 800;
     color: #fff;
-}
-
-.commune-name {
-    font-family: monospace;
-    font-size: 9px;
-    color: #777;
-}
-
-.zone-tag {
-    font-family: monospace;
-    font-size: 8px;
-    background-color: #1a1a1a;
-    border: 1px solid #333;
-    padding: 2px 6px;
-    color: #aaa;
 }
 
 .address-box {
@@ -2153,14 +2043,8 @@
     font-size: 11px;
 }
 
-.address-detail {
-    color: #888;
-}
-
-.address-postal {
-    font-family: monospace;
-    font-size: 9px;
-    color: #666;
+.text-white {
+    color: #fff;
 }
 
 .contact-info-row {
@@ -2180,14 +2064,6 @@
     font-weight: bold;
     color: #fff;
     word-break: break-word;
-}
-
-.otp-pill {
-    font-family: monospace;
-    font-size: 8px;
-    color: #2ecc71;
-    font-weight: bold;
-    letter-spacing: 0.1em;
 }
 
 .btn-mini-send {
@@ -2319,15 +2195,12 @@
 
 
 /* =============================================================
-   CERTIFICAT
+   INFORMATIONS COMMANDE
 ============================================================= */
 
-.edition-limit-tag {
-    font-family: monospace;
-    font-size: 8px;
-    color: var(--accent, #d32f2f);
-    font-weight: bold;
-    letter-spacing: 0.1em;
+.cert-body {
+    display: flex;
+    flex-direction: column;
 }
 
 .collection-tag-row {
@@ -2402,21 +2275,6 @@
     font-size: 14px;
     font-weight: 900;
     color: #fff;
-}
-
-.spec-val.green {
-    color: #2ecc71;
-}
-
-.nfc-chip-glyph {
-    font-size: 12px;
-    color: #2ecc71;
-}
-
-.spec-sub {
-    font-family: monospace;
-    font-size: 8px;
-    color: #555;
 }
 
 .hash-block {
@@ -2516,15 +2374,6 @@
         align-items: flex-start;
         flex-direction: column;
         gap: 4px;
-    }
-
-    .wilaya-highlight-box {
-        flex-wrap: wrap;
-    }
-
-    .zone-tag {
-        width: 100%;
-        text-align: center;
     }
 
     .panel-header-row {
