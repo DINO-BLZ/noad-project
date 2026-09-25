@@ -8,34 +8,59 @@
     <form action="{{ route('admin.drops.store') }}" method="POST" enctype="multipart/form-data" class="admin-form" id="drop-form">
         @csrf
 
-        <label>Nom du drop
+        <label>
+            Nom du drop
             <input type="text" name="name" value="{{ old('name') }}" required>
         </label>
 
-        <label>Description
+        <label>
+            Description
             <textarea name="description" rows="3">{{ old('description') }}</textarea>
         </label>
 
-        <label>Date de début
-            <input type="datetime-local" name="start_date" id="start_date" value="{{ old('start_date') }}" required>
+        <label>
+            Date de début
+            <input
+                type="datetime-local"
+                name="start_date"
+                id="start_date"
+                value="{{ old('start_date') }}"
+                required
+            >
         </label>
 
-        <label>Date de fin
-            <input type="datetime-local" name="end_date" id="end_date" value="{{ old('end_date') }}" required>
+        <label>
+            Date de fin
+            <input
+                type="datetime-local"
+                name="end_date"
+                id="end_date"
+                value="{{ old('end_date') }}"
+                required
+            >
         </label>
 
-        <label>Statut
-            
-            <label>Places whitelist max (laisser vide = illimité)
-    <input type="number" name="max_whitelist_slots" min="0" value="{{ old('max_whitelist_slots') }}">
-</label>
+        <label>
+            Places whitelist max (laisser vide = illimité)
+            <input
+                type="number"
+                name="max_whitelist_slots"
+                min="0"
+                value="{{ old('max_whitelist_slots') }}"
+            >
         </label>
 
-        <label>Produits existants (optionnel)
+        <label>
+            Produits existants (optionnel)
+
             <div class="checkbox-list">
                 @foreach($products as $product)
                     <label class="checkbox-item">
-                        <input type="checkbox" name="products[]" value="{{ $product->id }}">
+                        <input
+                            type="checkbox"
+                            name="products[]"
+                            value="{{ $product->id }}"
+                        >
                         {{ $product->name }}
                     </label>
                 @endforeach
@@ -43,8 +68,16 @@
         </label>
 
         <label>Nouveaux produits pour ce drop</label>
+
         <div id="new-products-list"></div>
-        <button type="button" id="add-product-row" class="admin-btn-secondary">+ Ajouter un produit</button>
+
+        <button
+            type="button"
+            id="add-product-row"
+            class="admin-btn-secondary"
+        >
+            + Ajouter un produit
+        </button>
 
         @if($errors->any())
             <div class="admin-form__errors">
@@ -54,7 +87,9 @@
             </div>
         @endif
 
-        <button type="submit" class="admin-btn">Créer le drop</button>
+        <button type="submit" class="admin-btn">
+            Créer le drop
+        </button>
     </form>
 
 </div>
@@ -185,7 +220,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function syncMinEndDate() {
         if (startInput.value) {
             endInput.min = startInput.value;
-            if (endInput.value && endInput.value <= startInput.value) {
+
+            if (
+                endInput.value &&
+                endInput.value <= startInput.value
+            ) {
                 endInput.value = '';
             }
         }
@@ -195,7 +234,11 @@ document.addEventListener('DOMContentLoaded', () => {
     syncMinEndDate();
 
     document.getElementById('drop-form').addEventListener('submit', (e) => {
-        if (startInput.value && endInput.value && endInput.value <= startInput.value) {
+        if (
+            startInput.value &&
+            endInput.value &&
+            endInput.value <= startInput.value
+        ) {
             e.preventDefault();
             alert('La date de fin doit être après la date de début.');
         }
@@ -208,26 +251,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('add-product-row').addEventListener('click', () => {
         const row = document.createElement('div');
+
         row.className = 'new-product-row';
+
         row.innerHTML = `
-            <button type="button" class="new-product-row__remove">Retirer</button>
-            <label>Nom du produit
-                <input type="text" name="new_products[${productIndex}][name]">
+            <button type="button" class="new-product-row__remove">
+                Retirer
+            </button>
+
+            <label>
+                Nom du produit
+                <input
+                    type="text"
+                    name="new_products[${productIndex}][name]"
+                >
             </label>
-            <label>Prix (DA)
-                <input type="number" step="0.01" name="new_products[${productIndex}][price]">
+
+            <label>
+                Prix (DA)
+                <input
+                    type="number"
+                    step="0.01"
+                    name="new_products[${productIndex}][price]"
+                >
             </label>
-            <label>Catégorie
-                <select name="new_products[${productIndex}][category_id]">
+
+            <label>
+                Catégorie
+                <select
+                    name="new_products[${productIndex}][category_id]"
+                >
                     <option value="">--Choisir--</option>
                     ${categoryOptions}
                 </select>
             </label>
-            <label>Photo
-                <input type="file" name="new_products[${productIndex}][image]" accept="image/*">
+
+            <label>
+                Photo
+                <input
+                    type="file"
+                    name="new_products[${productIndex}][image]"
+                    accept="image/*"
+                >
             </label>
         `;
-        row.querySelector('.new-product-row__remove').addEventListener('click', () => row.remove());
+
+        row.querySelector('.new-product-row__remove').addEventListener(
+            'click',
+            () => row.remove()
+        );
+
         list.appendChild(row);
         productIndex++;
     });
