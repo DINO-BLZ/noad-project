@@ -45,4 +45,9 @@ class Variant extends Model
 
         $this->decrement('stock', $quantity);
     }
+
+    public static function totalStock(): int
+    {
+        return (int) static::sum('stock');
+    }
 }

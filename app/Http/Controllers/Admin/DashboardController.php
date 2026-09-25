@@ -75,7 +75,7 @@ class DashboardController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $totalStock = (int) Variant::sum('stock');
+        $totalStock = Variant::totalStock();
 
 
         /*
@@ -150,10 +150,7 @@ class DashboardController extends Controller
         |
         */
 
-        $activeDrop = Drop::query()
-            ->active()
-            ->orderByDesc('start_date')
-            ->first();
+        $activeDrop = Drop::current()->first();
 
         $dropMonitoring = $activeDrop?->quotaMonitoring();
 

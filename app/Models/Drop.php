@@ -215,6 +215,20 @@ class Drop extends Model
             });
     }
 
+    /**
+     * Retourne les drops actifs dans l'ordre du plus récent
+     * au plus ancien.
+     *
+     * Utilisé lorsqu'il peut exister plusieurs drops actifs
+     * simultanément et qu'il faut déterminer le drop courant.
+     */
+    public function scopeCurrent($query)
+    {
+        return $query
+            ->active()
+            ->orderByDesc('start_date');
+    }
+
     public function scopeUpcoming($query)
     {
         return $query->where('start_date', '>', now());

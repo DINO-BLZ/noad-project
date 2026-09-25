@@ -62,11 +62,7 @@ class DropController extends Controller
          * Drop actif
          * --------------------------------------------------------
          */
-        $activeDrop = Drop::query()
-            ->get()
-            ->first(
-                fn (Drop $drop) => $drop->isActive()
-            );
+        $activeDrop = Drop::current()->first();
 
         /*
          * --------------------------------------------------------

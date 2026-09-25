@@ -69,8 +69,6 @@ class Product extends Model
     {
         return $this->drops()
             ->active()
-            ->where('start_date', '<=', now())
-            ->where('end_date', '>=', now())
             ->latest('start_date')
             ->first();
     }
