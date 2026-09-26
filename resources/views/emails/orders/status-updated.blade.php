@@ -1,9 +1,10 @@
-<x-mail::message>
+[x-mail::message](x-mail::message)
+
 # Mise à jour de votre commande
 
 Bonjour {{ $order->full_name }},
 
-Le statut de votre commande **#{{ $order->id }}** est maintenant : **{{ ucfirst($order->status) }}**.
+Le statut de votre commande **#{{ $order->id }}** est maintenant : **{{ ucfirst($order->status->value) }}**.
 
 <x-mail::button :url="route('checkout.success', $order->id)">
 Voir ma commande
