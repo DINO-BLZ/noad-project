@@ -253,26 +253,7 @@ class DropController extends Controller
         );
     }
 
-    /**
-     * ============================================================
-     * CREATE
-     * ============================================================
-     *
-     * Affiche le formulaire de création d'un Drop.
-     */
-    public function create()
-    {
-        $products = Product::all();
-        $categories = Category::all();
-
-        return view(
-            'admin.drops.create',
-            compact(
-                'products',
-                'categories'
-            )
-        );
-    }
+   
 
     /**
      * ============================================================

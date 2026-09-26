@@ -1,0 +1,18 @@
+[33maadcc3b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m optimization du dashboard controller
+[33mc69a8da[m j,ai presque fini l,adaptation des maquettes
+[33m3ef6b2d[m correction des queues et des maillable
+[33m49293fd[m entre etape des contrainte sql
+[33m9e08aaf[m fixing bugs
+[33m4780fb6[m fixing drop probleme and new action for tests
+[33m1e74469[m erreur dans les tests de white liste arret a cause de surchauffe pc
+[33me4ac42f[m fin des stabilisation et des tests debut des policies
+[33m103dd97[m Fix CartController (UpdateCartItemRequest), correctifs encodage Mail, style Pint, fix tests (RefreshDatabase, CheckoutSnapshotsTest)
+[33mea4f68f[m centralisation du message d,erreure
+[33mfedfa6e[m implementation de systeme forgot password
+[33m5107e04[m ajout dun systeme de notification mail et multi image sur produit
+[33m8798ae3[m amelioration du site et correction de bug
+[33md6ef306[m trying ti fix the drop leaking problem
+[33mbd0e314[m amelioration et correction de bug
+[33mf3badaa[m amelioration general
+[33me89f0cd[m amelioration avec un system de taille
+[33mabf3ba1[m Premier commit - projet Noad

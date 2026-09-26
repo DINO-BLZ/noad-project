@@ -211,8 +211,7 @@ Route::prefix('admin')
         Route::get('/drops', [AdminDropController::class, 'index'])
             ->name('drops.index');
 
-        Route::get('/drops/creer', [AdminDropController::class, 'create'])
-            ->name('drops.create');
+       
 
         Route::post('/drops', [AdminDropController::class, 'store'])
             ->name('drops.store');
