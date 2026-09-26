@@ -22,6 +22,14 @@ return Application::configure(basePath: dirname(__DIR__))
             ->everyMinute()
             ->withoutOverlapping();
 
+        $schedule->command('carts:purge-old-guests')
+            ->dailyAt('03:30')
+            ->withoutOverlapping();
+
+        $schedule->command('auth:purge-old-password-reset-tokens')
+            ->dailyAt('04:00')
+            ->withoutOverlapping();
+
         $schedule->command('search:reindex-products')
             ->dailyAt('03:00')
             ->withoutOverlapping();
@@ -37,4 +45,5 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    })
+    ->create();
