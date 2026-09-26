@@ -42,11 +42,11 @@ class UpdateOrderStatusRequest extends FormRequest
 
                     if (! $currentStatus->canTransitionTo($newStatus)) {
                         $fail(
-                            "La commande ne peut pas passer du statut "
-                            . $currentStatus->value
-                            . " au statut "
-                            . $newStatus->value
-                            . "."
+                            'La commande ne peut pas passer du statut '
+                            .$currentStatus->value
+                            .' au statut '
+                            .$newStatus->value
+                            .'.'
                         );
                     }
                 },

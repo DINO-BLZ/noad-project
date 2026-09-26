@@ -6,7 +6,6 @@ use App\Actions\Drops\ApproveWhitelistAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\DropRequest;
 use App\Mail\WhitelistStatusMail;
-use App\Models\Category;
 use App\Models\Drop;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -253,8 +252,6 @@ class DropController extends Controller
         );
     }
 
-   
-
     /**
      * ============================================================
      * STORE
@@ -272,8 +269,8 @@ class DropController extends Controller
          * Génération du slug.
          */
         $data['slug'] = Str::slug($data['name'])
-            . '-'
-            . uniqid();
+            .'-'
+            .uniqid();
 
         /*
          * Validation des nouveaux produits avant
@@ -335,8 +332,7 @@ class DropController extends Controller
                     function ($id) use ($productQuotas) {
                         return [
                             $id => [
-                                'quota' =>
-                                    $productQuotas[$id] ?? 0,
+                                'quota' => $productQuotas[$id] ?? 0,
                             ],
                         ];
                     }
@@ -610,8 +606,7 @@ class DropController extends Controller
                     function ($id) use ($productQuotas) {
                         return [
                             $id => [
-                                'quota' =>
-                                    $productQuotas[$id] ?? 0,
+                                'quota' => $productQuotas[$id] ?? 0,
                             ],
                         ];
                     }
@@ -693,8 +688,7 @@ class DropController extends Controller
             );
         } catch (LogicException $exception) {
             return back()->withErrors([
-                'whitelist' =>
-                    $exception->getMessage(),
+                'whitelist' => $exception->getMessage(),
             ]);
         }
 
@@ -825,8 +819,8 @@ class DropController extends Controller
                 $errors[
                     "new_products.$index"
                 ] = [
-                    'Produit #' .
-                    ($index + 1) .
+                    'Produit #'.
+                    ($index + 1).
                     ' : le nom et le prix sont tous les deux requis.',
                 ];
 
@@ -841,8 +835,7 @@ class DropController extends Controller
             $seenCombinations = [];
 
             foreach (
-                $newProduct['sizes'] ?? []
-                as $sizeData
+                $newProduct['sizes'] ?? [] as $sizeData
             ) {
                 /*
                  * Ligne de variante incomplète :
@@ -850,14 +843,14 @@ class DropController extends Controller
                  */
                 if (
                     empty($sizeData['size']) ||
-                    !isset($sizeData['stock'])
+                    ! isset($sizeData['stock'])
                 ) {
                     continue;
                 }
 
                 $combination =
-                    ($sizeData['size'] ?? '') .
-                    '|' .
+                    ($sizeData['size'] ?? '').
+                    '|'.
                     ($sizeData['color'] ?? '');
 
                 /*
@@ -871,12 +864,12 @@ class DropController extends Controller
                     $errors[
                         "new_products.$index.sizes"
                     ] = [
-                        'Produit #' .
-                        ($index + 1) .
-                        ' : la combinaison taille/couleur "' .
-                        ($sizeData['size'] ?? '') .
-                        ' / ' .
-                        ($sizeData['color'] ?? '') .
+                        'Produit #'.
+                        ($index + 1).
+                        ' : la combinaison taille/couleur "'.
+                        ($sizeData['size'] ?? '').
+                        ' / '.
+                        ($sizeData['color'] ?? '').
                         '" est en double.',
                     ];
                 }
@@ -900,11 +893,10 @@ class DropController extends Controller
             $validated as $newProduct
         ) {
             foreach (
-                $newProduct['sizes'] ?? []
-                as $sizeData
+                $newProduct['sizes'] ?? [] as $sizeData
             ) {
                 if (
-                    !empty($sizeData['sku'])
+                    ! empty($sizeData['sku'])
                 ) {
                     $allSkus[] =
                         $sizeData['sku'];
@@ -912,7 +904,7 @@ class DropController extends Controller
             }
         }
 
-        if (!empty($allSkus)) {
+        if (! empty($allSkus)) {
             /*
              * ----------------------------------------------------
              * Doublons dans la requête
@@ -932,10 +924,10 @@ class DropController extends Controller
             );
 
             if (
-                !empty($duplicateSkus)
+                ! empty($duplicateSkus)
             ) {
                 $errors['new_products'][] =
-                    'Doublon de SKU dans les nouveaux produits : ' .
+                    'Doublon de SKU dans les nouveaux produits : '.
                     implode(
                         ', ',
                         $duplicateSkus
@@ -956,10 +948,10 @@ class DropController extends Controller
                 ->all();
 
             if (
-                !empty($existingSkus)
+                ! empty($existingSkus)
             ) {
                 $errors['new_products'][] =
-                    'SKU déjà utilisé en base : ' .
+                    'SKU déjà utilisé en base : '.
                     implode(
                         ', ',
                         $existingSkus
@@ -972,7 +964,7 @@ class DropController extends Controller
          * Retourne toutes les erreurs
          * --------------------------------------------------------
          */
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             throw ValidationException::withMessages(
                 $errors
             );
@@ -1023,24 +1015,19 @@ class DropController extends Controller
              * ----------------------------------------------------
              */
             $product = Product::create([
-                'name' =>
-                    $newProduct['name'],
+                'name' => $newProduct['name'],
 
-                'slug' =>
-                    Str::slug(
-                        $newProduct['name']
-                    ) .
-                    '-' .
+                'slug' => Str::slug(
+                    $newProduct['name']
+                ).
+                    '-'.
                     uniqid(),
 
-                'price' =>
-                    $newProduct['price'],
+                'price' => $newProduct['price'],
 
-                'image' =>
-                    $imagePath,
+                'image' => $imagePath,
 
-                'category_id' =>
-                    $newProduct['category_id']
+                'category_id' => $newProduct['category_id']
                     ?? null,
             ]);
 
@@ -1063,24 +1050,20 @@ class DropController extends Controller
                  * - le stock est renseigné
                  */
                 if (
-                    !empty($sizeData['size']) &&
+                    ! empty($sizeData['size']) &&
                     isset($sizeData['stock'])
                 ) {
                     $product
                         ->variants()
                         ->create([
-                            'size' =>
-                                $sizeData['size'],
+                            'size' => $sizeData['size'],
 
-                            'stock' =>
-                                $sizeData['stock'],
+                            'stock' => $sizeData['stock'],
 
-                            'sku' =>
-                                $sizeData['sku']
+                            'sku' => $sizeData['sku']
                                 ?? null,
 
-                            'color' =>
-                                $sizeData['color']
+                            'color' => $sizeData['color']
                                 ?? null,
                         ]);
 
@@ -1095,7 +1078,7 @@ class DropController extends Controller
              *
              * On crée une variante par défaut.
              */
-            if (!$hasValidSize) {
+            if (! $hasValidSize) {
                 $product
                     ->variants()
                     ->create([

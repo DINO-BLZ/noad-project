@@ -137,11 +137,10 @@ class ProductController extends Controller
             )
             ->when(
                 $product->category_id,
-                fn ($query) =>
-                    $query->where(
-                        'category_id',
-                        $product->category_id
-                    )
+                fn ($query) => $query->where(
+                    'category_id',
+                    $product->category_id
+                )
             )
             ->latest()
             ->limit(4)
@@ -164,12 +163,11 @@ class ProductController extends Controller
                 )
                 ->when(
                     $product->category_id,
-                    fn ($query) =>
-                        $query->where(
-                            'category_id',
-                            '!=',
-                            $product->category_id
-                        )
+                    fn ($query) => $query->where(
+                        'category_id',
+                        '!=',
+                        $product->category_id
+                    )
                 )
                 ->latest()
                 ->limit(

@@ -84,8 +84,8 @@ class DropCurrentScopeTest extends TestCase
         $endDate
     ): Drop {
         $drop = Drop::create([
-            'name' => 'Test Drop ' . uniqid(),
-            'slug' => 'test-drop-' . uniqid(),
+            'name' => 'Test Drop '.uniqid(),
+            'slug' => 'test-drop-'.uniqid(),
             'description' => 'Drop de test.',
             'start_date' => $startDate,
             'end_date' => $endDate,
@@ -107,13 +107,13 @@ class DropCurrentScopeTest extends TestCase
     private function createProduct(): Product
     {
         $category = Category::create([
-            'name' => 'Test Category ' . uniqid(),
-            'slug' => 'test-category-' . uniqid(),
+            'name' => 'Test Category '.uniqid(),
+            'slug' => 'test-category-'.uniqid(),
         ]);
 
         $product = Product::create([
-            'name' => 'Test Product ' . uniqid(),
-            'slug' => 'test-product-' . uniqid(),
+            'name' => 'Test Product '.uniqid(),
+            'slug' => 'test-product-'.uniqid(),
             'price' => 100,
             'category_id' => $category->id,
         ]);
@@ -128,7 +128,7 @@ class DropCurrentScopeTest extends TestCase
         return $product->variants()->create([
             'size' => 'Unique',
             'stock' => 10,
-            'sku' => 'TEST-' . strtoupper(uniqid()),
+            'sku' => 'TEST-'.strtoupper(uniqid()),
         ]);
     }
 }

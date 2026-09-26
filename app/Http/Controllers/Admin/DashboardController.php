@@ -29,7 +29,6 @@ class DashboardController extends Controller
             OrderStatus::Delivered->value,
         ];
 
-
         /*
         |--------------------------------------------------------------------------
         | CHIFFRE D'AFFAIRES
@@ -49,7 +48,6 @@ class DashboardController extends Controller
                 ->value('total') ?? 0
         );
 
-
         /*
         |--------------------------------------------------------------------------
         | COMMANDES
@@ -68,7 +66,6 @@ class DashboardController extends Controller
             $confirmedStatuses
         )->count();
 
-
         /*
         |--------------------------------------------------------------------------
         | STOCK TOTAL
@@ -76,7 +73,6 @@ class DashboardController extends Controller
         */
 
         $totalStock = Variant::totalStock();
-
 
         /*
         |--------------------------------------------------------------------------
@@ -126,7 +122,7 @@ class DashboardController extends Controller
                         ? 'ÉPUISÉE'
                         : ((int) $variant->stock === 1
                             ? '1 RESTANT'
-                            : $variant->stock . ' RESTANTS'),
+                            : $variant->stock.' RESTANTS'),
                     'status_label' => $isOutOfStock
                         ? 'ÉPUISÉE'
                         : 'STOCK CRITIQUE',
@@ -135,7 +131,6 @@ class DashboardController extends Controller
                         : 'critical',
                 ];
             });
-
 
         /*
         |--------------------------------------------------------------------------
@@ -207,7 +202,6 @@ class DashboardController extends Controller
             ];
         }
 
-
         /*
         |--------------------------------------------------------------------------
         | WHITELIST
@@ -221,7 +215,6 @@ class DashboardController extends Controller
             'pending'
         )->count();
 
-
         /*
         |--------------------------------------------------------------------------
         | UTILISATEURS / PRODUITS
@@ -231,7 +224,6 @@ class DashboardController extends Controller
         $totalUsers = User::count();
 
         $totalProducts = Product::count();
-
 
         /*
         |--------------------------------------------------------------------------
@@ -259,7 +251,6 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
-
         /*
         |--------------------------------------------------------------------------
         | COMMANDES RÉCENTES
@@ -272,7 +263,6 @@ class DashboardController extends Controller
             ->latest()
             ->take(5)
             ->get();
-
 
         /*
         |--------------------------------------------------------------------------
@@ -296,7 +286,6 @@ class DashboardController extends Controller
             ->groupBy('day')
             ->orderBy('day')
             ->get();
-
 
         /*
         |--------------------------------------------------------------------------

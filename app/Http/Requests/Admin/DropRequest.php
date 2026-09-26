@@ -19,7 +19,7 @@ class DropRequest extends FormRequest
             'description' => 'nullable|string',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
-        
+
             'products' => 'array',
             'max_whitelist_slots' => 'nullable|integer|min:0',
             'products.*' => 'exists:products,id',
@@ -33,17 +33,17 @@ class DropRequest extends FormRequest
             'new_products.*.sizes.*.stock' => 'nullable|integer|min:0',
             'new_products.*.sizes.*.sku' => 'nullable|string|max:50',
             'new_products.*.sizes.*.color' => 'nullable|string|max:50',
-        
-'product_quotas' => [
-    'nullable',
-    'array',
-],
 
-'product_quotas.*' => [
-    'nullable',
-    'integer',
-    'min:0',
-],
+            'product_quotas' => [
+                'nullable',
+                'array',
+            ],
+
+            'product_quotas.*' => [
+                'nullable',
+                'integer',
+                'min:0',
+            ],
 
         ];
     }

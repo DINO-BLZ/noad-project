@@ -211,8 +211,6 @@ Route::prefix('admin')
         Route::get('/drops', [AdminDropController::class, 'index'])
             ->name('drops.index');
 
-       
-
         Route::post('/drops', [AdminDropController::class, 'store'])
             ->name('drops.store');
 

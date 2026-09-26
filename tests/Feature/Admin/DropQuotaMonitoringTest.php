@@ -8,8 +8,8 @@ use App\Models\Drop;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
-use App\Models\Variant;
 use App\Models\User;
+use App\Models\Variant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

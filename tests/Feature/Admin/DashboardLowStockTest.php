@@ -4,8 +4,8 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\Variant;
 use App\Models\User;
+use App\Models\Variant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

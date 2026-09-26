@@ -12,35 +12,35 @@ use App\Models\Product;
 
 class ProductController extends Controller
 {
-   public function index()
-{
-    $products = Product::query()
-        ->with([
-            'category',
-            'variants',
-        ])
-        ->latest()
-        ->get();
+    public function index()
+    {
+        $products = Product::query()
+            ->with([
+                'category',
+                'variants',
+            ])
+            ->latest()
+            ->get();
 
-    $activeReferences = $products->count();
+        $activeReferences = $products->count();
 
-    $outOfStock = $products->filter(function ($product) {
-        return $product->variants->sum('stock') <= 0;
-    })->count();
+        $outOfStock = $products->filter(function ($product) {
+            return $product->variants->sum('stock') <= 0;
+        })->count();
 
-    $stockValue = $products->sum(function ($product) {
-        $totalStock = $product->variants->sum('stock');
+        $stockValue = $products->sum(function ($product) {
+            $totalStock = $product->variants->sum('stock');
 
-        return (float) $product->price * $totalStock;
-    });
+            return (float) $product->price * $totalStock;
+        });
 
-    return view('admin.products.index', compact(
-        'products',
-        'activeReferences',
-        'outOfStock',
-        'stockValue'
-    ));
-}
+        return view('admin.products.index', compact(
+            'products',
+            'activeReferences',
+            'outOfStock',
+            'stockValue'
+        ));
+    }
 
     public function create()
     {
@@ -73,10 +73,10 @@ class ProductController extends Controller
     }
 
     public function edit(Product $product)
-{
-    $this->authorize('update', $product);
+    {
+        $this->authorize('update', $product);
 
-    $product->load(['variants', 'images']);
+        $product->load(['variants', 'images']);
 
         $categories = Category::query()
             ->orderBy('name')

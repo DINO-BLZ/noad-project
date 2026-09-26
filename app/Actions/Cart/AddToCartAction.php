@@ -12,9 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class AddToCartAction
 {
-    public function __construct(private CartService $cartService)
-    {
-    }
+    public function __construct(private CartService $cartService) {}
 
     public function execute(
         Product $product,
