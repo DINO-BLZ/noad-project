@@ -2,10 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OrderStatus;
+use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Drop;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Models\Variant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -94,6 +98,71 @@ class SeoMetadataTest extends TestCase
 
         $this->actingAs($admin)
             ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('<meta name="robots" content="noindex, nofollow">', false);
+    }
+
+    public function test_customer_and_authentication_pages_are_marked_noindex(): void
+    {
+        $this->get(route('cart.index'))
+            ->assertOk()
+            ->assertSee('<meta name="robots" content="noindex, nofollow">', false);
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('<meta name="robots" content="noindex, nofollow">', false);
+
+        $this->get(route('register'))
+            ->assertOk()
+            ->assertSee('<meta name="robots" content="noindex, nofollow">', false);
+    }
+
+    public function test_checkout_success_and_whitelist_pages_are_marked_noindex(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::create(['name' => 'Private Category', 'slug' => 'private-category']);
+        $product = Product::withoutSyncingToSearch(function () use ($category): Product {
+            return Product::create([
+                'name' => 'Private Product',
+                'slug' => 'private-product',
+                'price' => 1000,
+                'category_id' => $category->id,
+            ]);
+        });
+        $variant = Variant::create([
+            'product_id' => $product->id,
+            'size' => 'M',
+            'stock' => 2,
+            'sku' => 'PRIVATE-SKU',
+            'color' => 'Black',
+        ]);
+        CartItem::create([
+            'user_id' => $user->id,
+            'session_id' => null,
+            'variant_id' => $variant->id,
+            'quantity' => 1,
+        ]);
+        $order = Order::create([
+            'user_id' => $user->id,
+            'full_name' => $user->name,
+            'phone' => '0555000000',
+            'address' => 'Private Address',
+            'wilaya' => 'Algiers',
+            'payment_method' => 'cod',
+            'status' => OrderStatus::Pending,
+            'total' => 1000,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('checkout.index'))
+            ->assertOk()
+            ->assertSee('<meta name="robots" content="noindex, nofollow">', false);
+
+        $this->get(route('whitelist.index'))
+            ->assertOk()
+            ->assertSee('<meta name="robots" content="noindex, nofollow">', false);
+
+        $this->get(route('checkout.success', $order))
             ->assertOk()
             ->assertSee('<meta name="robots" content="noindex, nofollow">', false);
     }

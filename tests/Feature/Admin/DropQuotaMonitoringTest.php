@@ -3,6 +3,7 @@
 namespace Tests\Unit\Models;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Category;
 use App\Models\Drop;
 use App\Models\Order;
@@ -37,13 +38,13 @@ class DropQuotaMonitoringTest extends TestCase
 
         $this->createOrderItem(
             $variantA,
-            OrderStatus::Paid,
+            OrderStatus::Delivered,
             12
         );
 
         $this->createOrderItem(
             $variantB,
-            OrderStatus::Paid,
+            OrderStatus::Delivered,
             2
         );
 
@@ -73,7 +74,7 @@ class DropQuotaMonitoringTest extends TestCase
 
         $this->createOrderItem(
             $variant,
-            OrderStatus::Paid,
+            OrderStatus::Delivered,
             4
         );
 
@@ -111,13 +112,13 @@ class DropQuotaMonitoringTest extends TestCase
 
         $this->createOrderItem(
             $variantA,
-            OrderStatus::Paid,
+            OrderStatus::Delivered,
             12
         );
 
         $this->createOrderItem(
             $variantB,
-            OrderStatus::Paid,
+            OrderStatus::Delivered,
             2
         );
 
@@ -150,7 +151,7 @@ class DropQuotaMonitoringTest extends TestCase
 
         $this->createOrderItem(
             $variantA,
-            OrderStatus::Paid,
+            OrderStatus::Delivered,
             12
         );
 
@@ -229,7 +230,7 @@ class DropQuotaMonitoringTest extends TestCase
         $product = $this->createProduct('Historical Product');
         $variant = $this->createVariant($product, 20);
         $drop->products()->attach($product->id, ['quota' => 10]);
-        $item = $this->createOrderItem($variant, OrderStatus::Paid, 3);
+        $item = $this->createOrderItem($variant, OrderStatus::Delivered, 3);
 
         $variant->delete();
 
@@ -254,7 +255,7 @@ class DropQuotaMonitoringTest extends TestCase
         $product = $this->createProduct('Deleted Product');
         $variant = $this->createVariant($product, 20);
         $drop->products()->attach($product->id, ['quota' => 10]);
-        $item = $this->createOrderItem($variant, OrderStatus::Paid, 2);
+        $item = $this->createOrderItem($variant, OrderStatus::Delivered, 2);
 
         $product->delete();
 
@@ -327,6 +328,9 @@ class DropQuotaMonitoringTest extends TestCase
             'wilaya' => 'Algiers',
             'payment_method' => 'cod',
             'status' => $status,
+            'payment_status' => $status === OrderStatus::Delivered
+                ? PaymentStatus::Paid
+                : PaymentStatus::Pending,
             'total' => $quantity * 25,
         ]);
 

@@ -1,6 +1,8 @@
 ```blade
 @extends('layouts.app')
 
+@section('robots', 'noindex, nofollow')
+
 @section('content')
 
 <div class="noad-reset-page">

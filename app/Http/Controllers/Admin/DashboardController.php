@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\WhitelistStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Drop;
@@ -40,9 +41,9 @@ class DashboardController extends Controller
             OrderItem::query()
                 ->whereHas(
                     'order',
-                    fn ($query) => $query->whereIn(
-                        'status',
-                        $confirmedStatuses
+                    fn ($query) => $query->where(
+                        'payment_status',
+                        PaymentStatus::Paid->value
                     )
                 )
                 ->selectRaw('SUM(quantity * price) as total')
@@ -271,17 +272,11 @@ class DashboardController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $salesByDay = Order::where(
-            'created_at',
-            '>=',
-            now()->subDays(7)
-        )
-            ->whereIn(
-                'status',
-                $confirmedStatuses
-            )
+        $salesByDay = Order::where('payment_status', PaymentStatus::Paid->value)
+            ->whereNotNull('delivered_at')
+            ->where('delivered_at', '>=', now()->subDays(7))
             ->select(
-                DB::raw('date(created_at) as day'),
+                DB::raw('date(delivered_at) as day'),
                 DB::raw('sum(total) as total')
             )
             ->groupBy('day')

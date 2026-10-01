@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\WhitelistStatus;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
@@ -105,7 +106,10 @@ class Drop extends Model
             ])
             ->select('order_items.drop_id')
             ->selectRaw('SUM(order_items.quantity) as actual_sold')
-            ->selectRaw('SUM(order_items.quantity * order_items.price) as revenue')
+            ->selectRaw(
+                'SUM(CASE WHEN orders.payment_status = ? THEN order_items.quantity * order_items.price ELSE 0 END) as revenue',
+                [PaymentStatus::Paid->value]
+            )
             ->selectRaw('COUNT(DISTINCT orders.id) as orders')
             ->groupBy('order_items.drop_id')
             ->get()

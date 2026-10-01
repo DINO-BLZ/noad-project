@@ -10,9 +10,9 @@ Boutique en ligne de mode/streetwear pour le marché algérien, avec un système
 
 ## Prérequis
 
-- PHP 8.3+ avec les extensions `pdo_sqlite` (et `pdo_mysql` si tu utilises MySQL)
+- PHP 8.3+ avec `ctype`, `fileinfo`, `filter`, `hash`, `mbstring`, `openssl`, `session`, `tokenizer`, `xml`, PDO, et `pdo_sqlite` en local (`pdo_mysql` en production)
 - Composer
-- Node.js 20+ et npm
+- Node.js 20.19+ ou 22.12+ et npm (requis uniquement pour construire les assets)
 - Docker (pour les services complémentaires si nécessaire)
 
 ## Installation
@@ -84,11 +84,18 @@ L'exemple utilise des valeurs locales sans secret. En production, `APP_DEBUG` do
 
 ### Préparation du déploiement
 
-Après configuration des services et sauvegarde de la base, le déploiement standard comprend :
+Prérequis : Linux avec Nginx ou Apache derrière HTTPS et PHP-FPM, MySQL 8, un worker Laravel supervisé, ainsi qu'un cron exécutant le scheduler chaque minute. PHP/Composer servent à installer et exécuter l'application; Node/npm servent uniquement à construire les assets. MariaDB n'est pas certifié par la CI actuelle.
+
+Sur un nouveau serveur, après avoir créé la base MySQL et configuré l'accès SSH au dépôt :
 
 ```bash
+git clone <URL_DU_DEPOT> noad
+cd noad
+cp .env.example .env
+# Renseigner APP_URL HTTPS, DB_*, SMTP, Elasticsearch, SESSION_SECURE_COOKIE=true.
 composer install --no-dev --optimize-autoloader
 npm ci
+php artisan key:generate
 npm run build
 php artisan migrate --force
 php artisan storage:link
@@ -97,7 +104,21 @@ php artisan route:cache
 php artisan view:cache
 ```
 
-Ne lance pas `migrate:fresh` sur une base contenant des données. Vérifie ensuite `/up`, `php artisan queue:failed`, `php artisan schedule:list` et `/sitemap.xml`.
+`key:generate` est à faire uniquement à l'installation initiale, avec `APP_KEY` vide; ne régénère pas la clé à chaque déploiement. Ne lance jamais `migrate:fresh` sur une base contenant des données.
+
+Le serveur web doit posséder `storage/` et `bootstrap/cache/` en lecture/écriture; attribue ces répertoires à l'utilisateur/groupe PHP-FPM, sans les rendre accessibles en écriture à tous. Le disque `public` stocke les images sous `storage/app/public`; le lien `public/storage` doit pointer vers cette cible. Vérifie ensuite `/up`, `php artisan queue:failed`, `php artisan schedule:list` et `/sitemap.xml`.
+
+Worker supervisé :
+
+```bash
+php artisan queue:work database --tries=3 --backoff=5
+```
+
+Scheduler cron :
+
+```cron
+* * * * * cd /chemin/vers/noad && php artisan schedule:run >> /dev/null 2>&1
+```
 
 ### Lancer l'application
 

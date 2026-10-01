@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('robots', 'noindex, nofollow')
+
 @section('content')
 
 <div class="cart">

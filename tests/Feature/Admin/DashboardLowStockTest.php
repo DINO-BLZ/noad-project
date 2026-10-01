@@ -2,7 +2,11 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Category;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Variant;
@@ -145,6 +149,52 @@ class DashboardLowStockTest extends TestCase
         $this->assertSame(0, $lowStockVariants[0]['stock']);
         $this->assertSame(1, $lowStockVariants[1]['stock']);
         $this->assertSame(2, $lowStockVariants[2]['stock']);
+    }
+
+    public function test_dashboard_revenue_only_counts_cod_payments_received(): void
+    {
+        $this->actingAs($this->createAdmin());
+
+        $unpaidOrder = $this->createRevenueOrder(OrderStatus::Shipped, PaymentStatus::Pending, 9000);
+        $paidOrder = $this->createRevenueOrder(OrderStatus::Delivered, PaymentStatus::Paid, 2500);
+
+        OrderItem::create([
+            'order_id' => $unpaidOrder->id,
+            'quantity' => 1,
+            'price' => 9000,
+            'product_name' => 'Uncollected COD',
+        ]);
+        OrderItem::create([
+            'order_id' => $paidOrder->id,
+            'quantity' => 1,
+            'price' => 2500,
+            'product_name' => 'Collected COD',
+        ]);
+
+        $response = $this->get(route('admin.dashboard'));
+
+        $response->assertOk()->assertViewHas('totalRevenue', 2500.0);
+        $response->assertViewHas('salesByDay');
+        $this->assertEquals(2500.0, (float) $response->viewData('salesByDay')->sum('total'));
+    }
+
+    private function createRevenueOrder(
+        OrderStatus $status,
+        PaymentStatus $paymentStatus,
+        float $total
+    ): Order {
+        return Order::create([
+            'user_id' => $this->createAdmin()->id,
+            'full_name' => 'Dashboard Customer',
+            'phone' => '0555000000',
+            'address' => 'Dashboard Address',
+            'wilaya' => 'Algiers',
+            'payment_method' => 'cod',
+            'status' => $status,
+            'payment_status' => $paymentStatus,
+            'delivered_at' => $paymentStatus === PaymentStatus::Paid ? now() : null,
+            'total' => $total,
+        ]);
     }
 
     private function createAdmin(): User
