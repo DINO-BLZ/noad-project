@@ -131,8 +131,7 @@
     <div class="admin-products__toolbar-left">
 
         <span class="admin-products__count">
-            {{ $products->count() }}
-            référence{{ $products->count() > 1 ? 's' : '' }}
+            {{ $products->total() }} références
         </span>
 
     </div>
@@ -140,55 +139,24 @@
 
     <div class="admin-products__toolbar-right">
 
-        {{-- Ces filtres restent visuels pour le moment.
-             Ils ne sont pas encore connectés au backend. --}}
+        <form method="GET" action="{{ route('admin.products.index') }}" class="admin-products__filters">
+            <select name="status" class="admin-filter" aria-label="Filtrer par statut">
+                <option value="">Tous les statuts</option>
+                <option value="available" @selected($status === 'available')>Disponible</option>
+                <option value="out_of_stock" @selected($status === 'out_of_stock')>Rupture</option>
+            </select>
 
-        <select
-            class="admin-filter"
-            aria-label="Filtrer par statut"
-        >
+            <select name="category_id" class="admin-filter" aria-label="Filtrer par catégorie">
+                <option value="">Toutes les catégories</option>
+                @foreach($categories as $category)
+                    <option value="{{ $category->id }}" @selected((string) request('category_id') === (string) $category->id)>
+                        {{ $category->name }}
+                    </option>
+                @endforeach
+            </select>
 
-            <option value="">
-                Tous les statuts
-            </option>
-
-            <option value="available">
-                Disponible
-            </option>
-
-            <option value="out_of_stock">
-                Rupture
-            </option>
-
-        </select>
-
-
-        <select
-            class="admin-filter"
-            aria-label="Filtrer par catégorie"
-        >
-
-            <option value="">
-                Toutes les catégories
-            </option>
-
-            @php
-                $categories = $products
-                    ->pluck('category')
-                    ->filter()
-                    ->unique('id')
-                    ->sortBy('name');
-            @endphp
-
-            @foreach($categories as $category)
-
-                <option value="{{ $category->id }}">
-                    {{ $category->name }}
-                </option>
-
-            @endforeach
-
-        </select>
+            <button type="submit" class="admin-filter">Filtrer</button>
+        </form>
 
     </div>
 
@@ -489,13 +457,10 @@
     <div class="admin-products__footer">
 
         <span>
-            AFFICHAGE COMPLET DU CATALOGUE
+            AFFICHAGE {{ $products->firstItem() ?? 0 }}–{{ $products->lastItem() ?? 0 }} SUR {{ $products->total() }}
         </span>
 
-        <span>
-            {{ $products->count() }}
-            référence{{ $products->count() > 1 ? 's' : '' }}
-        </span>
+        {{ $products->links() }}
 
     </div>
 

@@ -9,36 +9,62 @@ use App\Http\Requests\Admin\StoreProductRequest;
 use App\Http\Requests\Admin\UpdateProductRequest;
 use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $status = $request->input('status');
+
         $products = Product::query()
             ->with([
                 'category',
                 'variants',
             ])
+            ->when($status === 'available', fn ($query) => $query->whereHas(
+                'variants',
+                fn ($variants) => $variants->where('stock', '>', 0)
+            ))
+            ->when($status === 'out_of_stock', fn ($query) => $query->whereDoesntHave(
+                'variants',
+                fn ($variants) => $variants->where('stock', '>', 0)
+            ))
+            ->when($request->filled('category_id'), fn ($query) => $query->where(
+                'category_id',
+                $request->integer('category_id')
+            ))
             ->latest()
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
-        $activeReferences = $products->count();
+        $activeReferences = Product::count();
 
-        $outOfStock = $products->filter(function ($product) {
-            return $product->variants->sum('stock') <= 0;
-        })->count();
+        $outOfStock = Product::query()
+            ->whereDoesntHave('variants', fn ($query) => $query->where('stock', '>', 0))
+            ->count();
 
-        $stockValue = $products->sum(function ($product) {
-            $totalStock = $product->variants->sum('stock');
+        $variantStock = DB::table('variants')
+            ->select('product_id', DB::raw('SUM(stock) as total_stock'))
+            ->groupBy('product_id');
 
-            return (float) $product->price * $totalStock;
-        });
+        $stockValue = (float) DB::table('products')
+            ->leftJoinSub($variantStock, 'variant_stock', function ($join) {
+                $join->on('products.id', '=', 'variant_stock.product_id');
+            })
+            ->selectRaw('COALESCE(SUM(products.price * COALESCE(variant_stock.total_stock, 0)), 0) as stock_value')
+            ->value('stock_value');
+
+        $categories = Category::query()->orderBy('name')->get();
 
         return view('admin.products.index', compact(
             'products',
+            'categories',
             'activeReferences',
             'outOfStock',
-            'stockValue'
+            'stockValue',
+            'status'
         ));
     }
 

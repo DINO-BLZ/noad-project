@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Throwable;
 
 class SearchController extends Controller
 {
@@ -11,9 +12,16 @@ class SearchController extends Controller
     {
         $query = trim((string) $request->input('q', ''));
 
-        $products = $query !== ''
-            ? Product::search($query)->paginate(12)->withQueryString()
-            : Product::query()->whereRaw('0 = 1')->paginate(12);
+        if ($query === '') {
+            $products = Product::query()->whereRaw('0 = 1')->paginate(12);
+        } else {
+            try {
+                $products = Product::search($query)->paginate(12)->withQueryString();
+            } catch (Throwable $exception) {
+                report($exception);
+                $products = $this->databaseSearch($query)->paginate(12)->withQueryString();
+            }
+        }
 
         $products->load(['variants', 'category', 'drops' => fn ($q) => $q->active()]);
 
@@ -36,7 +44,12 @@ class SearchController extends Controller
             return response()->json([]);
         }
 
-        $products = Product::search($query)->take(5)->get();
+        try {
+            $products = Product::search($query)->take(5)->get();
+        } catch (Throwable $exception) {
+            report($exception);
+            $products = $this->databaseSearch($query)->take(5)->get();
+        }
 
         return response()->json(
             $products->map(fn ($product) => [
@@ -46,5 +59,16 @@ class SearchController extends Controller
                 'image' => $product->image ? asset('storage/'.$product->image) : null,
             ])
         );
+    }
+
+    private function databaseSearch(string $query)
+    {
+        $term = '%'.$query.'%';
+
+        return Product::query()->where(function ($builder) use ($term) {
+            $builder->where('name', 'LIKE', $term)
+                ->orWhere('description', 'LIKE', $term)
+                ->orWhereHas('category', fn ($category) => $category->where('name', 'LIKE', $term));
+        });
     }
 }

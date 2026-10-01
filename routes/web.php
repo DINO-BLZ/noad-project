@@ -306,16 +306,4 @@ Route::prefix('admin')
         Route::patch('/commandes/{order}/statut', [AdminOrderController::class, 'updateStatus'])
             ->name('orders.updateStatus');
 
-        /*
-        |--------------------------------------------------------------------------
-        | Order Documents
-        |--------------------------------------------------------------------------
-        */
-
-        Route::get('/commandes/{order}/bordereau', [AdminOrderController::class, 'label'])
-            ->name('orders.label');
-
-        Route::get('/commandes/{order}/facture', [AdminOrderController::class, 'invoice'])
-            ->name('orders.invoice');
-
     });

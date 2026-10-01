@@ -21,6 +21,7 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $orders = Order::query()
+            ->with('items')
             ->when(OrderStatus::tryFrom((string) $request->status), fn ($query, $status) => $query->where('status', $status->value))
             ->latest()
             ->paginate(20)
@@ -65,33 +66,5 @@ class OrderController extends Controller
         }
 
         return back()->with('success', 'Statut de la commande mis à jour.');
-    }
-
-    /**
-     * Génération du bordereau de commande.
-     *
-     * Placeholder temporaire :
-     * la génération réelle du document sera ajoutée ultérieurement.
-     */
-    public function label(Order $order)
-    {
-        return back()->with(
-            'error',
-            'La génération du bordereau n’est pas encore disponible.'
-        );
-    }
-
-    /**
-     * Génération de la facture.
-     *
-     * Placeholder temporaire :
-     * la génération réelle du document sera ajoutée ultérieurement.
-     */
-    public function invoice(Order $order)
-    {
-        return back()->with(
-            'error',
-            'La génération de la facture n’est pas encore disponible.'
-        );
     }
 }

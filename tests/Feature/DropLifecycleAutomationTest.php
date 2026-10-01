@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendDropOpenedNotification;
 use App\Mail\DropOpenedMail;
 use App\Models\Category;
 use App\Models\Drop;
@@ -12,6 +13,7 @@ use App\Models\Variant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class DropLifecycleAutomationTest extends TestCase
@@ -20,7 +22,7 @@ class DropLifecycleAutomationTest extends TestCase
 
     public function test_approved_users_are_notified_once_when_a_drop_starts(): void
     {
-        Mail::fake();
+        Queue::fake();
 
         $this->travelTo(now()->startOfHour());
 
@@ -58,19 +60,62 @@ class DropLifecycleAutomationTest extends TestCase
 
         Artisan::call('drops:notify-opened');
 
-        Mail::assertQueued(DropOpenedMail::class, 1);
-        Mail::assertQueued(DropOpenedMail::class, function (DropOpenedMail $mail) use ($approvedUser, $drop) {
-            return $mail->hasTo($approvedUser->email)
-                && $mail->whitelist->drop_id === $drop->id;
+        Queue::assertPushed(SendDropOpenedNotification::class, 1);
+        Queue::assertPushed(SendDropOpenedNotification::class, function (SendDropOpenedNotification $job) use ($approved) {
+            return $job->whitelistId === $approved->id;
         });
 
-        $this->assertNotNull($approved->fresh()->drop_opened_notified_at);
+        $this->assertNull($approved->fresh()->drop_opened_notified_at);
+        $this->assertSame('queued', $approved->fresh()->drop_opened_notification_status);
 
         Artisan::call('drops:notify-opened');
 
-        Mail::assertQueued(DropOpenedMail::class, 1);
+        Queue::assertPushed(SendDropOpenedNotification::class, 1);
 
         $this->travelBack();
+    }
+
+    public function test_notification_is_marked_sent_only_after_mail_send_succeeds(): void
+    {
+        Mail::fake();
+
+        $drop = $this->makeDrop();
+        $user = User::factory()->create();
+        $whitelist = DropWhitelist::create([
+            'drop_id' => $drop->id,
+            'user_id' => $user->id,
+            'status' => 'approved',
+            'drop_opened_notification_status' => 'queued',
+        ]);
+
+        (new SendDropOpenedNotification($whitelist->id))->handle();
+
+        Mail::assertSent(DropOpenedMail::class, fn (DropOpenedMail $mail) => $mail->hasTo($user->email));
+        $this->assertSame('sent', $whitelist->fresh()->drop_opened_notification_status);
+        $this->assertNotNull($whitelist->fresh()->drop_opened_notified_at);
+    }
+
+    public function test_failed_notification_can_be_requeued_by_the_scheduler(): void
+    {
+        Queue::fake();
+
+        $drop = $this->makeDrop();
+        $user = User::factory()->create();
+        $whitelist = DropWhitelist::create([
+            'drop_id' => $drop->id,
+            'user_id' => $user->id,
+            'status' => 'approved',
+            'drop_opened_notification_status' => 'queued',
+        ]);
+
+        (new SendDropOpenedNotification($whitelist->id))->failed(new \RuntimeException('Mail delivery failed'));
+
+        $this->assertSame('failed', $whitelist->fresh()->drop_opened_notification_status);
+
+        Artisan::call('drops:notify-opened');
+
+        $this->assertSame('queued', $whitelist->fresh()->drop_opened_notification_status);
+        Queue::assertPushed(SendDropOpenedNotification::class, 1);
     }
 
     public function test_pending_whitelist_requests_expire_when_a_drop_ends(): void

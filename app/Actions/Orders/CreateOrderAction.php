@@ -71,6 +71,7 @@ class CreateOrderAction
                     $total += $subtotal;
 
                     $orderItemsData[] = [
+                        'drop_id' => $activeDrop?->id,
                         'variant_id' => $variant->id,
                         'quantity' => $cartItem->quantity,
                         'price' => $price,

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class OrderItem extends Model
 {
-    protected $fillable = ['order_id', 'variant_id', 'quantity', 'price', 'variant_sku', 'variant_size', 'variant_color', 'product_name', 'created_at', 'updated_at'];
+    protected $fillable = ['order_id', 'drop_id', 'variant_id', 'quantity', 'price', 'variant_sku', 'variant_size', 'variant_color', 'product_name', 'created_at', 'updated_at'];
 
     public function order()
     {
@@ -16,5 +16,10 @@ class OrderItem extends Model
     public function variant()
     {
         return $this->belongsTo(Variant::class);
+    }
+
+    public function drop()
+    {
+        return $this->belongsTo(Drop::class);
     }
 }

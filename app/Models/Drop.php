@@ -7,6 +7,7 @@ use App\Enums\WhitelistStatus;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class Drop extends Model
@@ -56,116 +57,67 @@ class Drop extends Model
      */
     public function quotaMonitoring(): array
     {
-        $productsWithQuota = $this->products()
-            ->wherePivot('quota', '>', 0)
-            ->get();
+        return self::quotaMonitoringFor([$this])[$this->id];
+    }
 
-        if ($productsWithQuota->isEmpty()) {
-            return [
-                'quota_defined' => false,
-                'quota' => 0,
-                'sold' => 0,
-                'remaining' => 0,
-                'percentage' => 0,
-            ];
+    public static function quotaMonitoringFor(iterable $drops): Collection
+    {
+        $dropIds = collect($drops)
+            ->map(fn (Drop $drop) => (int) $drop->id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($dropIds->isEmpty()) {
+            return collect();
         }
 
-        $quotas = $productsWithQuota
-            ->mapWithKeys(function (Product $product) {
-                return [
-                    $product->id => (int) $product->pivot->quota,
-                ];
-            });
+        $quotas = DB::table('drop_product')
+            ->whereIn('drop_id', $dropIds)
+            ->select('drop_id')
+            ->selectRaw('SUM(quota) as quota')
+            ->groupBy('drop_id')
+            ->pluck('quota', 'drop_id');
 
-        $productIds = $quotas->keys()
-            ->map(fn ($id) => (int) $id)
-            ->all();
-
-        /*
-         * Une seule requête pour toutes les quantités vendues.
-         *
-         * Limite connue :
-         * order_items.variant_id est nullable et peut devenir NULL
-         * si la variante est supprimée. Dans ce cas, la vente ne peut
-         * plus être rattachée à son produit et sort du calcul.
-         * C'est également la limite du calcul actuellement utilisé
-         * dans Admin\DropController.
-         */
-        $soldByProduct = DB::table('order_items')
-            ->join(
-                'variants',
-                'variants.id',
-                '=',
-                'order_items.variant_id'
-            )
-            ->join(
-                'orders',
-                'orders.id',
-                '=',
-                'order_items.order_id'
-            )
-            ->whereIn('variants.product_id', $productIds)
+        $sales = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->whereIn('order_items.drop_id', $dropIds)
             ->whereIn('orders.status', [
                 OrderStatus::Paid->value,
                 OrderStatus::Shipped->value,
                 OrderStatus::Delivered->value,
             ])
-            ->select(
-                'variants.product_id',
-                DB::raw('SUM(order_items.quantity) as total_sold')
-            )
-            ->groupBy('variants.product_id')
-            ->pluck(
-                'total_sold',
-                'variants.product_id'
-            );
+            ->select('order_items.drop_id')
+            ->selectRaw('SUM(order_items.quantity) as sold')
+            ->selectRaw('SUM(order_items.quantity * order_items.price) as revenue')
+            ->selectRaw('COUNT(DISTINCT orders.id) as orders')
+            ->groupBy('order_items.drop_id')
+            ->get()
+            ->keyBy('drop_id');
 
-        $totalQuota = 0;
-        $totalSold = 0;
+        return $dropIds->mapWithKeys(function (int $dropId) use ($quotas, $sales) {
+            $totalQuota = (int) ($quotas[$dropId] ?? 0);
+            $dropSales = $sales[$dropId] ?? null;
+            $totalSold = (int) ($dropSales->sold ?? 0);
+            $remaining = max(0, $totalQuota - $totalSold);
+            $quotaDefined = $totalQuota > 0;
 
-        foreach ($quotas as $productId => $quota) {
-            $sold = (int) ($soldByProduct[$productId] ?? 0);
-
-            /*
-             * Le plafond est appliqué produit par produit.
-             *
-             * Exemple :
-             * Produit A : quota 10 / vendu 12 => 10 retenus
-             * Produit B : quota 10 / vendu 2  => 2 retenus
-             *
-             * Total : 12 / 20, et non 14 / 20.
-             */
-            $cappedSold = min($sold, $quota);
-
-            $totalQuota += $quota;
-            $totalSold += $cappedSold;
-        }
-
-        $remaining = max(
-            0,
-            $totalQuota - $totalSold
-        );
-
-        /*
-         * 100 % uniquement lorsqu'il ne reste réellement
-         * plus aucune pièce.
-         *
-         * Sinon on utilise floor() afin d'éviter qu'un résultat
-         * comme 99,6 % soit affiché à tort comme 100 %.
-         */
-        $percentage = $remaining === 0
-            ? 100
-            : (int) floor(
-                ($totalSold / $totalQuota) * 100
-            );
-
-        return [
-            'quota_defined' => true,
-            'quota' => $totalQuota,
-            'sold' => $totalSold,
-            'remaining' => $remaining,
-            'percentage' => $percentage,
-        ];
+            return [$dropId => [
+                'quota_defined' => $quotaDefined,
+                'quota' => $totalQuota,
+                'sold' => $totalSold,
+                'available' => $remaining,
+                'remaining' => $remaining,
+                'percentage' => $quotaDefined
+                    ? min(100, (int) floor(($totalSold / $totalQuota) * 100))
+                    : 0,
+                'revenue' => (float) ($dropSales->revenue ?? 0),
+                'orders' => (int) ($dropSales->orders ?? 0),
+                'quota_status' => ! $quotaDefined
+                    ? 'undefined'
+                    : ($remaining === 0 ? 'reached' : 'available'),
+            ]];
+        });
     }
 
     public function whitelists()
@@ -190,9 +142,13 @@ class Drop extends Model
     {
         return Attribute::make(
             get: function () {
+                $hasAvailableStock = array_key_exists('has_available_stock', $this->attributes)
+                    ? (bool) $this->attributes['has_available_stock']
+                    : ! $this->isSoldOut();
+
                 if (
                     $this->end_date->isPast()
-                    || $this->isSoldOut()
+                    || ! $hasAvailableStock
                 ) {
                     return 'ended';
                 }
@@ -233,6 +189,28 @@ class Drop extends Model
     public function scopeUpcoming($query)
     {
         return $query->where('start_date', '>', now());
+    }
+
+    public function scopeEnded($query)
+    {
+        return $query->where(function ($query) {
+            $query->where('end_date', '<', now())
+                ->orWhereDoesntHave('products.variants', fn ($variants) => $variants->where('stock', '>', 0));
+        });
+    }
+
+    public function scopeWithStockStatus($query)
+    {
+        $availableStock = DB::table('drop_product')
+            ->join('variants', 'variants.product_id', '=', 'drop_product.product_id')
+            ->whereColumn('drop_product.drop_id', 'drops.id')
+            ->where('variants.stock', '>', 0)
+            ->selectRaw('1')
+            ->limit(1);
+
+        return $query->addSelect([
+            'has_available_stock' => $availableStock,
+        ]);
     }
 
     public function isActive(): bool

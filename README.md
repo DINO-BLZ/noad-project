@@ -61,10 +61,25 @@ Les e-mails sont envoyés via la file de traitement (`QUEUE_CONNECTION=database`
 Pour qu'ils soient réellement délivrés en local ou en environnement de prod, il faut laisser un worker actif en permanence :
 
 ```bash
-php artisan queue:work --tries=3
+php artisan queue:work --tries=3 --backoff=5
 ```
 
 En production, il est recommandé d'utiliser Supervisor pour garder ce worker constamment en vie.
+Les échecs sont conservés dans `failed_jobs` (`QUEUE_FAILED_DRIVER=database-uuids`). Pour les inspecter et relancer un job :
+
+```bash
+php artisan queue:failed
+php artisan queue:retry <uuid>
+php artisan queue:retry all
+```
+
+Surveille les jobs échoués et la disponibilité du worker; le job d'ouverture de Drop réessaie trois fois avant de redevenir éligible au scheduler.
+
+### Variables d'environnement de production
+
+Avant le déploiement, configure au minimum `APP_ENV=production`, `APP_DEBUG=false`, une `APP_KEY` privée, `APP_URL`, l'accès MySQL (`DB_*`), un fournisseur SMTP (`MAIL_*`), `QUEUE_CONNECTION=database`, `CACHE_STORE`, `SESSION_DRIVER`, `FILESYSTEM_DISK` et l'accès Elasticsearch (`SCOUT_DRIVER=elastic`, `ELASTIC_HOST`). Ne publie jamais le fichier `.env` ni ses valeurs dans les logs ou le dépôt.
+
+L'exemple utilise des valeurs locales sans secret. En production, `APP_DEBUG` doit rester désactivé et le niveau de logs doit être adapté à l'exploitation.
 
 ### Lancer l'application
 

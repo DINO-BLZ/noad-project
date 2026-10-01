@@ -9,13 +9,13 @@ class WhitelistController extends Controller
 {
     public function index()
     {
-        $whitelists = auth()->user()
+        $applications = auth()->user()
             ->dropWhitelists()
             ->with('drop')
             ->latest()
             ->get();
 
-        return view('whitelist.index', compact('whitelists'));
+        return view('whitelist.index', compact('applications'));
     }
 
     public function store(Request $request)

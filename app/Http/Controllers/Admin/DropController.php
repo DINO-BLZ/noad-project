@@ -8,7 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\DropRequest;
 use App\Mail\WhitelistStatusMail;
 use App\Models\Drop;
-use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Variant;
 use Illuminate\Support\Facades\DB;
@@ -44,18 +43,13 @@ class DropController extends Controller
         $status = request('status');
 
         $drops = Drop::query()
+            ->withStockStatus()
+            ->withCount('products')
+            ->when($status === 'active', fn ($query) => $query->active())
+            ->when($status === 'upcoming', fn ($query) => $query->upcoming())
+            ->when($status === 'ended', fn ($query) => $query->ended())
             ->orderByDesc('start_date')
             ->get();
-
-        if (in_array($status, ['active', 'upcoming', 'ended'], true)) {
-            $drops = $drops
-                ->filter(fn (Drop $drop) => match ($status) {
-                    'active' => $drop->isActive(),
-                    'upcoming' => $drop->isUpcoming(),
-                    'ended' => $drop->isEnded(),
-                })
-                ->values();
-        }
 
         /*
          * --------------------------------------------------------
@@ -70,6 +64,7 @@ class DropController extends Controller
          * --------------------------------------------------------
          */
         $upcomingDrops = Drop::upcoming()
+            ->withStockStatus()
             ->orderBy('start_date')
             ->get();
 
@@ -79,12 +74,10 @@ class DropController extends Controller
          * --------------------------------------------------------
          */
         $archivedDrops = Drop::query()
-            ->get()
-            ->filter(
-                fn (Drop $drop) => $drop->isEnded()
-            )
-            ->sortByDesc('end_date')
-            ->values();
+            ->ended()
+            ->withStockStatus()
+            ->orderByDesc('end_date')
+            ->get();
 
         /*
          * --------------------------------------------------------
@@ -101,134 +94,20 @@ class DropController extends Controller
          * KPI du Drop actif
          * --------------------------------------------------------
          */
-        $activeDropRevenue = 0;
-        $activeDropSold = 0;
-        $activeDropSoldPercentage = 0;
-        $activeDropQuota = 0;
+        $activeDropMonitoring = $activeDrop?->quotaMonitoring();
+        $activeDropRevenue = $activeDropMonitoring['revenue'] ?? 0;
+        $activeDropSold = $activeDropMonitoring['sold'] ?? 0;
+        $activeDropSoldPercentage = $activeDropMonitoring['percentage'] ?? 0;
+        $activeDropQuota = $activeDropMonitoring['quota'] ?? 0;
         $activeDropSalesRate = null;
-
-        if ($activeDrop) {
-            $activeDrop->loadMissing('products');
-
-            $productIds = $activeDrop->products
-                ->pluck('id')
-                ->unique()
-                ->values();
-
-            /*
-             * Quota total du Drop.
-             */
-            $activeDropQuota = $activeDrop->products->sum(
-                fn ($product) => (int) (
-                    $product->pivot->quota ?? 0
-                )
-            );
-
-            if ($productIds->isNotEmpty()) {
-                /*
-                 * ------------------------------------------------
-                 * Commandes considérées comme confirmées
-                 * ------------------------------------------------
-                 *
-                 * paid      = payée
-                 * shipped   = expédiée
-                 * delivered = livrée
-                 */
-                $activeDropSalesQuery = OrderItem::query()
-                    ->whereHas(
-                        'variant',
-                        fn ($query) => $query->whereIn(
-                            'product_id',
-                            $productIds
-                        )
-                    )
-                    ->whereHas(
-                        'order',
-                        fn ($query) => $query->whereIn(
-                            'status',
-                            [
-                                'paid',
-                                'shipped',
-                                'delivered',
-                            ]
-                        )
-                    );
-
-                /*
-                 * Quantité vendue.
-                 */
-                $activeDropSold = (int) (
-                    (clone $activeDropSalesQuery)
-                        ->sum('quantity')
-                );
-
-                /*
-                 * Chiffre d'affaires.
-                 *
-                 * On utilise le prix enregistré dans OrderItem
-                 * afin de conserver le prix réellement payé.
-                 */
-                $activeDropRevenue = (float) (
-                    (clone $activeDropSalesQuery)
-                        ->selectRaw(
-                            'SUM(quantity * price) as total'
-                        )
-                        ->value('total') ?? 0
-                );
-            }
-
-            /*
-             * Pourcentage de quota vendu.
-             */
-            $activeDropSoldPercentage = $activeDropQuota > 0
-                ? round(
-                    ($activeDropSold / $activeDropQuota) * 100
-                )
-                : 0;
-        }
 
         /*
          * --------------------------------------------------------
          * CA des Drops archivés
          * --------------------------------------------------------
          */
-        $archivedRevenue = 0;
-
-        $archivedProductIds = $archivedDrops
-            ->flatMap(
-                fn ($drop) => $drop->products
-            )
-            ->pluck('id')
-            ->unique()
-            ->values();
-
-        if ($archivedProductIds->isNotEmpty()) {
-            $archivedRevenue = (float) (
-                OrderItem::query()
-                    ->whereHas(
-                        'variant',
-                        fn ($query) => $query->whereIn(
-                            'product_id',
-                            $archivedProductIds
-                        )
-                    )
-                    ->whereHas(
-                        'order',
-                        fn ($query) => $query->whereIn(
-                            'status',
-                            [
-                                'paid',
-                                'shipped',
-                                'delivered',
-                            ]
-                        )
-                    )
-                    ->selectRaw(
-                        'SUM(quantity * price) as total'
-                    )
-                    ->value('total') ?? 0
-            );
-        }
+        $archivedMonitoring = Drop::quotaMonitoringFor($archivedDrops);
+        $archivedRevenue = $archivedMonitoring->sum('revenue');
 
         /*
          * --------------------------------------------------------
@@ -410,94 +289,11 @@ class DropController extends Controller
          * Initialisation des KPI
          * --------------------------------------------------------
          */
-        $dropRevenue = 0;
-        $dropSold = 0;
-
-        /*
-         * Somme des quotas de tous les produits
-         * associés au Drop.
-         */
-        $dropQuota = $drop->products->sum(
-            fn ($product) => (int) (
-                $product->pivot->quota ?? 0
-            )
-        );
-
-        $dropSoldPercentage = 0;
-
-        /*
-         * --------------------------------------------------------
-         * IDs des produits du Drop
-         * --------------------------------------------------------
-         */
-        $productIds = $drop->products
-            ->pluck('id')
-            ->unique()
-            ->values();
-
-        /*
-         * --------------------------------------------------------
-         * Calcul des ventes et du CA
-         * --------------------------------------------------------
-         */
-        if ($productIds->isNotEmpty()) {
-            /*
-             * Commandes confirmées uniquement.
-             */
-            $dropSalesQuery = OrderItem::query()
-                ->whereHas(
-                    'variant',
-                    fn ($query) => $query->whereIn(
-                        'product_id',
-                        $productIds
-                    )
-                )
-                ->whereHas(
-                    'order',
-                    fn ($query) => $query->whereIn(
-                        'status',
-                        [
-                            'paid',
-                            'shipped',
-                            'delivered',
-                        ]
-                    )
-                );
-
-            /*
-             * Quantité vendue.
-             */
-            $dropSold = (int) (
-                (clone $dropSalesQuery)
-                    ->sum('quantity')
-            );
-
-            /*
-             * Chiffre d'affaires.
-             *
-             * Le prix utilisé est celui de OrderItem,
-             * donc le prix réellement enregistré au moment
-             * de la commande.
-             */
-            $dropRevenue = (float) (
-                (clone $dropSalesQuery)
-                    ->selectRaw(
-                        'SUM(quantity * price) as total'
-                    )
-                    ->value('total') ?? 0
-            );
-        }
-
-        /*
-         * --------------------------------------------------------
-         * Pourcentage de quota vendu
-         * --------------------------------------------------------
-         */
-        $dropSoldPercentage = $dropQuota > 0
-            ? round(
-                ($dropSold / $dropQuota) * 100
-            )
-            : 0;
+        $dropMonitoring = $drop->quotaMonitoring();
+        $dropRevenue = $dropMonitoring['revenue'];
+        $dropSold = $dropMonitoring['sold'];
+        $dropQuota = $dropMonitoring['quota'];
+        $dropSoldPercentage = $dropMonitoring['percentage'];
 
         /*
          * --------------------------------------------------------
@@ -1028,8 +824,7 @@ class DropController extends Controller
 
                 'image' => $imagePath,
 
-                'category_id' => $newProduct['category_id']
-                    ?? null,
+                'category_id' => $newProduct['category_id'],
             ]);
 
             /*
@@ -1061,11 +856,12 @@ class DropController extends Controller
 
                             'stock' => $sizeData['stock'],
 
-                            'sku' => $sizeData['sku']
-                                ?? null,
+                            'sku' => isset($sizeData['sku']) && trim($sizeData['sku']) !== ''
+                                ? trim($sizeData['sku'])
+                                : null,
 
                             'color' => $sizeData['color']
-                                ?? null,
+                                ?? '',
                         ]);
 
                     $hasValidSize = true;

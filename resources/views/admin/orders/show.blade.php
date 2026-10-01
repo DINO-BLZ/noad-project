@@ -139,25 +139,6 @@
 
 
         <div class="head-actions-grid">
-
-            <a
-                href="{{ route('admin.orders.label', $order->id) }}"
-                target="_blank"
-                class="btn-head-action"
-            >
-                <span class="btn-icon">🖨</span>
-                BORDEREAU
-            </a>
-
-            <a
-                href="{{ route('admin.orders.invoice', $order->id) }}"
-                target="_blank"
-                class="btn-head-action"
-            >
-                <span class="btn-icon">📄</span>
-                FACTURE PDF
-            </a>
-
             @if($order->phone)
                 <a
                     href="tel:{{ $order->phone }}"

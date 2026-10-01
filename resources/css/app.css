@@ -33,3 +33,46 @@ body{
     color:var(--text);
     transition:.3s ease;
 }
+
+.static-page{
+    padding:4rem 1.5rem;
+}
+
+.static-page__content{
+    max-width:960px;
+    margin:0 auto;
+    padding:3rem;
+    background:#f5f1ea;
+    border:1px solid rgba(20,20,20,.1);
+    color:#1d1b18;
+}
+
+.static-page__eyebrow{
+    margin-bottom:1rem;
+    color:#7a6b5c;
+    font-size:.72rem;
+    text-transform:uppercase;
+}
+
+.static-page__title{
+    margin-bottom:1rem;
+    font-size:2.5rem;
+    text-transform:uppercase;
+}
+
+.static-page__subtitle,
+.static-page__body{
+    color:#463f39;
+    font-size:1rem;
+    line-height:1.8;
+}
+
+.static-page__subtitle{
+    margin-bottom:1.5rem;
+}
+
+@media (max-width:600px){
+    .static-page__content{
+        padding:2rem 1.25rem;
+    }
+}

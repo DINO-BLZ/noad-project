@@ -634,7 +634,7 @@
 
                                     {{ strtoupper(
                                         substr(
-                                            $order->fullname ?? 'NA',
+                                            $order->full_name ?? 'NA',
                                             0,
                                             2
                                         )
@@ -646,7 +646,7 @@
 
                                     <span class="dest-name">
 
-                                        {{ $order->fullname ?? 'CLIENT INCONNU' }}
+                                        {{ $order->full_name ?? 'CLIENT INCONNU' }}
 
                                         <span class="wilaya-pill">
 
@@ -692,13 +692,13 @@
                             @endphp
 
                             <span class="item-title">
-                                {{ $firstItem?->product?->name ?? 'ARTICLE NOAD' }}
+                                {{ $firstItem?->product_name ?? 'ARTICLE NOAD' }}
                             </span>
 
                             @if($secondItem)
 
                                 <span class="item-secondary">
-                                    + {{ $secondItem->product?->name ?? 'ARTICLE' }}
+                                    + {{ $secondItem->product_name ?? 'ARTICLE' }}
                                 </span>
 
                             @endif
@@ -825,14 +825,6 @@
                             >
                                 👁
                             </a>
-
-                            <button
-                                type="button"
-                                class="btn-action-icon"
-                                title="Bordereau"
-                            >
-                                📄
-                            </button>
 
                         </div>
 

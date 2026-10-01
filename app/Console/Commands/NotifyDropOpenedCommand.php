@@ -3,10 +3,10 @@
 namespace App\Console\Commands;
 
 use App\Enums\WhitelistStatus;
-use App\Mail\DropOpenedMail;
+use App\Jobs\SendDropOpenedNotification;
 use App\Models\DropWhitelist;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 class NotifyDropOpenedCommand extends Command
 {
@@ -19,6 +19,7 @@ class NotifyDropOpenedCommand extends Command
         $whitelists = DropWhitelist::query()
             ->where('status', WhitelistStatus::Approved->value)
             ->whereNull('drop_opened_notified_at')
+            ->whereIn('drop_opened_notification_status', ['pending', 'failed'])
             ->whereHas('drop', function ($query) {
                 $query
                     ->where('start_date', '<=', now())
@@ -27,20 +28,32 @@ class NotifyDropOpenedCommand extends Command
             ->with(['user', 'drop'])
             ->get();
 
-        $sent = 0;
+        $queued = 0;
 
         foreach ($whitelists as $whitelist) {
-            if ($whitelist->user?->email) {
-                Mail::to($whitelist->user->email)->queue(new DropOpenedMail($whitelist));
-                $sent++;
+            $claimed = DropWhitelist::query()
+                ->whereKey($whitelist->id)
+                ->whereIn('drop_opened_notification_status', ['pending', 'failed'])
+                ->update(['drop_opened_notification_status' => 'queued']);
+
+            if ($claimed !== 1) {
+                continue;
             }
 
-            $whitelist->update([
-                'drop_opened_notified_at' => now(),
-            ]);
+            try {
+                SendDropOpenedNotification::dispatch($whitelist->id);
+                $queued++;
+            } catch (Throwable $exception) {
+                DropWhitelist::query()
+                    ->whereKey($whitelist->id)
+                    ->where('drop_opened_notification_status', 'queued')
+                    ->update(['drop_opened_notification_status' => 'failed']);
+
+                report($exception);
+            }
         }
 
-        $this->info("{$sent} notification(s) de drop ouvert envoyée(s).");
+        $this->info("{$queued} notification(s) de drop ouvert mise(s) en queue.");
 
         return self::SUCCESS;
     }

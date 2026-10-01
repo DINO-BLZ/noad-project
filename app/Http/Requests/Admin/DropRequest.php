@@ -15,7 +15,7 @@ class DropRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|min:2|max:255',
             'description' => 'nullable|string',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
@@ -25,12 +25,12 @@ class DropRequest extends FormRequest
             'products.*' => 'exists:products,id',
             'new_products' => 'array',
             'new_products.*.name' => 'nullable|string|max:255',
-            'new_products.*.price' => 'nullable|numeric|min:0',
-            'new_products.*.image' => 'nullable|image|max:4096',
-            'new_products.*.category_id' => 'nullable|exists:categories,id',
+            'new_products.*.price' => 'nullable|numeric|min:0|max:999999999.99',
+            'new_products.*.image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'new_products.*.category_id' => 'required_with:new_products.*.name|integer|exists:categories,id',
             'new_products.*.sizes' => 'nullable|array',
-            'new_products.*.sizes.*.size' => 'nullable|string|max:10',
-            'new_products.*.sizes.*.stock' => 'nullable|integer|min:0',
+            'new_products.*.sizes.*.size' => 'nullable|string|max:50',
+            'new_products.*.sizes.*.stock' => 'nullable|integer|min:0|max:1000000',
             'new_products.*.sizes.*.sku' => 'nullable|string|max:50',
             'new_products.*.sizes.*.color' => 'nullable|string|max:50',
 

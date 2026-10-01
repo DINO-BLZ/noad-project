@@ -4,11 +4,39 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class StaticPageRoutesTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_every_literal_blade_route_reference_is_registered(): void
+    {
+        $missingRoutes = [];
+
+        foreach (File::allFiles(resource_path('views')) as $viewFile) {
+            preg_match_all(
+                '/(?<!>)route\(\s*[\'\"]([^\'\"]+)[\'\"]/',
+                $contents = File::get($viewFile->getPathname()),
+                $matches
+            );
+
+            foreach (array_unique($matches[1]) as $routeName) {
+                $isGuarded = preg_match(
+                    '/Route::has\(\s*[\'\"]'.preg_quote($routeName, '/').'[\'\"]\s*\)/',
+                    $contents
+                );
+
+                if (! Route::has($routeName) && ! $isGuarded) {
+                    $missingRoutes[] = $routeName.' in '.$viewFile->getRelativePathname();
+                }
+            }
+        }
+
+        $this->assertSame([], $missingRoutes);
+    }
 
     public function test_public_static_pages_are_available(): void
     {

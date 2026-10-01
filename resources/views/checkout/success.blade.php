@@ -495,11 +495,11 @@
 
                             <div class="item-thumbnail">
 
-                                @if($item->product && $item->product->image)
+                                @if($item->variant?->product?->image)
 
                                     <img
-                                        src="{{ asset('storage/' . $item->product->image) }}"
-                                        alt="{{ $item->product->name }}"
+                                        src="{{ asset('storage/' . $item->variant->product->image) }}"
+                                        alt="{{ $item->product_name }}"
                                     >
 
                                 @else
@@ -521,7 +521,7 @@
 
                                     <h3 class="item-name">
 
-                                        {{ $item->product->name ?? 'PRODUIT NOAD' }}
+                                        {{ $item->product_name ?? 'PRODUIT NOAD' }}
 
                                     </h3>
 
@@ -543,11 +543,11 @@
 
                                 <div class="item-specs">
 
-                                    @if($item->variant)
+                                    @if($item->variant_size)
 
                                         <span>
                                             TAILLE :
-                                            {{ strtoupper($item->variant->size) }}
+                                            {{ strtoupper($item->variant_size) }}
                                         </span>
 
                                     @endif
@@ -567,7 +567,7 @@
                                 <span class="item-ref">
 
                                     RÉF.
-                                    {{ $item->product->sku ?? 'NOAD-' . str_pad($item->product_id ?? $item->id, 4, '0', STR_PAD_LEFT) }}
+                                    {{ $item->variant_sku ?? 'NOAD-' . str_pad($item->id, 4, '0', STR_PAD_LEFT) }}
 
                                 </span>
 
