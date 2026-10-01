@@ -64,6 +64,9 @@ Route::get('/cgv', [PageController::class, 'cgv'])
 Route::get('/mentions-legales', [PageController::class, 'legal'])
     ->name('legal');
 
+Route::get('/sitemap.xml', [PageController::class, 'sitemap'])
+    ->name('sitemap');
+
 Route::get('/collections', [PageController::class, 'collections'])
     ->name('collections.index');
 

@@ -532,21 +532,36 @@ class DropController extends Controller
             $whitelist
         );
 
-        /*
-         * Mise à jour du statut.
-         */
-        $whitelist->update([
-            'status' => WhitelistStatus::Rejected->value,
-        ]);
+        try {
+            $whitelist = DB::transaction(function () use ($drop, $whitelistId) {
+                $lockedDrop = Drop::query()
+                    ->whereKey($drop->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-        /*
-         * On rattache explicitement le Drop à la relation
-         * pour que le Mailable puisse l'utiliser si nécessaire.
-         */
-        $whitelist->setRelation(
-            'drop',
-            $drop
-        );
+                $lockedWhitelist = $lockedDrop
+                    ->whitelists()
+                    ->whereKey($whitelistId)
+                    ->lockForUpdate()
+                    ->with('user')
+                    ->firstOrFail();
+
+                if ($lockedWhitelist->status !== WhitelistStatus::Pending->value) {
+                    throw new LogicException('Seules les demandes en attente peuvent être refusées.');
+                }
+
+                $lockedWhitelist->update([
+                    'status' => WhitelistStatus::Rejected->value,
+                ]);
+                $lockedWhitelist->setRelation('drop', $lockedDrop);
+
+                return $lockedWhitelist;
+            });
+        } catch (LogicException $exception) {
+            return back()->withErrors([
+                'whitelist' => $exception->getMessage(),
+            ]);
+        }
 
         /*
          * Notification utilisateur.

@@ -95,7 +95,7 @@ class DropLifecycleAutomationTest extends TestCase
         $this->assertNotNull($whitelist->fresh()->drop_opened_notified_at);
     }
 
-    public function test_failed_notification_can_be_requeued_by_the_scheduler(): void
+    public function test_terminal_failure_is_not_requeued_by_scheduler_but_can_be_retried_manually(): void
     {
         Queue::fake();
 
@@ -105,7 +105,7 @@ class DropLifecycleAutomationTest extends TestCase
             'drop_id' => $drop->id,
             'user_id' => $user->id,
             'status' => 'approved',
-            'drop_opened_notification_status' => 'queued',
+            'drop_opened_notification_status' => 'processing',
         ]);
 
         (new SendDropOpenedNotification($whitelist->id))->failed(new \RuntimeException('Mail delivery failed'));
@@ -114,8 +114,37 @@ class DropLifecycleAutomationTest extends TestCase
 
         Artisan::call('drops:notify-opened');
 
-        $this->assertSame('queued', $whitelist->fresh()->drop_opened_notification_status);
-        Queue::assertPushed(SendDropOpenedNotification::class, 1);
+        $this->assertSame('failed', $whitelist->fresh()->drop_opened_notification_status);
+        Queue::assertNothingPushed();
+
+        Mail::fake();
+        (new SendDropOpenedNotification($whitelist->id))->handle();
+
+        Mail::assertSent(DropOpenedMail::class);
+        $this->assertSame('sent', $whitelist->fresh()->drop_opened_notification_status);
+    }
+
+    public function test_synchronous_dispatch_failure_does_not_leave_notification_processing(): void
+    {
+        config(['queue.default' => 'sync']);
+
+        $drop = $this->makeDrop();
+        $user = User::factory()->create();
+        $whitelist = DropWhitelist::create([
+            'drop_id' => $drop->id,
+            'user_id' => $user->id,
+            'status' => 'approved',
+            'drop_opened_notification_status' => 'pending',
+        ]);
+
+        Mail::shouldReceive('to')
+            ->once()
+            ->with($user->email)
+            ->andThrow(new \RuntimeException('Mail transport unavailable'));
+
+        Artisan::call('drops:notify-opened');
+
+        $this->assertSame('failed', $whitelist->fresh()->drop_opened_notification_status);
     }
 
     public function test_pending_whitelist_requests_expire_when_a_drop_ends(): void
@@ -169,6 +198,16 @@ class DropLifecycleAutomationTest extends TestCase
             ->expectsOutputToContain('drops:notify-opened')
             ->expectsOutputToContain('drops:expire-pending-whitelists')
             ->expectsOutputToContain('search:reindex-products')
+            ->assertSuccessful();
+    }
+
+    public function test_application_and_scheduler_use_algeria_timezone(): void
+    {
+        $this->assertSame('Africa/Algiers', config('app.timezone'));
+        $this->assertSame('Africa/Algiers', now()->timezoneName);
+
+        $this->artisan('schedule:list --json')
+            ->expectsOutputToContain('"timezone":"Africa\/Algiers"')
             ->assertSuccessful();
     }
 

@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Drop;
+use App\Models\NewsletterSubscriber;
+use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class PageController extends Controller
 {
@@ -96,13 +100,65 @@ class PageController extends Controller
         );
     }
 
-    public function newsletterSubscribe(Request $request)
+    public function sitemap()
     {
-        $request->validate([
-            'email' => ['required', 'email'],
+        $urls = collect([
+            'home',
+            'shop.index',
+            'drops.index',
+            'about',
+            'collections.index',
+            'journal.index',
+            'contact',
+            'shipping',
+            'returns',
+            'faq',
+            'cgv',
+            'legal',
+        ])->map(fn (string $name) => [
+            'loc' => route($name),
+            'lastmod' => null,
         ]);
 
-        $request->session()->flash('success', 'Votre adresse e-mail a bien été enregistrée.');
+        Product::query()
+            ->select(['slug', 'updated_at'])
+            ->orderBy('id')
+            ->get()
+            ->each(fn (Product $product) => $urls->push([
+                'loc' => route('products.show', $product->slug),
+                'lastmod' => $product->updated_at,
+            ]));
+
+        Drop::query()
+            ->select(['slug', 'updated_at'])
+            ->orderBy('id')
+            ->get()
+            ->each(fn (Drop $drop) => $urls->push([
+                'loc' => route('drops.show', $drop->slug),
+                'lastmod' => $drop->updated_at,
+            ]));
+
+        return response()
+            ->view('sitemap', compact('urls'))
+            ->header('Content-Type', 'application/xml; charset=UTF-8');
+    }
+
+    public function newsletterSubscribe(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+        ]);
+
+        $subscriber = NewsletterSubscriber::firstOrCreate(
+            ['email' => Str::lower(trim($validated['email']))],
+            ['subscribed_at' => now()]
+        );
+
+        $message = $subscriber->wasRecentlyCreated
+            ? 'Votre inscription à la newsletter est confirmée.'
+            : 'Cette adresse est déjà inscrite à la newsletter.';
+
+        $request->session()->flash('newsletter_status', $message);
 
         return back();
     }

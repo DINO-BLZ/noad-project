@@ -16,26 +16,32 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('drops:notify-opened')
             ->everyMinute()
+            ->timezone(config('app.timezone'))
             ->withoutOverlapping();
 
         $schedule->command('drops:expire-pending-whitelists')
             ->everyMinute()
+            ->timezone(config('app.timezone'))
             ->withoutOverlapping();
 
         $schedule->command('carts:purge-old-guests')
             ->dailyAt('03:30')
+            ->timezone(config('app.timezone'))
             ->withoutOverlapping();
 
         $schedule->command('auth:purge-old-password-reset-tokens')
             ->dailyAt('04:00')
+            ->timezone(config('app.timezone'))
             ->withoutOverlapping();
 
         $schedule->command('search:reindex-products')
             ->dailyAt('03:00')
+            ->timezone(config('app.timezone'))
             ->withoutOverlapping();
 
         $schedule->command('orders:send-daily-digest')
             ->dailyAt('07:00')
+            ->timezone(config('app.timezone'))
             ->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {

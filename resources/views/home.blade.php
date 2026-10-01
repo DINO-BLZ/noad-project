@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('title', 'NOAD — Vêtements et drops en édition limitée')
+@section('meta_description', 'Découvrez les pièces NOAD et les prochains drops disponibles en Algérie.')
+
 @section('content')
 
 <div class="noad-home-page">
@@ -703,6 +706,16 @@
                             drops et actualités NOAD.
                         </p>
 
+                        @if(session('newsletter_status'))
+                            <p class="newsletter-desc" role="status">
+                                {{ session('newsletter_status') }}
+                            </p>
+                        @endif
+
+                        @error('email')
+                            <p class="newsletter-desc" role="alert">{{ $message }}</p>
+                        @enderror
+
                         <form
                             action="{{ route('newsletter.subscribe') }}"
                             method="POST"
@@ -714,6 +727,7 @@
                             <input
                                 type="email"
                                 name="email"
+                                value="{{ old('email') }}"
                                 placeholder="Votre adresse e-mail"
                                 required
                                 class="input-news font-mono"

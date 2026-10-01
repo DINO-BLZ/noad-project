@@ -11,7 +11,7 @@ class Order extends Model
     protected $fillable = [
         'user_id', 'full_name', 'phone', 'address', 'wilaya',
         'payment_method', 'status', 'payment_status', 'total', 'checkout_token',
-        'created_at', 'updated_at',
+        'delivered_at', 'created_at', 'updated_at',
     ];
 
     protected function casts(): array
@@ -19,6 +19,7 @@ class Order extends Model
         return [
             'status' => OrderStatus::class,
             'payment_status' => PaymentStatus::class,
+            'delivered_at' => 'datetime',
         ];
     }
 

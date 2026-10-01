@@ -411,7 +411,7 @@
                         </span>
 
                         <span>
-                            CALCULÉE À LA COMMANDE
+                            À CONFIRMER AVANT EXPÉDITION
                         </span>
 
                     </div>
@@ -422,7 +422,7 @@
                 <div class="checkout-summary-total">
 
                     <span>
-                        TOTAL
+                        TOTAL ARTICLES, HORS LIVRAISON
                     </span>
 
                     <strong>
@@ -449,7 +449,7 @@
                         </strong>
 
                         <p>
-                            Aucune avance nécessaire pour le paiement à la livraison.
+                            Aucun acompte requis. Les frais de livraison seront confirmés avant expédition; le montant affiché ci-dessus ne les inclut pas.
                         </p>
 
                     </div>

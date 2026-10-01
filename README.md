@@ -36,6 +36,7 @@ php artisan migrate --seed
 ```
 
 `DB_CONNECTION=sqlite` est déjà le défaut dans `.env.example` — aucune configuration supplémentaire n'est nécessaire pour démarrer en local.
+Le fuseau applicatif est `Africa/Algiers`. Pour MySQL/MariaDB, la session DB utilise `DB_TIMEZONE=+01:00` afin de garder cohérents les timestamps sans réécrire les données existantes.
 
 ### Frontend
 
@@ -73,13 +74,30 @@ php artisan queue:retry <uuid>
 php artisan queue:retry all
 ```
 
-Surveille les jobs échoués et la disponibilité du worker; le job d'ouverture de Drop réessaie trois fois avant de redevenir éligible au scheduler.
+Surveille les jobs échoués et la disponibilité du worker; le job d'ouverture de Drop réessaie trois fois. Après l'échec final, il n'est pas relancé automatiquement par le scheduler; utilise `queue:retry <uuid>` après avoir corrigé la cause.
 
 ### Variables d'environnement de production
 
-Avant le déploiement, configure au minimum `APP_ENV=production`, `APP_DEBUG=false`, une `APP_KEY` privée, `APP_URL`, l'accès MySQL (`DB_*`), un fournisseur SMTP (`MAIL_*`), `QUEUE_CONNECTION=database`, `CACHE_STORE`, `SESSION_DRIVER`, `FILESYSTEM_DISK` et l'accès Elasticsearch (`SCOUT_DRIVER=elastic`, `ELASTIC_HOST`). Ne publie jamais le fichier `.env` ni ses valeurs dans les logs ou le dépôt.
+Avant le déploiement, configure au minimum `APP_ENV=production`, `APP_DEBUG=false`, une `APP_KEY` privée, `APP_URL` en HTTPS, `APP_TIMEZONE=Africa/Algiers`, l'accès MySQL (`DB_*`, `DB_TIMEZONE=+01:00`), un fournisseur SMTP (`MAIL_*`), `QUEUE_CONNECTION=database`, `CACHE_STORE`, `SESSION_DRIVER`, `SESSION_SECURE_COOKIE=true`, `FILESYSTEM_DISK` et l'accès Elasticsearch (`SCOUT_DRIVER=elastic`, `ELASTIC_HOST`). Ne publie jamais le fichier `.env` ni ses valeurs dans les logs ou le dépôt.
 
 L'exemple utilise des valeurs locales sans secret. En production, `APP_DEBUG` doit rester désactivé et le niveau de logs doit être adapté à l'exploitation.
+
+### Préparation du déploiement
+
+Après configuration des services et sauvegarde de la base, le déploiement standard comprend :
+
+```bash
+composer install --no-dev --optimize-autoloader
+npm ci
+npm run build
+php artisan migrate --force
+php artisan storage:link
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+Ne lance pas `migrate:fresh` sur une base contenant des données. Vérifie ensuite `/up`, `php artisan queue:failed`, `php artisan schedule:list` et `/sitemap.xml`.
 
 ### Lancer l'application
 
@@ -97,7 +115,10 @@ Les jobs suivants sont enregistrés dans le scheduler Laravel :
 - chaque minute : `drops:expire-pending-whitelists`
 - chaque jour à 03:30 : `carts:purge-old-guests`
 - chaque jour à 04:00 : `auth:purge-old-password-reset-tokens`
+- chaque jour à 03:00 : `search:reindex-products`
 - chaque jour à 07:00 : `orders:send-daily-digest` (destinataires dans `DIGEST_MAIL_RECIPIENTS`)
+
+Ces heures sont interprétées en `Africa/Algiers`.
 
 En production, ajoute une crontab :
 
@@ -115,7 +136,7 @@ La suite principale tourne en SQLite en mémoire, sans dépendance externe :
 php artisan test
 ```
 
-Un test spécifique (`CheckoutPessimisticLockingMysqlTest`) vérifie le verrouillage pessimiste des lignes en conditions réelles MySQL et nécessite une vraie base MySQL — il est automatiquement ignoré (`skipped`) avec la suite par défaut. Pour l'exécuter, avec un MySQL local démarré et une base `noad_test_mysql` créée :
+Les tests `*MysqlTest` vérifient les verrous et la concurrence en conditions réelles MySQL; ils nécessitent une vraie base MySQL et sont automatiquement ignorés avec la suite SQLite. Pour les exécuter, avec un MySQL local démarré et une base `noad_test_mysql` créée :
 
 ```bash
 vendor/bin/phpunit -c phpunit.mysql.xml
@@ -137,3 +158,6 @@ Chaque push/PR (toutes branches) déclenche automatiquement, via GitHub Actions 
 ## Notes
 
 - Le paiement par carte (CIB/Edahabia) est temporairement désactivé — seul le paiement à la livraison (COD) est disponible. Voir le commentaire dans `app/Http/Requests/CheckoutRequest.php`.
+- Le total enregistré et affiché couvre les articles; les frais de livraison sont explicitement indiqués comme à confirmer avant expédition. Aucun tarif n'est codé tant qu'une règle commerciale de livraison n'est pas décidée.
+- Les inscriptions newsletter sont enregistrées dans `newsletter_subscribers`; la réponse distingue une nouvelle inscription d'une adresse déjà inscrite.
+- Le sitemap public est disponible sur `/sitemap.xml`; les pages d'administration portent `noindex, nofollow`.

@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('title', 'Drops NOAD — Éditions limitées')
+@section('meta_description', 'Consultez les drops NOAD, leurs périodes et les pièces actuellement disponibles.')
+
 @section('content')
 
 @php

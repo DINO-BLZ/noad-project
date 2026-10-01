@@ -19,7 +19,7 @@ class NotifyDropOpenedCommand extends Command
         $whitelists = DropWhitelist::query()
             ->where('status', WhitelistStatus::Approved->value)
             ->whereNull('drop_opened_notified_at')
-            ->whereIn('drop_opened_notification_status', ['pending', 'failed'])
+            ->where('drop_opened_notification_status', 'pending')
             ->whereHas('drop', function ($query) {
                 $query
                     ->where('start_date', '<=', now())
@@ -33,7 +33,7 @@ class NotifyDropOpenedCommand extends Command
         foreach ($whitelists as $whitelist) {
             $claimed = DropWhitelist::query()
                 ->whereKey($whitelist->id)
-                ->whereIn('drop_opened_notification_status', ['pending', 'failed'])
+                ->where('drop_opened_notification_status', 'pending')
                 ->update(['drop_opened_notification_status' => 'queued']);
 
             if ($claimed !== 1) {
@@ -46,7 +46,7 @@ class NotifyDropOpenedCommand extends Command
             } catch (Throwable $exception) {
                 DropWhitelist::query()
                     ->whereKey($whitelist->id)
-                    ->where('drop_opened_notification_status', 'queued')
+                    ->whereIn('drop_opened_notification_status', ['queued', 'processing'])
                     ->update(['drop_opened_notification_status' => 'failed']);
 
                 report($exception);

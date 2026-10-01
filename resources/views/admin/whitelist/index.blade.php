@@ -624,7 +624,7 @@
 
                             <div class="decision-actions-row">
 
-                                @if($candidate->status !== 'approved' && Route::has('admin.drops.whitelist.approve'))
+                                @if($candidate->status === 'pending' && Route::has('admin.drops.whitelist.approve'))
 
                                     <form
 
@@ -656,7 +656,7 @@
 
 
 
-                                @if($candidate->status !== 'rejected' && Route::has('admin.drops.whitelist.reject'))
+                                @if($candidate->status === 'pending' && Route::has('admin.drops.whitelist.reject'))
 
                                     <form
 

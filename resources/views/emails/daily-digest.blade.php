@@ -14,6 +14,7 @@
 @endif
 
 ## Commandes
+- Nouvelles commandes : {{ $orders['new'] }}
 - En attente : {{ $orders['pending'] }}
 - Annulées : {{ $orders['cancelled'] }}
 

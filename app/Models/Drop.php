@@ -74,12 +74,28 @@ class Drop extends Model
 
         $quotas = DB::table('drop_product')
             ->whereIn('drop_id', $dropIds)
-            ->select('drop_id')
+            ->where('quota', '>', 0)
+            ->select('drop_id', 'product_id')
             ->selectRaw('SUM(quota) as quota')
-            ->groupBy('drop_id')
-            ->pluck('quota', 'drop_id');
+            ->groupBy('drop_id', 'product_id')
+            ->get()
+            ->groupBy('drop_id');
 
-        $sales = DB::table('order_items')
+        $salesByProduct = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->whereIn('order_items.drop_id', $dropIds)
+            ->whereIn('orders.status', [
+                OrderStatus::Paid->value,
+                OrderStatus::Shipped->value,
+                OrderStatus::Delivered->value,
+            ])
+            ->select('order_items.drop_id', 'order_items.product_id')
+            ->selectRaw('SUM(order_items.quantity) as sold')
+            ->groupBy('order_items.drop_id', 'order_items.product_id')
+            ->get()
+            ->groupBy('drop_id');
+
+        $financials = DB::table('order_items')
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->whereIn('order_items.drop_id', $dropIds)
             ->whereIn('orders.status', [
@@ -88,17 +104,23 @@ class Drop extends Model
                 OrderStatus::Delivered->value,
             ])
             ->select('order_items.drop_id')
-            ->selectRaw('SUM(order_items.quantity) as sold')
+            ->selectRaw('SUM(order_items.quantity) as actual_sold')
             ->selectRaw('SUM(order_items.quantity * order_items.price) as revenue')
             ->selectRaw('COUNT(DISTINCT orders.id) as orders')
             ->groupBy('order_items.drop_id')
             ->get()
             ->keyBy('drop_id');
 
-        return $dropIds->mapWithKeys(function (int $dropId) use ($quotas, $sales) {
-            $totalQuota = (int) ($quotas[$dropId] ?? 0);
-            $dropSales = $sales[$dropId] ?? null;
-            $totalSold = (int) ($dropSales->sold ?? 0);
+        return $dropIds->mapWithKeys(function (int $dropId) use ($quotas, $salesByProduct, $financials) {
+            $dropQuotas = $quotas->get($dropId, collect());
+            $productSales = $salesByProduct->get($dropId, collect())->keyBy('product_id');
+            $totalQuota = (int) $dropQuotas->sum('quota');
+            $totalSold = (int) $dropQuotas->sum(function ($quota) use ($productSales) {
+                $unitsSold = (int) ($productSales->get($quota->product_id)->sold ?? 0);
+
+                return min($unitsSold, (int) $quota->quota);
+            });
+            $dropFinancials = $financials->get($dropId);
             $remaining = max(0, $totalQuota - $totalSold);
             $quotaDefined = $totalQuota > 0;
 
@@ -106,13 +128,14 @@ class Drop extends Model
                 'quota_defined' => $quotaDefined,
                 'quota' => $totalQuota,
                 'sold' => $totalSold,
+                'actual_sold' => (int) ($dropFinancials->actual_sold ?? 0),
                 'available' => $remaining,
                 'remaining' => $remaining,
                 'percentage' => $quotaDefined
                     ? min(100, (int) floor(($totalSold / $totalQuota) * 100))
                     : 0,
-                'revenue' => (float) ($dropSales->revenue ?? 0),
-                'orders' => (int) ($dropSales->orders ?? 0),
+                'revenue' => (float) ($dropFinancials->revenue ?? 0),
+                'orders' => (int) ($dropFinancials->orders ?? 0),
                 'quota_status' => ! $quotaDefined
                     ? 'undefined'
                     : ($remaining === 0 ? 'reached' : 'available'),

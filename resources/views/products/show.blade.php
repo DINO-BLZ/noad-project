@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('title', $product->name.' — NOAD')
+@section('meta_description', \Illuminate\Support\Str::limit(strip_tags($product->description ?: 'Découvrez '.$product->name.' dans la boutique NOAD.'), 160))
+
 @section('content')
 
 @php

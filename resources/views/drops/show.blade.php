@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('title', $drop->name.' — Drop NOAD')
+@section('meta_description', \Illuminate\Support\Str::limit(strip_tags($drop->description ?: 'Découvrez le drop '.$drop->name.' de NOAD.'), 160))
+
 @section('content')
 
 <div class="noad-drop-resistance-page">

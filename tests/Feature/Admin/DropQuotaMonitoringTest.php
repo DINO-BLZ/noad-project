@@ -17,7 +17,7 @@ class DropQuotaMonitoringTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_calculates_actual_sales_and_quota_availability(): void
+    public function test_it_caps_quota_sales_per_product_and_keeps_actual_sales(): void
     {
         $drop = $this->createDrop();
 
@@ -51,9 +51,10 @@ class DropQuotaMonitoringTest extends TestCase
 
         $this->assertTrue($result['quota_defined']);
         $this->assertSame(20, $result['quota']);
-        $this->assertSame(14, $result['sold']);
-        $this->assertSame(6, $result['remaining']);
-        $this->assertSame(70, $result['percentage']);
+        $this->assertSame(12, $result['sold']);
+        $this->assertSame(14, $result['actual_sold']);
+        $this->assertSame(8, $result['remaining']);
+        $this->assertSame(60, $result['percentage']);
         $this->assertSame(2, $result['orders']);
         $this->assertSame(350.0, $result['revenue']);
         $this->assertSame('available', $result['quota_status']);
@@ -90,7 +91,7 @@ class DropQuotaMonitoringTest extends TestCase
         $this->assertSame(40, $result['percentage']);
     }
 
-    public function test_actual_sales_remain_visible_when_the_quota_is_exceeded(): void
+    public function test_quota_sales_are_capped_per_product_when_exceeded(): void
     {
         $drop = $this->createDrop();
 
@@ -123,12 +124,13 @@ class DropQuotaMonitoringTest extends TestCase
         $result = $drop->quotaMonitoring();
 
         $this->assertSame(20, $result['quota']);
-        $this->assertSame(14, $result['sold']);
-        $this->assertSame(6, $result['remaining']);
-        $this->assertSame(70, $result['percentage']);
+        $this->assertSame(12, $result['sold']);
+        $this->assertSame(14, $result['actual_sold']);
+        $this->assertSame(8, $result['remaining']);
+        $this->assertSame(60, $result['percentage']);
     }
 
-    public function test_sales_for_products_without_quota_are_still_reported(): void
+    public function test_products_without_quota_are_excluded_from_quota_sales(): void
     {
         $drop = $this->createDrop();
 
@@ -162,7 +164,8 @@ class DropQuotaMonitoringTest extends TestCase
 
         $this->assertTrue($result['quota_defined']);
         $this->assertSame(10, $result['quota']);
-        $this->assertSame(17, $result['sold']);
+        $this->assertSame(10, $result['sold']);
+        $this->assertSame(17, $result['actual_sold']);
         $this->assertSame(0, $result['remaining']);
         $this->assertSame(100, $result['percentage']);
     }
@@ -188,7 +191,8 @@ class DropQuotaMonitoringTest extends TestCase
 
         $this->assertFalse($result['quota_defined']);
         $this->assertSame(0, $result['quota']);
-        $this->assertSame(5, $result['sold']);
+        $this->assertSame(0, $result['sold']);
+        $this->assertSame(5, $result['actual_sold']);
         $this->assertSame(0, $result['remaining']);
         $this->assertSame(0, $result['percentage']);
         $this->assertSame('undefined', $result['quota_status']);
@@ -233,11 +237,13 @@ class DropQuotaMonitoringTest extends TestCase
 
         $this->assertNull($item->variant_id);
         $this->assertSame($drop->id, $item->drop_id);
+        $this->assertSame($product->id, $item->product_id);
         $this->assertSame($drop->id, $item->drop->id);
 
         $result = $drop->quotaMonitoring();
 
         $this->assertSame(3, $result['sold']);
+        $this->assertSame(3, $result['actual_sold']);
         $this->assertSame(75.0, $result['revenue']);
         $this->assertSame(1, $result['orders']);
     }
@@ -248,13 +254,20 @@ class DropQuotaMonitoringTest extends TestCase
         $product = $this->createProduct('Deleted Product');
         $variant = $this->createVariant($product, 20);
         $drop->products()->attach($product->id, ['quota' => 10]);
-        $this->createOrderItem($variant, OrderStatus::Paid, 2);
+        $item = $this->createOrderItem($variant, OrderStatus::Paid, 2);
 
         $product->delete();
 
+        $item->refresh();
+
+        $this->assertNull($item->variant_id);
+        $this->assertSame($product->id, $item->product_id);
+
         $result = $drop->quotaMonitoring();
 
-        $this->assertSame(2, $result['sold']);
+        $this->assertSame(0, $result['sold']);
+        $this->assertSame(2, $result['actual_sold']);
+        $this->assertFalse($result['quota_defined']);
         $this->assertSame(50.0, $result['revenue']);
         $this->assertSame(1, $result['orders']);
     }
@@ -320,6 +333,7 @@ class DropQuotaMonitoringTest extends TestCase
         return OrderItem::create([
             'order_id' => $order->id,
             'drop_id' => $variant->product->drops()->value('drops.id'),
+            'product_id' => $variant->product_id,
             'variant_id' => $variant->id,
             'quantity' => $quantity,
             'price' => 25,

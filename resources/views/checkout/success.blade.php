@@ -2,6 +2,30 @@
 
 @section('content')
 
+@php
+    $orderStatus = $order->status;
+    $isCancelled = $orderStatus === \App\Enums\OrderStatus::Cancelled;
+    $isDelivered = $orderStatus === \App\Enums\OrderStatus::Delivered;
+    $statusSubtitle = match ($orderStatus) {
+        \App\Enums\OrderStatus::Pending => 'EN ATTENTE DE CONFIRMATION',
+        \App\Enums\OrderStatus::Paid => 'COMMANDE CONFIRMÉE',
+        \App\Enums\OrderStatus::Shipped => 'COMMANDE EXPÉDIÉE',
+        \App\Enums\OrderStatus::Delivered => 'COMMANDE LIVRÉE',
+        \App\Enums\OrderStatus::Cancelled => 'COMMANDE ANNULÉE',
+    };
+    $preparationState = match ($orderStatus) {
+        \App\Enums\OrderStatus::Pending, \App\Enums\OrderStatus::Paid => 'in-progress',
+        \App\Enums\OrderStatus::Shipped, \App\Enums\OrderStatus::Delivered => 'completed',
+        \App\Enums\OrderStatus::Cancelled => 'upcoming',
+    };
+    $shippingState = match ($orderStatus) {
+        \App\Enums\OrderStatus::Pending, \App\Enums\OrderStatus::Paid, \App\Enums\OrderStatus::Cancelled => 'upcoming',
+        \App\Enums\OrderStatus::Shipped => 'in-progress',
+        \App\Enums\OrderStatus::Delivered => 'completed',
+    };
+    $deliveryState = $isDelivered ? 'completed' : 'upcoming';
+@endphp
+
 <div class="order-confirmation-page">
 
     {{-- =========================================================
@@ -21,7 +45,7 @@
                 </div>
 
                 <h1 class="confirmation-title">
-                    COMMANDE VALIDÉE
+                    {{ $isCancelled ? 'COMMANDE ANNULÉE' : 'COMMANDE ENREGISTRÉE' }}
                 </h1>
 
                 <p class="confirmation-lead">
@@ -48,7 +72,7 @@
                 </div>
 
                 <span class="status-sub">
-                    COMMANDE ENREGISTRÉE
+                    {{ $statusSubtitle }}
                 </span>
 
             </div>
@@ -204,8 +228,11 @@
                         </span>
 
                         <p class="strip-desc">
-                            Le paiement sera effectué en espèces
-                            lors de la réception de votre commande.
+                            @if($order->payment_status === \App\Enums\PaymentStatus::Paid)
+                                Le paiement en espèces a été effectué à la livraison.
+                            @else
+                                Le paiement sera effectué en espèces lors de la réception de votre commande.
+                            @endif
                         </p>
 
                     </div>
@@ -217,7 +244,7 @@
                         </span>
 
                         <span class="amount-sub">
-                            À RÉGLER
+                            {{ $order->payment_status === \App\Enums\PaymentStatus::Paid ? 'RÉGLÉ' : 'À RÉGLER' }}
                         </span>
 
                     </div>
@@ -302,7 +329,7 @@
 
                     {{-- STEP 2 --}}
 
-                    <div class="timeline-step in-progress">
+                    <div class="timeline-step {{ $preparationState }}">
 
                         <div class="step-indicator">
 
@@ -320,16 +347,29 @@
                                     2. PRÉPARATION
                                 </h3>
 
-                                <span class="timeline-time in-progress-tag">
-                                    EN COURS
+                                <span class="timeline-time {{ in_array($preparationState, ['in-progress'], true) ? 'in-progress-tag' : '' }}">
+                                    @if($preparationState === 'in-progress')
+                                        {{ $orderStatus === \App\Enums\OrderStatus::Pending ? 'EN ATTENTE DE CONFIRMATION' : 'EN COURS' }}
+                                    @elseif($preparationState === 'completed')
+                                        TERMINÉE
+                                    @else
+                                        ANNULÉE
+                                    @endif
                                 </span>
 
                             </div>
 
                             <p class="timeline-desc">
 
-                                Votre commande est en cours
-                                de préparation avant expédition.
+                                @if($orderStatus === \App\Enums\OrderStatus::Pending)
+                                    La préparation commencera après confirmation de votre commande.
+                                @elseif($preparationState === 'in-progress')
+                                    Votre commande est en cours de préparation avant expédition.
+                                @elseif($preparationState === 'completed')
+                                    La préparation de votre commande est terminée.
+                                @else
+                                    La commande a été annulée.
+                                @endif
 
                             </p>
 
@@ -340,7 +380,7 @@
 
                     {{-- STEP 3 --}}
 
-                    <div class="timeline-step upcoming">
+                    <div class="timeline-step {{ $shippingState }}">
 
                         <div class="step-indicator">
 
@@ -359,15 +399,30 @@
                                 </h3>
 
                                 <span class="timeline-time">
-                                    À VENIR
+                                    @if($shippingState === 'in-progress')
+                                        EXPÉDIÉE
+                                    @elseif($shippingState === 'completed')
+                                        TERMINÉE
+                                    @elseif($isCancelled)
+                                        ANNULÉE
+                                    @else
+                                        À VENIR
+                                    @endif
                                 </span>
 
                             </div>
 
                             <p class="timeline-desc">
 
-                                Votre colis sera remis au transporteur
-                                dès que la préparation sera terminée.
+                                @if($shippingState === 'in-progress')
+                                    Votre colis a été remis au transporteur.
+                                @elseif($shippingState === 'completed')
+                                    Votre colis a été remis au transporteur.
+                                @elseif($isCancelled)
+                                    Aucun colis ne sera expédié pour cette commande.
+                                @else
+                                    Votre colis sera remis au transporteur dès que la préparation sera terminée.
+                                @endif
 
                             </p>
 
@@ -378,7 +433,7 @@
 
                     {{-- STEP 4 --}}
 
-                    <div class="timeline-step upcoming">
+                    <div class="timeline-step {{ $deliveryState }}">
 
                         <div class="step-indicator">
 
@@ -395,15 +450,26 @@
                                 </h3>
 
                                 <span class="timeline-time">
-                                    PAIEMENT À RÉCEPTION
+                                    @if($isDelivered)
+                                        {{ $order->delivered_at?->format('d/m/Y — H:i') ?? 'LIVRÉE' }}
+                                    @elseif($isCancelled)
+                                        ANNULÉE
+                                    @else
+                                        PAIEMENT À RÉCEPTION
+                                    @endif
                                 </span>
 
                             </div>
 
                             <p class="timeline-desc">
 
-                                Votre commande sera livrée à l'adresse
-                                indiquée lors du checkout.
+                                @if($isDelivered)
+                                    Votre commande a été livrée à l'adresse indiquée.
+                                @elseif($isCancelled)
+                                    La livraison n'aura pas lieu pour cette commande annulée.
+                                @else
+                                    Votre commande sera livrée à l'adresse indiquée lors du checkout.
+                                @endif
 
                             </p>
 
@@ -611,7 +677,7 @@
                         </span>
 
                         <span class="highlight-free">
-                            À CONFIRMER
+                            À CONFIRMER AVANT EXPÉDITION
                         </span>
 
                     </div>
@@ -639,11 +705,11 @@
                     <div class="total-text-group">
 
                         <span class="total-caption">
-                            MONTANT TOTAL
+                            TOTAL ARTICLES
                         </span>
 
                         <span class="total-title">
-                            TOTAL À LA LIVRAISON
+                            FRAIS LIVRAISON NON INCLUS
                         </span>
 
                     </div>

@@ -27,7 +27,7 @@ class SendDropOpenedNotification implements ShouldQueue
     {
         $whitelist = DropWhitelist::with(['drop', 'user'])->find($this->whitelistId);
 
-        if (! $whitelist || $whitelist->drop_opened_notification_status !== 'queued') {
+        if (! $whitelist) {
             return;
         }
 
@@ -35,8 +35,28 @@ class SendDropOpenedNotification implements ShouldQueue
             $whitelist->status !== WhitelistStatus::Approved->value
             || $whitelist->drop_opened_notified_at !== null
         ) {
-            $whitelist->update(['drop_opened_notification_status' => 'pending']);
+            DropWhitelist::query()
+                ->whereKey($whitelist->id)
+                ->whereIn('drop_opened_notification_status', ['queued', 'processing', 'failed'])
+                ->update(['drop_opened_notification_status' => 'pending']);
 
+            return;
+        }
+
+        $notificationStatus = $whitelist->drop_opened_notification_status;
+
+        if (in_array($notificationStatus, ['queued', 'failed'], true)) {
+            $claimed = DropWhitelist::query()
+                ->whereKey($whitelist->id)
+                ->where('status', WhitelistStatus::Approved->value)
+                ->whereNull('drop_opened_notified_at')
+                ->where('drop_opened_notification_status', $notificationStatus)
+                ->update(['drop_opened_notification_status' => 'processing']);
+
+            if ($claimed !== 1) {
+                return;
+            }
+        } elseif ($notificationStatus !== 'processing' || $this->attempts() <= 1) {
             return;
         }
 
@@ -56,7 +76,7 @@ class SendDropOpenedNotification implements ShouldQueue
     {
         DropWhitelist::query()
             ->whereKey($this->whitelistId)
-            ->where('drop_opened_notification_status', 'queued')
+            ->whereIn('drop_opened_notification_status', ['queued', 'processing'])
             ->update(['drop_opened_notification_status' => 'failed']);
     }
 }

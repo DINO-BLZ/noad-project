@@ -1068,6 +1068,16 @@
                         de registre Whitelist.
                     </p>
 
+                    @if(session('newsletter_status'))
+                        <p class="news-desc" role="status">
+                            {{ session('newsletter_status') }}
+                        </p>
+                    @endif
+
+                    @error('email')
+                        <p class="news-desc" role="alert">{{ $message }}</p>
+                    @enderror
+
                     <form
                         action="{{ route('newsletter.subscribe') }}"
                         method="POST"
@@ -1079,6 +1089,7 @@
                         <input
                             type="email"
                             name="email"
+                            value="{{ old('email') }}"
                             placeholder="Votre adresse e-mail"
                             required
                             class="input-news-text font-mono"

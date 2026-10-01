@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Console;
 
+use App\Actions\Orders\OrderStatusTransitionService;
 use App\Enums\OrderStatus;
 use App\Mail\DailyDigestMail;
 use App\Models\Category;
@@ -30,7 +31,9 @@ class SendDailyDigestCommandTest extends TestCase
         $yesterday = $now->copy()->subDay();
         $dayBeforeYesterday = $now->copy()->subDays(2);
 
-        $paidOrder = $this->createOrder(OrderStatus::Paid, [
+        $paidOrder = $this->createOrder(OrderStatus::Delivered, [
+            'payment_status' => 'paid',
+            'delivered_at' => $yesterday,
             'created_at' => $dayBeforeYesterday,
             'updated_at' => $yesterday,
             'total' => 3000,
@@ -61,7 +64,9 @@ class SendDailyDigestCommandTest extends TestCase
             'total' => 2500,
         ]);
 
-        $todayPaidOrder = $this->createOrder(OrderStatus::Paid, [
+        $todayPaidOrder = $this->createOrder(OrderStatus::Delivered, [
+            'payment_status' => 'paid',
+            'delivered_at' => $now,
             'created_at' => $yesterday,
             'updated_at' => $now,
             'total' => 9999,
@@ -120,12 +125,89 @@ class SendDailyDigestCommandTest extends TestCase
                     ],
                 ]
                 && $mail->orders['pending'] === 1
+                && $mail->orders['new'] === 3
                 && $mail->orders['cancelled'] === 1
                 && $mail->whitelist['new'] === 1
                 && $mail->stock['critical_count'] === 2
                 && in_array($criticalVariantZero->sku, $stockSkus, true)
                 && in_array($criticalVariantThree->sku, $stockSkus, true);
         });
+    }
+
+    public function test_sales_are_counted_once_on_delivery_day_not_on_later_order_updates(): void
+    {
+        Mail::fake();
+        config(['mail.digest_recipients' => 'test@example.com']);
+
+        $reportDay = now()->startOfDay()->subDay();
+        $olderDay = $reportDay->copy()->subDays(2);
+        $this->travelTo($olderDay->copy()->setTime(10, 0));
+
+        $variant = $this->createVariant(20, 'Delivered Product');
+        $lifecycleOrder = $this->createOrder(OrderStatus::Pending, [
+            'created_at' => $olderDay,
+            'updated_at' => $olderDay,
+            'total' => 200,
+        ]);
+        $this->createItem($lifecycleOrder, $variant, 2);
+
+        $transitionService = app(OrderStatusTransitionService::class);
+        $this->travelTo($olderDay->copy()->addDay()->setTime(11, 0));
+        $transitionService->transition($lifecycleOrder, OrderStatus::Paid);
+
+        $this->travelTo($reportDay->copy()->setTime(9, 0));
+        $transitionService->transition($lifecycleOrder, OrderStatus::Shipped);
+        $transitionService->transition($lifecycleOrder, OrderStatus::Delivered);
+
+        $sameDayOrder = $this->createOrder(OrderStatus::Shipped, [
+            'created_at' => now(),
+            'updated_at' => now(),
+            'total' => 300,
+        ]);
+        $this->createItem($sameDayOrder, $variant, 3);
+        $transitionService->transition($sameDayOrder, OrderStatus::Delivered);
+
+        $pendingOrder = $this->createOrder(OrderStatus::Pending, [
+            'created_at' => now(),
+            'updated_at' => now(),
+            'total' => 900,
+        ]);
+
+        $paidNotDelivered = $this->createOrder(OrderStatus::Paid, [
+            'created_at' => $olderDay,
+            'updated_at' => $olderDay,
+            'total' => 400,
+        ]);
+        $this->createItem($paidNotDelivered, $variant, 4);
+        $this->travelTo($reportDay->copy()->setTime(14, 0));
+        $transitionService->transition($paidNotDelivered, OrderStatus::Shipped);
+
+        $oldDeliveredOrder = $this->createOrder(OrderStatus::Delivered, [
+            'payment_status' => 'paid',
+            'delivered_at' => $reportDay->copy()->subDay(),
+            'created_at' => $olderDay,
+            'updated_at' => now(),
+            'total' => 900,
+        ]);
+        $this->createItem($oldDeliveredOrder, $variant, 9);
+
+        $this->travelTo($reportDay->copy()->addDay()->setTime(8, 0));
+        Artisan::call('orders:send-daily-digest');
+
+        Mail::assertQueued(DailyDigestMail::class, function (DailyDigestMail $mail) use ($pendingOrder): bool {
+            return $mail->sales['confirmed_orders'] === 2
+                && $mail->sales['revenue'] === 500.0
+                && $mail->sales['items_sold'] === 5
+                && $mail->sales['top_products'] === [[
+                    'name' => 'Delivered Product',
+                    'quantity' => 5,
+                ]]
+                && $mail->orders['new'] === 2
+                && $mail->orders['pending'] === 1
+                && $pendingOrder->fresh()->status === OrderStatus::Pending;
+        });
+
+        $this->travelBack();
     }
 
     private function createOrder(OrderStatus $status, array $overrides = []): Order
@@ -166,6 +248,20 @@ class SendDailyDigestCommandTest extends TestCase
             'size' => 'M',
             'color' => 'Black',
             'stock' => $stock,
+        ]);
+    }
+
+    private function createItem(Order $order, Variant $variant, int $quantity): OrderItem
+    {
+        return OrderItem::create([
+            'order_id' => $order->id,
+            'variant_id' => $variant->id,
+            'quantity' => $quantity,
+            'price' => $variant->product->price,
+            'variant_sku' => $variant->sku,
+            'variant_size' => $variant->size,
+            'variant_color' => $variant->color,
+            'product_name' => $variant->product->name,
         ]);
     }
 }

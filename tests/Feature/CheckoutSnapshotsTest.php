@@ -44,6 +44,13 @@ class CheckoutSnapshotsTest extends TestCase
             'quantity' => 2,
         ]);
 
+        $this->actingAs($user)
+            ->get(route('checkout.index'))
+            ->assertOk()
+            ->assertSee('TOTAL ARTICLES, HORS LIVRAISON')
+            ->assertSee('À CONFIRMER AVANT EXPÉDITION')
+            ->assertDontSee('CALCULÉE À LA COMMANDE');
+
         $response = $this->actingAs($user)->post(route('checkout.store'), [
             'full_name' => 'John Doe',
             'phone' => '123456789',
@@ -53,6 +60,11 @@ class CheckoutSnapshotsTest extends TestCase
         ]);
 
         $response->assertRedirect();
+
+        $this->get($response->headers->get('Location'))
+            ->assertOk()
+            ->assertSee('FRAIS LIVRAISON NON INCLUS')
+            ->assertSee('À CONFIRMER AVANT EXPÉDITION');
 
         $this->assertDatabaseHas('order_items', [
             'variant_sku' => 'SKU-123',

@@ -82,6 +82,33 @@ class DropWhitelistApprovalTest extends TestCase
         Mail::assertQueued(WhitelistStatusMail::class);
     }
 
+    public function test_rejection_cannot_overwrite_an_already_approved_request(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->create(['is_admin' => true]);
+        $user = User::factory()->create();
+        $drop = $this->makeDrop();
+        $whitelist = DropWhitelist::create([
+            'drop_id' => $drop->id,
+            'user_id' => $user->id,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.drops.whitelist.approve', [
+            'drop' => $drop->slug,
+            'whitelistId' => $whitelist->id,
+        ]))->assertSessionHasNoErrors();
+
+        $this->post(route('admin.drops.whitelist.reject', [
+            'drop' => $drop->slug,
+            'whitelistId' => $whitelist->id,
+        ]))->assertSessionHasErrors('whitelist');
+
+        $this->assertSame('approved', $whitelist->fresh()->status);
+        Mail::assertQueued(WhitelistStatusMail::class, 1);
+    }
+
     public function test_approval_is_refused_once_max_whitelist_slots_is_reached(): void
     {
         Mail::fake();

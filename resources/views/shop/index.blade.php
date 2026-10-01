@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('title', 'Boutique NOAD — Vêtements et drops')
+@section('meta_description', 'Explorez les pièces et collections disponibles dans la boutique NOAD.')
+
 @section('content')
 <div class="shop-page">
     <div class="shop-header">

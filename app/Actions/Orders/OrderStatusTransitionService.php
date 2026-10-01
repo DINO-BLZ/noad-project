@@ -34,6 +34,7 @@ class OrderStatusTransitionService
             // qu'au moment où le livreur remet la commande.
             if ($newStatus === OrderStatus::Delivered) {
                 $attributes['payment_status'] = PaymentStatus::Paid;
+                $attributes['delivered_at'] = now();
             }
 
             $lockedOrder->update($attributes);

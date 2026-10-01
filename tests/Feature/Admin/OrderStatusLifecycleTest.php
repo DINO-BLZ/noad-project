@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Actions\Orders\OrderStatusTransitionService;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Mail\OrderStatusUpdatedMail;
 use App\Models\Category;
 use App\Models\Order;
@@ -159,6 +160,67 @@ class OrderStatusLifecycleTest extends TestCase
         $response->assertRedirect();
         $this->assertSame(OrderStatus::Paid, $order->fresh()->status);
         Mail::assertQueued(OrderStatusUpdatedMail::class);
+    }
+
+    public function test_delivery_transition_records_the_sale_date_and_payment(): void
+    {
+        $order = $this->createOrder(OrderStatus::Shipped);
+
+        $this->travelTo(now()->setDate(2026, 9, 30)->setTime(16, 45));
+
+        app(OrderStatusTransitionService::class)->transition($order, OrderStatus::Delivered);
+
+        $order->refresh();
+
+        $this->assertSame(OrderStatus::Delivered, $order->status);
+        $this->assertSame('paid', $order->payment_status->value);
+        $this->assertSame('2026-09-30 16:45:00', $order->delivered_at->format('Y-m-d H:i:s'));
+
+        $this->travelBack();
+    }
+
+    #[DataProvider('confirmationTimelineProvider')]
+    public function test_customer_confirmation_timeline_matches_order_status(
+        OrderStatus $status,
+        string $expectedSubtitle,
+        bool $preparationInProgress,
+    ): void {
+        $order = $this->createOrder($status);
+
+        if ($status === OrderStatus::Delivered) {
+            $order->update([
+                'payment_status' => PaymentStatus::Paid,
+                'delivered_at' => now(),
+            ]);
+        }
+
+        $response = $this->actingAs($order->user)
+            ->get(route('checkout.success', $order));
+
+        $response->assertOk()->assertSee($expectedSubtitle);
+
+        if ($preparationInProgress) {
+            $this->assertStringContainsString(
+                'timeline-time in-progress-tag',
+                $response->getContent()
+            );
+        } else {
+            $this->assertStringNotContainsString(
+                'timeline-time in-progress-tag',
+                $response->getContent()
+            );
+        }
+    }
+
+    public static function confirmationTimelineProvider(): array
+    {
+        return [
+            'pending' => [OrderStatus::Pending, 'EN ATTENTE DE CONFIRMATION', true],
+            'paid' => [OrderStatus::Paid, 'COMMANDE CONFIRMÉE', true],
+            'shipped' => [OrderStatus::Shipped, 'COMMANDE EXPÉDIÉE', false],
+            'delivered' => [OrderStatus::Delivered, 'COMMANDE LIVRÉE', false],
+            'cancelled' => [OrderStatus::Cancelled, 'COMMANDE ANNULÉE', false],
+        ];
     }
 
     public function test_order_status_updated_mail_renders_with_action_button(): void
