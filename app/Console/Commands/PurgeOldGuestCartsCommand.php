@@ -15,6 +15,7 @@ class PurgeOldGuestCartsCommand extends Command
     {
         $deleted = CartItem::query()
             ->whereNull('user_id')
+            ->whereNotNull('session_id')
             ->where('updated_at', '<', now()->subDays(7))
             ->delete();
 

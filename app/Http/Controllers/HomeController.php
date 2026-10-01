@@ -9,7 +9,7 @@ class HomeController extends Controller
 {
     public function index()
     {
-        $activeDrop = Drop::active()->latest('start_date')->first();
+        $activeDrop = Drop::current()->first();
 
         $upcomingDrop = $activeDrop
             ? null

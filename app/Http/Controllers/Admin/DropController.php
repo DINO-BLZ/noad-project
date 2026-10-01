@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Drops\ApproveWhitelistAction;
+use App\Enums\WhitelistStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\DropRequest;
 use App\Mail\WhitelistStatusMail;
@@ -739,7 +740,7 @@ class DropController extends Controller
          * Mise à jour du statut.
          */
         $whitelist->update([
-            'status' => 'rejected',
+            'status' => WhitelistStatus::Rejected->value,
         ]);
 
         /*

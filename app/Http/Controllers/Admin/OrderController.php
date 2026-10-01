@@ -21,7 +21,7 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $orders = Order::query()
-            ->when($request->status, fn ($query, $status) => $query->where('status', $status))
+            ->when(OrderStatus::tryFrom((string) $request->status), fn ($query, $status) => $query->where('status', $status->value))
             ->latest()
             ->paginate(20)
             ->withQueryString();

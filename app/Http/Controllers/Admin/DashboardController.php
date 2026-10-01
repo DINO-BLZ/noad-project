@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\OrderStatus;
+use App\Enums\WhitelistStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Drop;
 use App\Models\DropWhitelist;
@@ -212,7 +213,7 @@ class DashboardController extends Controller
 
         $pendingReviews = DropWhitelist::where(
             'status',
-            'pending'
+            WhitelistStatus::Pending->value
         )->count();
 
         /*

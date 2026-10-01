@@ -173,12 +173,14 @@
                 && $currentStatus->canTransitionTo(OrderStatus::Cancelled)
             )
                 <form
-                    action="{{ route('admin.orders.cancel', $order->id) }}"
+                    action="{{ route('admin.orders.updateStatus', $order) }}"
                     method="POST"
                     class="inline-form"
                     onsubmit="return confirm('Confirmer l\'annulation de cette commande ?');"
                 >
                     @csrf
+                    @method('PATCH')
+                    <input type="hidden" name="status" value="cancelled">
 
                     <button type="submit" class="btn-head-danger">
                         <span class="btn-icon">✕</span>
@@ -643,7 +645,7 @@
 
                 <div class="timeline-stack">
 
-                    @forelse($order->auditLogs->sortByDesc('created_at') as $log)
+                    @forelse(($order->auditLogs ?? collect())->sortByDesc('created_at') as $log)
 
                         <div class="timeline-entry {{ $loop->first ? 'active' : '' }}">
 

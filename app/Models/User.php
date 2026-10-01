@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\WhitelistStatus;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -44,7 +45,7 @@ class User extends Authenticatable
 
     public function approvedDropWhitelists()
     {
-        return $this->hasMany(DropWhitelist::class)->where('status', 'approved');
+        return $this->hasMany(DropWhitelist::class)->where('status', WhitelistStatus::Approved->value);
     }
 
     public function isWhitelistedForDrop(Drop $drop): bool

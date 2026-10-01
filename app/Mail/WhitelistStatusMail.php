@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Enums\WhitelistStatus;
 use App\Models\DropWhitelist;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -21,7 +22,7 @@ class WhitelistStatusMail extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        $approved = $this->whitelist->status === 'approved';
+        $approved = $this->whitelist->status === WhitelistStatus::Approved->value;
 
         return new Envelope(
             subject: $approved

@@ -76,6 +76,7 @@ Route::get('/reinitialiser-mot-de-passe/{token}', [ResetPasswordController::clas
     ->name('password.reset');
 
 Route::post('/reinitialiser-mot-de-passe', [ResetPasswordController::class, 'reset'])
+    ->middleware('throttle:5,1')
     ->name('password.update');
 
 /*
@@ -92,9 +93,11 @@ Route::post('/panier/ajouter/{product}', [CartController::class, 'add'])
     ->name('cart.add');
 
 Route::patch('/panier/{variantId}', [CartController::class, 'update'])
+    ->middleware('throttle:60,1')
     ->name('cart.update');
 
 Route::delete('/panier/{variantId}', [CartController::class, 'remove'])
+    ->middleware('throttle:60,1')
     ->name('cart.remove');
 
 /*
@@ -109,6 +112,7 @@ Route::middleware('auth')->group(function () {
         ->name('checkout.index');
 
     Route::post('/commande', [CheckoutController::class, 'store'])
+        ->middleware('throttle:10,1')
         ->name('checkout.store');
 
     Route::get('/commande/succes/{order}', [CheckoutController::class, 'success'])

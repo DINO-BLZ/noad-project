@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
+use App\Enums\WhitelistStatus;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -175,7 +176,7 @@ class Drop extends Model
     public function approvedWhitelists()
     {
         return $this->hasMany(DropWhitelist::class)
-            ->where('status', 'approved');
+            ->where('status', WhitelistStatus::Approved->value);
     }
 
     /**

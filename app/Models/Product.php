@@ -68,8 +68,7 @@ class Product extends Model
     public function activeDrop(): ?Drop
     {
         return $this->drops()
-            ->active()
-            ->latest('start_date')
+            ->current()
             ->first();
     }
 

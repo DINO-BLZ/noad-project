@@ -2,6 +2,7 @@
 
 namespace App\Actions\Drops;
 
+use App\Enums\WhitelistStatus;
 use App\Models\Drop;
 use App\Models\DropWhitelist;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +48,7 @@ class ApproveWhitelistAction
             /*
              * Only pending requests can be approved.
              */
-            if ($lockedWhitelist->status !== 'pending') {
+            if ($lockedWhitelist->status !== WhitelistStatus::Pending->value) {
                 throw new LogicException(
                     'Cette demande de whitelist ne peut plus être approuvée.'
                 );
@@ -63,7 +64,7 @@ class ApproveWhitelistAction
              * Approve the request.
              */
             $lockedWhitelist->update([
-                'status' => 'approved',
+                'status' => WhitelistStatus::Approved->value,
             ]);
 
             /*

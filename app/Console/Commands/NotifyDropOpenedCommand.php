@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\WhitelistStatus;
 use App\Mail\DropOpenedMail;
 use App\Models\DropWhitelist;
 use Illuminate\Console\Command;
@@ -16,7 +17,7 @@ class NotifyDropOpenedCommand extends Command
     public function handle(): int
     {
         $whitelists = DropWhitelist::query()
-            ->where('status', 'approved')
+            ->where('status', WhitelistStatus::Approved->value)
             ->whereNull('drop_opened_notified_at')
             ->whereHas('drop', function ($query) {
                 $query

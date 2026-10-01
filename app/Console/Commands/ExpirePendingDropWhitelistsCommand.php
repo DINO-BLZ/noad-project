@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\WhitelistStatus;
 use App\Models\DropWhitelist;
 use Illuminate\Console\Command;
 
@@ -14,12 +15,12 @@ class ExpirePendingDropWhitelistsCommand extends Command
     public function handle(): int
     {
         $expired = DropWhitelist::query()
-            ->where('status', 'pending')
+            ->where('status', WhitelistStatus::Pending->value)
             ->whereHas('drop', function ($query) {
                 $query->where('end_date', '<', now());
             })
             ->update([
-                'status' => 'expired',
+                'status' => WhitelistStatus::Expired->value,
             ]);
 
         $this->info("{$expired} demande(s) de whitelist expirée(s).");

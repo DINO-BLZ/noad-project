@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\WhitelistStatus;
 use App\Models\Drop;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -18,16 +19,16 @@ class DropRequestController extends Controller
             'user_id' => $user->id,
         ]);
 
-        if ($whitelist->exists && $whitelist->status === 'approved') {
+        if ($whitelist->exists && $whitelist->status === WhitelistStatus::Approved->value) {
             return back()->with('success', 'Vous êtes déjà whitelisté pour ce drop.');
         }
 
-        if ($whitelist->exists && $whitelist->status === 'pending') {
+        if ($whitelist->exists && $whitelist->status === WhitelistStatus::Pending->value) {
             return back()->with('info', 'Votre demande est en attente de validation.');
         }
 
-        if ($whitelist->exists && $whitelist->status === 'rejected') {
-            $whitelist->status = 'pending';
+        if ($whitelist->exists && $whitelist->status === WhitelistStatus::Rejected->value) {
+            $whitelist->status = WhitelistStatus::Pending->value;
 
             try {
                 $whitelist->save();
@@ -42,7 +43,7 @@ class DropRequestController extends Controller
             return back()->with('success', 'Votre nouvelle demande a été envoyée.');
         }
 
-        $whitelist->status = 'pending';
+        $whitelist->status = WhitelistStatus::Pending->value;
 
         try {
             $whitelist->save();

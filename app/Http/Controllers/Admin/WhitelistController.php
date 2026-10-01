@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\WhitelistStatus;
 use App\Http\Controllers\Controller;
 use App\Models\DropWhitelist;
 use Illuminate\Http\Request;
@@ -119,7 +120,7 @@ class WhitelistController extends Controller
          */
         $approvedCount = DropWhitelist::where(
             'status',
-            'approved'
+            WhitelistStatus::Approved->value
         )->count();
 
         /*
@@ -127,7 +128,7 @@ class WhitelistController extends Controller
          */
         $pendingCount = DropWhitelist::where(
             'status',
-            'pending'
+            WhitelistStatus::Pending->value
         )->count();
 
         /*
@@ -135,7 +136,7 @@ class WhitelistController extends Controller
          */
         $rejectedCount = DropWhitelist::where(
             'status',
-            'rejected'
+            WhitelistStatus::Rejected->value
         )->count();
 
         /*

@@ -3,11 +3,11 @@
 namespace App\Console\Commands;
 
 use App\Enums\OrderStatus;
+use App\Enums\WhitelistStatus;
 use App\Mail\DailyDigestMail;
 use App\Models\DropWhitelist;
 use App\Models\OrderItem;
 use App\Models\Variant;
-use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -49,16 +49,15 @@ class SendDailyDigestCommand extends Command
 
         $confirmedOrderQuery = DB::table('orders')
             ->whereIn('status', $confirmedStatuses)
-            ->whereBetween('created_at', [$startOfDay, $endOfDay]);
+            ->whereBetween('updated_at', [$startOfDay, $endOfDay]);
 
         $confirmedOrders = (clone $confirmedOrderQuery)->count();
 
         $revenue = (float) (
             OrderItem::query()
-                ->whereBetween('created_at', [$startOfDay, $endOfDay])
                 ->whereHas(
                     'order',
-                    fn ($query) => $query->whereIn('status', $confirmedStatuses)
+                    fn ($query) => $query->whereIn('status', $confirmedStatuses)->whereBetween('updated_at', [$startOfDay, $endOfDay])
                 )
                 ->selectRaw('SUM(quantity * price) as total')
                 ->value('total') ?? 0
@@ -66,10 +65,9 @@ class SendDailyDigestCommand extends Command
 
         $itemsSold = (int) (
             OrderItem::query()
-                ->whereBetween('created_at', [$startOfDay, $endOfDay])
                 ->whereHas(
                     'order',
-                    fn ($query) => $query->whereIn('status', $confirmedStatuses)
+                    fn ($query) => $query->whereIn('status', $confirmedStatuses)->whereBetween('updated_at', [$startOfDay, $endOfDay])
                 )
                 ->sum('quantity')
         );
@@ -82,7 +80,7 @@ class SendDailyDigestCommand extends Command
                 'order_items.order_id'
             )
             ->whereIn('orders.status', $confirmedStatuses)
-            ->whereBetween('orders.created_at', [$startOfDay, $endOfDay])
+            ->whereBetween('orders.updated_at', [$startOfDay, $endOfDay])
             ->select(
                 'order_items.product_name',
                 DB::raw('SUM(order_items.quantity) as total_sold')
@@ -127,12 +125,12 @@ class SendDailyDigestCommand extends Command
                 ->count(),
 
             'approved' => DropWhitelist::query()
-                ->where('status', 'approved')
+                ->where('status', WhitelistStatus::Approved->value)
                 ->whereBetween('updated_at', [$startOfDay, $endOfDay])
                 ->count(),
 
             'rejected' => DropWhitelist::query()
-                ->where('status', 'rejected')
+                ->where('status', WhitelistStatus::Rejected->value)
                 ->whereBetween('updated_at', [$startOfDay, $endOfDay])
                 ->count(),
         ];

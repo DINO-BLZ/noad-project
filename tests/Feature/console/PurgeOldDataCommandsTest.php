@@ -114,19 +114,19 @@ class PurgeOldDataCommandsTest extends TestCase
     {
         $category = Category::create([
             'name' => 'Test Category',
-            'slug' => 'test-category-' . uniqid(),
+            'slug' => 'test-category-'.uniqid(),
         ]);
 
         $product = Product::create([
             'name' => 'Test Product',
-            'slug' => 'test-product-' . uniqid(),
+            'slug' => 'test-product-'.uniqid(),
             'price' => 100,
             'category_id' => $category->id,
         ]);
 
         return Variant::create([
             'product_id' => $product->id,
-            'sku' => 'SKU-' . uniqid(),
+            'sku' => 'SKU-'.uniqid(),
             'size' => 'M',
             'color' => 'Black',
             'stock' => 10,

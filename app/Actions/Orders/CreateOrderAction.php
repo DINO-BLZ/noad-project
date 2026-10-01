@@ -35,6 +35,8 @@ class CreateOrderAction
                     abort(422, 'Votre panier est vide.');
                 }
 
+                $cartItems = $cartItems->sortBy('variant_id')->values();
+
                 $total = 0;
                 $orderItemsData = [];
 
@@ -100,7 +102,7 @@ class CreateOrderAction
                 CartItem::forOwner($userId, $sessionId)->delete();
 
                 return $order->fresh(['items']);
-            });
+            }, 3);
         } catch (QueryException $exception) {
             if ($checkoutToken && $exception->getCode() === '23000') {
                 $existingOrder = $this->orderForCheckoutToken($checkoutToken, $userId);

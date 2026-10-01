@@ -4,17 +4,16 @@ Boutique en ligne de mode/streetwear pour le marché algérien, avec un système
 
 ## Stack technique
 
-- **Backend** : Laravel 13, PHP 8.4+
+- **Backend** : Laravel 13, PHP 8.3+
 - **Base de données** : SQLite en local (par défaut), MySQL 8 en option (nécessaire pour le test de verrouillage pessimiste, voir plus bas)
-- **Recherche** : Elasticsearch via Laravel Scout
 - **Frontend** : Blade + Vite
 
 ## Prérequis
 
-- PHP 8.4+ avec les extensions `pdo_sqlite` (et `pdo_mysql` si tu utilises MySQL)
+- PHP 8.3+ avec les extensions `pdo_sqlite` (et `pdo_mysql` si tu utilises MySQL)
 - Composer
 - Node.js 20+ et npm
-- Docker (pour Elasticsearch)
+- Docker (pour les services complémentaires si nécessaire)
 
 ## Installation
 
@@ -38,22 +37,6 @@ php artisan migrate --seed
 
 `DB_CONNECTION=sqlite` est déjà le défaut dans `.env.example` — aucune configuration supplémentaire n'est nécessaire pour démarrer en local.
 
-### Recherche (Elasticsearch)
-
-Le catalogue produit est indexé via Laravel Scout + Elasticsearch. Démarre le conteneur :
-
-```bash
-docker compose up -d
-```
-
-Elasticsearch est alors disponible sur `localhost:9200` (config par défaut dans `config/elastic.client.php`, aucune variable `.env` à ajouter).
-
-Indexe les produits existants :
-
-```bash
-php artisan scout:import "App\Models\Product"
-```
-
 ### Frontend
 
 ```bash
@@ -68,17 +51,20 @@ npm run build
 
 ### Créer un compte admin
 
-Aucune commande dédiée n'existe pour l'instant. Passe par Tinker :
+```bash
+php artisan app:create-admin {email} {name}
+```
+
+### Worker de queue
+
+Les e-mails sont envoyés via la file de traitement (`QUEUE_CONNECTION=database`).
+Pour qu'ils soient réellement délivrés en local ou en environnement de prod, il faut laisser un worker actif en permanence :
 
 ```bash
-php artisan tinker
+php artisan queue:work --tries=3
 ```
 
-```php
-$user = \App\Models\User::find(1); // ou User::where('email', 'toi@example.com')->first()
-$user->is_admin = true;
-$user->save();
-```
+En production, il est recommandé d'utiliser Supervisor pour garder ce worker constamment en vie.
 
 ### Lancer l'application
 
@@ -88,13 +74,15 @@ php artisan serve
 
 L'app est accessible sur `http://localhost:8000`.
 
-## Planificateur (drops, recherche)
+## Planificateur
 
 Les jobs suivants sont enregistrés dans le scheduler Laravel :
 
-- chaque minute : email les whitelistés dont le drop vient de commencer (`drops:notify-opened`)
-- chaque minute : expire les demandes encore `pending` d'un drop dont `end_date` est passée (`drops:expire-pending-whitelists`)
-- chaque jour à 03:00 UTC : réindexe le catalogue produit (`search:reindex-products`, no-op si `SCOUT_DRIVER=null`)
+- chaque minute : `drops:notify-opened`
+- chaque minute : `drops:expire-pending-whitelists`
+- chaque jour à 03:30 : `carts:purge-old-guests`
+- chaque jour à 04:00 : `auth:purge-old-password-reset-tokens`
+- chaque jour à 07:00 : `orders:send-daily-digest` (destinataires dans `DIGEST_MAIL_RECIPIENTS`)
 
 En production, ajoute une crontab :
 

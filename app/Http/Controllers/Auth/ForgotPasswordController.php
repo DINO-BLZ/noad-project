@@ -19,15 +19,13 @@ class ForgotPasswordController extends Controller
     {
         $request->validate(['email' => 'required|email']);
 
-        $status = Password::sendResetLink(
+        Password::sendResetLink(
             $request->only('email'),
             function ($user, string $token) {
                 Mail::to($user->email)->queue(new PasswordResetMail($user, $token));
             }
         );
 
-        return $status === Password::RESET_LINK_SENT
-            ? back()->with('success', 'Un lien de réinitialisation a été envoyé si cette adresse existe.')
-            : back()->withErrors(['email' => __($status)]);
+        return back()->with('success', 'Un lien de réinitialisation a été envoyé si cette adresse existe.');
     }
 }
