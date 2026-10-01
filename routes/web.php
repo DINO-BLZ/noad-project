@@ -15,6 +15,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DropController;
 use App\Http\Controllers\DropRequestController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\WhitelistController;
@@ -41,6 +42,40 @@ Route::get('/recherche', [SearchController::class, 'index'])
 Route::get('/recherche/suggestions', [SearchController::class, 'suggestions'])
     ->middleware('throttle:30,1')
     ->name('search.suggestions');
+
+Route::get('/a-propos', [PageController::class, 'about'])
+    ->name('about');
+
+Route::get('/contact', [PageController::class, 'contact'])
+    ->name('contact');
+
+Route::get('/livraison', [PageController::class, 'shipping'])
+    ->name('shipping');
+
+Route::get('/retours', [PageController::class, 'returns'])
+    ->name('returns');
+
+Route::get('/faq', [PageController::class, 'faq'])
+    ->name('faq');
+
+Route::get('/cgv', [PageController::class, 'cgv'])
+    ->name('cgv');
+
+Route::get('/mentions-legales', [PageController::class, 'legal'])
+    ->name('legal');
+
+Route::get('/collections', [PageController::class, 'collections'])
+    ->name('collections.index');
+
+Route::get('/journal', [PageController::class, 'journalIndex'])
+    ->name('journal.index');
+
+Route::get('/journal/{id}', [PageController::class, 'journalShow'])
+    ->name('journal.show');
+
+Route::post('/newsletter/subscribe', [PageController::class, 'newsletterSubscribe'])
+    ->middleware('throttle:10,1')
+    ->name('newsletter.subscribe');
 
 /*
 |--------------------------------------------------------------------------
@@ -107,6 +142,10 @@ Route::delete('/panier/{variantId}', [CartController::class, 'remove'])
 */
 
 Route::middleware('auth')->group(function () {
+
+    Route::post('/whitelist', [WhitelistController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('whitelist.store');
 
     Route::get('/commande', [CheckoutController::class, 'index'])
         ->name('checkout.index');
@@ -196,6 +235,12 @@ Route::prefix('admin')
 
         Route::get('/categories', [AdminCategoryController::class, 'index'])
             ->name('categories.index');
+
+        Route::get('/categories/{category}/edit', [AdminCategoryController::class, 'edit'])
+            ->name('categories.edit');
+
+        Route::get('/categories/{category}', [AdminCategoryController::class, 'show'])
+            ->name('categories.show');
 
         Route::post('/categories', [AdminCategoryController::class, 'store'])
             ->name('categories.store');

@@ -17,6 +17,16 @@ class CategoryController extends Controller
         return view('admin.categories.index', compact('categories'));
     }
 
+    public function edit(Category $category)
+    {
+        return redirect()->route('admin.categories.index')->with('info', 'Édition de catégorie non disponible dans cette vue.');
+    }
+
+    public function show(Category $category)
+    {
+        return redirect()->route('admin.categories.index')->with('info', 'Détails de catégorie non disponibles dans cette vue.');
+    }
+
     public function store(StoreCategoryRequest $request)
     {
         $this->authorize('create', Category::class);
