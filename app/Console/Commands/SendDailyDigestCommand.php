@@ -167,7 +167,7 @@ class SendDailyDigestCommand extends Command
         |--------------------------------------------------------------------------
         */
 
-        Mail::to($recipients)->send(
+        Mail::to($recipients)->queue(
             new DailyDigestMail(
                 date: $date,
                 sales: [

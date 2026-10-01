@@ -104,7 +104,7 @@ class SendDailyDigestCommandTest extends TestCase
 
         $this->assertSame(0, $exitCode);
 
-        Mail::assertSent(DailyDigestMail::class, function (DailyDigestMail $mail) use (
+        Mail::assertQueued(DailyDigestMail::class, function (DailyDigestMail $mail) use (
             $criticalVariantZero,
             $criticalVariantThree,
         ): bool {

@@ -1,5 +1,4 @@
-[x-mail::message](x-mail::message)
-
+<x-mail::message>
 # Mise à jour de votre commande
 
 Bonjour {{ $order->full_name }},

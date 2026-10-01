@@ -161,6 +161,16 @@ class OrderStatusLifecycleTest extends TestCase
         Mail::assertQueued(OrderStatusUpdatedMail::class);
     }
 
+    public function test_order_status_updated_mail_renders_with_action_button(): void
+    {
+        $order = $this->createOrder(OrderStatus::Paid);
+
+        $rendered = (string) new OrderStatusUpdatedMail($order)->render();
+
+        $this->assertStringContainsString('Mise à jour de votre commande', $rendered);
+        $this->assertStringContainsString('Voir ma commande', $rendered);
+    }
+
     private function cancelAsAdmin(Order $order)
     {
         $admin = User::factory()->create(['is_admin' => true]);
