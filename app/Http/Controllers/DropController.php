@@ -19,7 +19,11 @@ class DropController extends Controller
 
     public function show(Drop $drop)
     {
-        $drop->load(['products.variants', 'approvedWhitelists']);
+        $drop->load([
+            'products.variants',
+            'products.category',
+            'approvedWhitelists',
+        ]);
 
         /** @var User|null $user */
         $user = Auth::user();
