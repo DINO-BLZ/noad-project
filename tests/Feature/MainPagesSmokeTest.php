@@ -61,6 +61,16 @@ class MainPagesSmokeTest extends TestCase
         $this->assertPageContains($this->get(route('register')), 'INSCRIPTION', 'registration');
     }
 
+    public function test_drop_detail_displays_remaining_variant_stock(): void
+    {
+        $data = $this->createFixture();
+        $data['variant']->update(['stock' => 7]);
+
+        $this->get(route('drops.show', $data['drop']))
+            ->assertOk()
+            ->assertSee('7 REST.');
+    }
+
     public function test_admin_pages_render_real_products_categories_drops_orders_and_whitelist(): void
     {
         $data = $this->createFixture();

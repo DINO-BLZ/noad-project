@@ -382,7 +382,7 @@
                                 @if($totalStock > 0)
 
                                     <span class="prod-availability font-mono">
-                                        DISPONIBLE
+                                        {{ $totalStock }} REST.
                                     </span>
 
                                 @else
