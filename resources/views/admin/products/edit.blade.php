@@ -6,7 +6,6 @@
 
 <div class="noad-admin-edit-product-scope">
 
-```
 <!-- ================= BARRE SUPÉRIEURE / FIL D'ARIANE ================= -->
 
 <div class="top-nav-bar font-mono">
@@ -883,7 +882,6 @@
     </form>
 
 </div>
-```
 
 </div>
 

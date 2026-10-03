@@ -36,6 +36,7 @@ class ProductController extends Controller
                 $request->integer('category_id')
             ))
             ->latest()
+            ->orderBy('id', 'desc')
             ->paginate(20)
             ->withQueryString();
 

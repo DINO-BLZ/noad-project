@@ -1,4 +1,3 @@
-```blade
 @extends('layouts.app')
 
 @section('robots', 'noindex, nofollow')
@@ -1051,4 +1050,3 @@
 </style>
 
 @endsection
-```

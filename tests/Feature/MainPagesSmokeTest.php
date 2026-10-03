@@ -123,7 +123,7 @@ class MainPagesSmokeTest extends TestCase
 
         foreach (range(1, 21) as $number) {
             Product::create([
-                'name' => 'Paged Product '.$number,
+                'name' => 'Paged Product '.str_pad((string) $number, 2, '0', STR_PAD_LEFT),
                 'slug' => 'paged-product-'.$number,
                 'price' => 1000,
                 'category_id' => $category->id,
@@ -139,8 +139,8 @@ class MainPagesSmokeTest extends TestCase
             return $products->count() === 20 && $products->total() === 21;
         });
         $response->assertViewHas('activeReferences', 21);
-        $response->assertSee('Paged Product 1');
-        $response->assertDontSee('Paged Product 21');
+        $response->assertSee('Paged Product 21');
+        $response->assertDontSee('Paged Product 01');
     }
 
     private function assertPageContains(TestResponse $response, string $expected, string $page): void
