@@ -14,10 +14,34 @@ class CancelOrderAction
     public function execute(Order $order): Order
     {
         return DB::transaction(function () use ($order) {
+            $variantIds = DB::table('order_items')
+                ->where('order_id', $order->id)
+                ->whereNotNull('variant_id')
+                ->pluck('variant_id')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values();
+
+            $variants = $variantIds->isNotEmpty()
+                ? Variant::query()
+                    ->whereIn('id', $variantIds)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id')
+                : collect();
+
             $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
             $currentStatus = $lockedOrder->status;
 
-            if (! in_array($currentStatus, [OrderStatus::Pending, OrderStatus::Paid], true)) {
+            /*
+             * Statuts depuis lesquels l'annulation est autorisée :
+             * - Pending  : commande jamais expédiée, stock restitué.
+             * - Paid     : payée mais pas encore expédiée, stock restitué.
+             * - Shipped  : colis refusé ou retour expéditeur, stock restitué.
+             */
+            if (! in_array($currentStatus, [OrderStatus::Pending, OrderStatus::Paid, OrderStatus::Shipped], true)) {
                 throw new LogicException(sprintf(
                     'Annulation de commande interdite depuis le statut %s.',
                     $currentStatus instanceof OrderStatus ? $currentStatus->value : (string) $currentStatus
@@ -25,12 +49,6 @@ class CancelOrderAction
             }
 
             $items = $lockedOrder->items()->get();
-            $variantIds = $items->pluck('variant_id')->filter()->unique()->sort()->values();
-            $variants = Variant::query()
-                ->whereIn('id', $variantIds)
-                ->lockForUpdate()
-                ->get()
-                ->keyBy('id');
 
             foreach ($items as $item) {
                 if ($item->variant_id && $variants->has($item->variant_id)) {

@@ -284,45 +284,19 @@
 
         <div class="popular-tags-list">
 
-            <a
-                href="{{ route('search.index', ['q' => 'Cargo Pant']) }}"
-                class="pop-tag"
-            >
-                CARGO PANT
-                <span class="arrow-up">↗</span>
-            </a>
-
-            <a
-                href="{{ route('search.index', ['q' => 'Logo Hoodie']) }}"
-                class="pop-tag"
-            >
-                LOGO HOODIE
-                <span class="arrow-up">↗</span>
-            </a>
-
-            <a
-                href="{{ route('search.index', ['q' => 'Drop 01']) }}"
-                class="pop-tag"
-            >
-                DROP 01
-                <span class="arrow-up">↗</span>
-            </a>
-
-            <a
-                href="{{ route('search.index', ['q' => 'Signature Cap']) }}"
-                class="pop-tag"
-            >
-                SIGNATURE CAP
-                <span class="arrow-up">↗</span>
-            </a>
-
-            <a
-                href="{{ route('search.index', ['q' => 'Polo Burgundy']) }}"
-                class="pop-tag"
-            >
-                POLO BURGUNDY
-                <span class="arrow-up">↗</span>
-            </a>
+            @if(isset($suggestions) && $suggestions->isNotEmpty())
+                @foreach($suggestions as $suggestion)
+                    <a
+                        href="{{ route('search.index', ['q' => $suggestion]) }}"
+                        class="pop-tag"
+                    >
+                        {{ strtoupper($suggestion) }}
+                        <span class="arrow-up">↗</span>
+                    </a>
+                @endforeach
+            @else
+                <span class="text-muted font-mono">AUCUNE SUGGESTION DISPONIBLE</span>
+            @endif
 
         </div>
 

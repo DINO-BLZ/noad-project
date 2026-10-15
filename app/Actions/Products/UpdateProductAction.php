@@ -2,6 +2,7 @@
 
 namespace App\Actions\Products;
 
+use App\Enums\OrderStatus;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Variant;
@@ -33,6 +34,29 @@ class UpdateProductAction
                 &$newFiles,
                 &$filesToDelete
             ) {
+                /*
+                 * ---------------------------------------------------------
+                 * 0. VERROUILLAGE DE LA LIGNE PRODUIT
+                 * ---------------------------------------------------------
+                 *
+                 * Le verrou doit être acquis AVANT les variantes pour
+                 * respecter la hiérarchie globale des verrous du projet :
+                 *
+                 *   Product (FOR UPDATE)
+                 *     └── Variants (FOR UPDATE, par ID croissant)
+                 *
+                 * DeleteProductAction acquiert ce même verrou en premier.
+                 * Sans lui ici, DeleteProductAction pourrait supprimer le
+                 * produit entre la vérification des variantes existantes et
+                 * la création d'une nouvelle variante dans cette action.
+                 *
+                 * CreateOrderAction ne verrouille jamais Product, donc ce
+                 * verrou ne crée aucun cycle avec le checkout.
+                 */
+                $product = Product::query()
+                    ->lockForUpdate()
+                    ->findOrFail($product->id);
+
                 /*
                  * ---------------------------------------------------------
                  * 1. INFORMATIONS DU PRODUIT
@@ -78,64 +102,107 @@ class UpdateProductAction
                  * 3. VARIANTES
                  * ---------------------------------------------------------
                  */
-                $submittedVariants = $data['variants'] ?? [];
-                $submittedVariantIds = [];
+                // A. Format "sizes" issu du formulaire Blade (edit.blade.php)
+                if (array_key_exists('sizes', $data) && is_array($data['sizes'])) {
+                    foreach ($data['sizes'] as $size => $sizeData) {
+                        if (! is_array($sizeData) || ! isset($sizeData['stock'])) {
+                            continue;
+                        }
 
-                foreach ($submittedVariants as $variantData) {
-                    $variantId = $variantData['id'] ?? null;
+                        $stock = (int) $sizeData['stock'];
 
-                    if ($variantId) {
-                        /*
-                         * Sécurité importante :
-                         * la variante doit appartenir à CE produit.
-                         */
                         $variant = $product->variants()
-                            ->whereKey($variantId)
+                            ->where('size', $size)
                             ->lockForUpdate()
                             ->first();
 
-                        if (! $variant) {
-                            throw ValidationException::withMessages([
-                                'variants' => ['Une variante sélectionnée est invalide.'],
+                        if ($variant) {
+                            $variant->update([
+                                'stock' => $stock,
+                            ]);
+                        } else {
+                            $product->variants()->create([
+                                'size' => (string) $size,
+                                'stock' => $stock,
+                                'sku' => null,
+                                'color' => '',
                             ]);
                         }
-
-                        $variant->update([
-                            'size' => $variantData['size'],
-                            'stock' => $variantData['stock'],
-                            'sku' => $this->nullableSku($variantData['sku'] ?? null),
-                            'color' => $variantData['color'] ?? '',
-                        ]);
-
-                        $submittedVariantIds[] = $variant->id;
-                    } else {
-                        $variant = $product->variants()->create([
-                            'size' => $variantData['size'],
-                            'stock' => $variantData['stock'],
-                            'sku' => $this->nullableSku($variantData['sku'] ?? null),
-                            'color' => $variantData['color'] ?? '',
-                        ]);
-
-                        $submittedVariantIds[] = $variant->id;
                     }
                 }
 
-                /*
-                 * Supprime les variantes qui ne sont plus présentes
-                 * dans le formulaire.
-                 */
-                $variantsToDelete = $product->variants()
-                    ->when(
-                        ! empty($submittedVariantIds),
-                        fn ($query) => $query->whereNotIn(
-                            'id',
-                            $submittedVariantIds
-                        )
-                    )
-                    ->get();
+                // B. Format "variants" unitaire (API / Tests)
+                if (array_key_exists('variants', $data) && is_array($data['variants']) && ! empty($data['variants'])) {
+                    foreach ($data['variants'] as $variantData) {
+                        $variantId = $variantData['id'] ?? null;
 
-                foreach ($variantsToDelete as $variant) {
-                    $variant->delete();
+                        if ($variantId) {
+                            /*
+                             * Sécurité importante :
+                             * la variante doit appartenir à CE produit.
+                             */
+                            $variant = $product->variants()
+                                ->whereKey($variantId)
+                                ->lockForUpdate()
+                                ->first();
+
+                            if (! $variant) {
+                                throw ValidationException::withMessages([
+                                    'variants' => ['Une variante sélectionnée est invalide.'],
+                                ]);
+                            }
+
+                            $variant->update([
+                                'size' => $variantData['size'],
+                                'stock' => $variantData['stock'],
+                                'sku' => $this->nullableSku($variantData['sku'] ?? null),
+                                'color' => $variantData['color'] ?? '',
+                            ]);
+                        } else {
+                            $product->variants()->create([
+                                'size' => $variantData['size'],
+                                'stock' => $variantData['stock'],
+                                'sku' => $this->nullableSku($variantData['sku'] ?? null),
+                                'color' => $variantData['color'] ?? '',
+                            ]);
+                        }
+                    }
+                }
+
+                // C. Suppression explicite de variantes
+                $removeVariantIds = $data['remove_variants'] ?? [];
+
+                if (! empty($removeVariantIds)) {
+                    $variantsToRemove = $product->variants()
+                        ->whereIn('id', $removeVariantIds)
+                        ->lockForUpdate()
+                        ->get();
+
+                    if ($variantsToRemove->count() !== count(array_unique($removeVariantIds))) {
+                        throw ValidationException::withMessages([
+                            'remove_variants' => ['Une variante sélectionnée pour suppression est invalide.'],
+                        ]);
+                    }
+
+                    // Empêcher la suppression des variantes utilisées par des commandes actives (Pending ou Paid)
+                    $hasActiveOrders = DB::table('order_items')
+                        ->join('orders', 'orders.id', '=', 'order_items.order_id')
+                        ->whereIn('order_items.variant_id', $removeVariantIds)
+                        ->whereIn('orders.status', [
+                            OrderStatus::Pending->value,
+                            OrderStatus::Paid->value,
+                        ])
+                        ->exists();
+
+                    if ($hasActiveOrders) {
+                        throw ValidationException::withMessages([
+                            'remove_variants' => ['Impossible de supprimer une variante associée à une commande active (en attente ou payée).'],
+                        ]);
+                    }
+
+                    foreach ($variantsToRemove as $variant) {
+                        $variant->delete();
+                    }
                 }
 
                 /*

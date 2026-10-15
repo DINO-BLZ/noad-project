@@ -56,7 +56,7 @@
 
             </a>
 
-        </div>
+    </div>
 
         <div class="subnav-meta">
 
@@ -614,7 +614,7 @@
 
                                 </span>
 
-                            @endif
+    @endif
 
                         </td>
 
@@ -634,7 +634,7 @@
 
                                     >
 
-                                        @csrf
+                        @csrf
 
                                         @method('PATCH')
 
@@ -650,7 +650,7 @@
 
                                         </button>
 
-                                    </form>
+                    </form>
 
                                 @endif
 
@@ -666,7 +666,7 @@
 
                                     >
 
-                                        @csrf
+                        @csrf
 
                                         @method('PATCH')
 
@@ -682,17 +682,17 @@
 
                                         </button>
 
-                                    </form>
+                    </form>
 
-                                @endif
+            @endif
 
-                            </div>
+        </div>
 
                         </td>
 
                     </tr>
 
-                @empty
+    @empty
 
                     <tr>
 
@@ -710,7 +710,7 @@
 
                     </tr>
 
-                @endforelse
+    @endforelse
 
             </tbody>
 
@@ -738,7 +738,7 @@
 
                     {{ $candidates->total() }}
 
-                </div>
+</div>
 
                 <div class="pagination-controls">
 

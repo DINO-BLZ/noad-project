@@ -25,9 +25,21 @@ class SearchController extends Controller
 
         $products->load(['variants', 'category', 'drops' => fn ($q) => $q->active()]);
 
+        /*
+         * Suggestions de recherche : 5 noms de produits réels du catalogue,
+         * triés par popularité approximative (plus récents d'abord).
+         * Remplace les suggestions hardcodées qui pointaient vers des
+         * produits inexistants.
+         */
+        $suggestions = Product::query()
+            ->orderByDesc('id')
+            ->limit(5)
+            ->pluck('name');
+
         return view('search.index', [
-            'products' => $products,
-            'query' => $query,
+            'products'    => $products,
+            'query'       => $query,
+            'suggestions' => $suggestions,
         ]);
     }
 

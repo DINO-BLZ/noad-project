@@ -303,6 +303,7 @@
 
                             <label
                                 class="size-option {{ $variant->stock <= 0 ? 'is-disabled' : '' }}"
+                                title="{{ $variant->color ? $variant->size . ' — ' . $variant->color : $variant->size }}"
                             >
 
                                 <input
@@ -316,6 +317,12 @@
                                 <span class="size-value">
                                     {{ $variant->size }}
                                 </span>
+
+                                @if($variant->color)
+                                    <span class="size-color">
+                                        {{ $variant->color }}
+                                    </span>
+                                @endif
 
                                 @if($variant->stock <= 0)
 

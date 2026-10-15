@@ -8,13 +8,17 @@
     <meta name="description" content="{{ html_entity_decode((string) $__env->yieldContent('meta_description', 'NOAD — vêtements et drops en édition limitée.'), ENT_QUOTES | ENT_HTML5, 'UTF-8') }}">
     <meta name="robots" content="@yield('robots', 'index,follow')">
     <link rel="canonical" href="{{ url()->current() }}">
-    <meta property="og:type" content="website">
+    {{-- Open Graph --}}
+    <meta property="og:type" content="@yield('og_type', 'website')">
     <meta property="og:title" content="{{ html_entity_decode((string) $__env->yieldContent('title', 'Noad — No Advantage'), ENT_QUOTES | ENT_HTML5, 'UTF-8') }}">
     <meta property="og:description" content="{{ html_entity_decode((string) $__env->yieldContent('meta_description', 'NOAD — vêtements et drops en édition limitée.'), ENT_QUOTES | ENT_HTML5, 'UTF-8') }}">
     <meta property="og:url" content="{{ url()->current() }}">
-    <meta name="twitter:card" content="summary">
+    <meta property="og:image" content="@yield('og_image', asset('images/noad-logo.png'))">
+    {{-- Twitter Card --}}
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ html_entity_decode((string) $__env->yieldContent('title', 'Noad — No Advantage'), ENT_QUOTES | ENT_HTML5, 'UTF-8') }}">
     <meta name="twitter:description" content="{{ html_entity_decode((string) $__env->yieldContent('meta_description', 'NOAD — vêtements et drops en édition limitée.'), ENT_QUOTES | ENT_HTML5, 'UTF-8') }}">
+    <meta name="twitter:image" content="@yield('og_image', asset('images/noad-logo.png'))">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Products\CreateProductAction;
+use App\Actions\Products\DeleteProductAction;
 use App\Actions\Products\UpdateProductAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreProductRequest;
@@ -134,11 +135,11 @@ class ProductController extends Controller
             );
     }
 
-    public function destroy(Product $product)
+    public function destroy(Product $product, DeleteProductAction $deleteProduct)
     {
         $this->authorize('delete', $product);
 
-        $product->delete();
+        $deleteProduct->execute($product);
 
         return redirect()
             ->route('admin.products.index')

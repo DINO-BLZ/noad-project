@@ -137,7 +137,7 @@ class CreateOrderAction
                          * Le quota est partagé entre toutes les variantes
                          * du même produit dans le même drop.
                          */
-                        $quotaKey = $activeDrop->id . ':' . $variant->product_id;
+                        $quotaKey = $activeDrop->id.':'.$variant->product_id;
 
                         $quotaRequests[$quotaKey] =
                             ($quotaRequests[$quotaKey] ?? 0)

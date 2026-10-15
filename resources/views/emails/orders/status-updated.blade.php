@@ -3,7 +3,7 @@
 
 Bonjour {{ $order->full_name }},
 
-Le statut de votre commande **#{{ $order->id }}** est maintenant : **{{ ucfirst($order->status->value) }}**.
+Le statut de votre commande **{{ $order->formatted_reference }}** est maintenant : **{{ $order->status->label() }}**.
 
 <x-mail::button :url="route('checkout.success', $order->id)">
 Voir ma commande
