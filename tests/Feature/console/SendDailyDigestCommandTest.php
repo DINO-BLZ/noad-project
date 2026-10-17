@@ -214,7 +214,12 @@ class SendDailyDigestCommandTest extends TestCase
     {
         $user = User::factory()->create();
 
-        return Order::create(array_merge([
+        // Timestamps are intentionally excluded from mass assignment: they are
+        // not part of Order::$fillable, so apply them explicitly below.
+        $timestamps = array_intersect_key($overrides, array_flip(['created_at', 'updated_at']));
+        unset($overrides['created_at'], $overrides['updated_at']);
+
+        $order = Order::create(array_merge([
             'user_id' => $user->id,
             'full_name' => 'Digest Test User',
             'phone' => '0555000000',
@@ -224,6 +229,16 @@ class SendDailyDigestCommandTest extends TestCase
             'status' => $status,
             'total' => 1000,
         ], $overrides));
+
+        if ($timestamps !== []) {
+            $order->forceFill($timestamps);
+
+            // save() normally refreshes updated_at. Suppress automatic timestamps
+            // so the exact dates supplied by the test remain intact.
+            Order::withoutTimestamps(fn () => $order->save());
+        }
+
+        return $order;
     }
 
     private function createVariant(int $stock, string $productName): Variant

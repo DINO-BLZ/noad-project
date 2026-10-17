@@ -64,7 +64,6 @@ class OrderStatusLifecycleTest extends TestCase
             'cancelled to shipped' => ['cancelled', 'shipped'],
             'cancelled to pending' => ['cancelled', 'pending'],
             'cancelled to cancelled' => ['cancelled', 'cancelled'],
-            'shipped to cancelled' => ['shipped', 'cancelled'],
             'delivered to cancelled' => ['delivered', 'cancelled'],
             'delivered to shipped' => ['delivered', 'shipped'],
             'delivered to pending' => ['delivered', 'pending'],
@@ -95,18 +94,27 @@ class OrderStatusLifecycleTest extends TestCase
         $this->assertSame(7, $variant->fresh()->stock);
     }
 
-    public function test_shipped_and_delivered_cannot_be_cancelled(): void
+    public function test_delivered_cannot_be_cancelled(): void
     {
-        foreach ([OrderStatus::Shipped, OrderStatus::Delivered] as $status) {
-            $variant = $this->createVariant(5);
-            $order = $this->createOrderWithItem($status, $variant, 2);
+        $variant = $this->createVariant(5);
+        $order = $this->createOrderWithItem(OrderStatus::Delivered, $variant, 2);
 
-            $response = $this->cancelAsAdmin($order);
+        $response = $this->cancelAsAdmin($order);
 
-            $response->assertRedirectBackWithErrors('status');
-            $this->assertSame($status, $order->fresh()->status);
-            $this->assertSame(5, $variant->fresh()->stock);
-        }
+        $response->assertRedirectBackWithErrors('status');
+        $this->assertSame(OrderStatus::Delivered, $order->fresh()->status);
+        $this->assertSame(5, $variant->fresh()->stock);
+    }
+
+    public function test_shipped_cancellation_restores_stock(): void
+    {
+        $variant = $this->createVariant(5);
+        $order = $this->createOrderWithItem(OrderStatus::Shipped, $variant, 2);
+
+        $this->cancelAsAdmin($order);
+
+        $this->assertSame(OrderStatus::Cancelled, $order->fresh()->status);
+        $this->assertSame(7, $variant->fresh()->stock);
     }
 
     public function test_cancelled_order_cannot_be_cancelled_again(): void
@@ -137,14 +145,14 @@ class OrderStatusLifecycleTest extends TestCase
     public function test_admin_cannot_bypass_state_machine_with_direct_request(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
-        $order = $this->createOrder(OrderStatus::Shipped);
+        $order = $this->createOrder(OrderStatus::Pending);
 
         $response = $this->actingAs($admin)->patch(route('admin.orders.updateStatus', $order), [
-            'status' => OrderStatus::Cancelled->value,
+            'status' => OrderStatus::Shipped->value,
         ]);
 
         $response->assertRedirectBackWithErrors('status');
-        $this->assertSame(OrderStatus::Shipped, $order->fresh()->status);
+        $this->assertSame(OrderStatus::Pending, $order->fresh()->status);
     }
 
     public function test_admin_can_change_order_status(): void
@@ -227,7 +235,7 @@ class OrderStatusLifecycleTest extends TestCase
     {
         $order = $this->createOrder(OrderStatus::Paid);
 
-        $rendered = (string) new OrderStatusUpdatedMail($order)->render();
+        $rendered = (string) (new OrderStatusUpdatedMail($order))->render();
 
         $this->assertStringContainsString('Mise à jour de votre commande', $rendered);
         $this->assertStringContainsString('Voir ma commande', $rendered);
