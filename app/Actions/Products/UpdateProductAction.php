@@ -120,7 +120,7 @@ class UpdateProductAction
                             $variant->update([
                                 'stock' => $stock,
                             ]);
-                        } else {
+                        } elseif ($stock > 0) {
                             $product->variants()->create([
                                 'size' => (string) $size,
                                 'stock' => $stock,

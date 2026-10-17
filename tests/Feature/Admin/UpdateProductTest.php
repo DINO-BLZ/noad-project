@@ -333,6 +333,42 @@ class UpdateProductTest extends TestCase
         ]);
     }
 
+    public function test_zero_stock_sizes_do_not_create_new_variants(): void
+    {
+        $admin = $this->createAdmin();
+        $category = $this->createCategory();
+        $product = $this->createProduct($category);
+
+        $product->variants()->create([
+            'size' => 'M',
+            'stock' => 5,
+            'sku' => 'TS-M-ZERO',
+            'color' => 'Noir',
+        ]);
+
+        $response = $this->actingAs($admin)->put(
+            route('admin.products.update', $product),
+            [
+                'name' => $product->name,
+                'category_id' => $category->id,
+                'price' => $product->price,
+                'description' => $product->description,
+                'sizes' => [
+                    'XS' => ['stock' => 0],
+                    'S' => ['stock' => 0],
+                    'M' => ['stock' => 5],
+                    'L' => ['stock' => 0],
+                    'XL' => ['stock' => 0],
+                    'XXL' => ['stock' => 0],
+                ],
+            ]
+        );
+
+        $response->assertRedirect();
+
+        $this->assertCount(1, $product->variants()->get());
+    }
+
     public function test_cannot_remove_variant_belonging_to_another_product(): void
     {
         $admin = $this->createAdmin();
