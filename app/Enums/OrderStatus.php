@@ -16,9 +16,9 @@ enum OrderStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Pending   => 'En attente',
-            self::Paid      => 'Payée',
-            self::Shipped   => 'Expédiée',
+            self::Pending => 'En attente',
+            self::Paid => 'Payée',
+            self::Shipped => 'Expédiée',
             self::Delivered => 'Livrée',
             self::Cancelled => 'Annulée',
         };
@@ -40,9 +40,9 @@ enum OrderStatus: string
     public function canTransitionTo(self $newStatus): bool
     {
         return match ($this) {
-            self::Pending   => in_array($newStatus, [self::Paid, self::Cancelled], true),
-            self::Paid      => in_array($newStatus, [self::Shipped, self::Cancelled], true),
-            self::Shipped   => in_array($newStatus, [self::Delivered, self::Cancelled], true),
+            self::Pending => in_array($newStatus, [self::Paid, self::Cancelled], true),
+            self::Paid => in_array($newStatus, [self::Shipped, self::Cancelled], true),
+            self::Shipped => in_array($newStatus, [self::Delivered, self::Cancelled], true),
             self::Delivered, self::Cancelled => false,
         };
     }

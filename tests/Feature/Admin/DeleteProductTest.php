@@ -325,23 +325,23 @@ class DeleteProductTest extends TestCase
         $product = $this->createProduct($category);
 
         $order = Order::create([
-            'full_name'      => 'Client Orphelin',
-            'phone'          => '123456789',
-            'address'        => 'Rue Alger',
-            'wilaya'         => 'Algiers',
+            'full_name' => 'Client Orphelin',
+            'phone' => '123456789',
+            'address' => 'Rue Alger',
+            'wilaya' => 'Algiers',
             'payment_method' => 'cod',
-            'status'         => OrderStatus::Pending,
-            'total'          => 5000,
+            'status' => OrderStatus::Pending,
+            'total' => 5000,
         ]);
 
         // variant_id = null : simule un order_item dont la variante a été
         // supprimée mais dont le product_id est encore intact.
         OrderItem::create([
-            'order_id'     => $order->id,
-            'product_id'   => $product->id,
-            'variant_id'   => null,
-            'quantity'     => 1,
-            'price'        => 5000,
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'variant_id' => null,
+            'quantity' => 1,
+            'price' => 5000,
             'product_name' => $product->name,
             'variant_size' => 'M',
         ]);

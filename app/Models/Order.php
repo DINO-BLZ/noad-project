@@ -17,7 +17,7 @@ class Order extends Model
     protected function casts(): array
     {
         return [
-            'status'       => OrderStatus::class,
+            'status' => OrderStatus::class,
             'payment_status' => PaymentStatus::class,
             'delivered_at' => 'datetime',
         ];
@@ -32,7 +32,7 @@ class Order extends Model
      */
     public function getFormattedReferenceAttribute(): string
     {
-        return 'ND-' . str_pad((string) $this->id, 6, '0', STR_PAD_LEFT);
+        return 'ND-'.str_pad((string) $this->id, 6, '0', STR_PAD_LEFT);
     }
 
     public function items()

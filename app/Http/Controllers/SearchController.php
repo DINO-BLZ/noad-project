@@ -37,8 +37,8 @@ class SearchController extends Controller
             ->pluck('name');
 
         return view('search.index', [
-            'products'    => $products,
-            'query'       => $query,
+            'products' => $products,
+            'query' => $query,
             'suggestions' => $suggestions,
         ]);
     }
