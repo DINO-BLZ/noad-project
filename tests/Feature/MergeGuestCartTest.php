@@ -175,4 +175,106 @@ class MergeGuestCartTest extends TestCase
 
         $this->assertDatabaseCount('cart_items', 2);
     }
+
+    public function test_empty_guest_cart_does_nothing_to_the_user_cart(): void
+    {
+        $user = User::factory()->create();
+        $userVariant = $this->createVariant('empty-guest-user-item', 10);
+        $this->createCartItem($user->id, null, $userVariant, 4);
+
+        CartItem::mergeGuestCartIntoUser('empty-guest-session', $user->id);
+
+        $this->assertDatabaseHas('cart_items', [
+            'user_id' => $user->id,
+            'session_id' => null,
+            'variant_id' => $userVariant->id,
+            'quantity' => 4,
+        ]);
+        $this->assertDatabaseCount('cart_items', 1);
+    }
+
+    public function test_multiple_guest_items_are_all_transferred_to_the_user(): void
+    {
+        $user = User::factory()->create();
+        $firstVariant = $this->createVariant('multiple-guest-first', 10);
+        $secondVariant = $this->createVariant('multiple-guest-second', 6);
+        $thirdVariant = $this->createVariant('multiple-guest-third', 2);
+
+        $this->createCartItem(null, 'guest-session-1', $firstVariant, 2);
+        $this->createCartItem(null, 'guest-session-1', $secondVariant, 4);
+        $this->createCartItem(null, 'guest-session-1', $thirdVariant, 5);
+
+        CartItem::mergeGuestCartIntoUser('guest-session-1', $user->id);
+
+        $this->assertDatabaseHas('cart_items', [
+            'user_id' => $user->id,
+            'session_id' => null,
+            'variant_id' => $firstVariant->id,
+            'quantity' => 2,
+        ]);
+        $this->assertDatabaseHas('cart_items', [
+            'user_id' => $user->id,
+            'session_id' => null,
+            'variant_id' => $secondVariant->id,
+            'quantity' => 4,
+        ]);
+        $this->assertDatabaseHas('cart_items', [
+            'user_id' => $user->id,
+            'session_id' => null,
+            'variant_id' => $thirdVariant->id,
+            'quantity' => 2,
+        ]);
+        $this->assertDatabaseMissing('cart_items', [
+            'session_id' => 'guest-session-1',
+        ]);
+        $this->assertDatabaseCount('cart_items', 3);
+    }
+
+    public function test_items_from_another_guest_session_are_left_untouched(): void
+    {
+        $user = User::factory()->create();
+        $targetVariant = $this->createVariant('target-guest-session', 10);
+        $otherVariant = $this->createVariant('other-guest-session', 10);
+
+        $this->createCartItem(null, 'guest-session-1', $targetVariant, 2);
+        $this->createCartItem(null, 'guest-session-2', $otherVariant, 3);
+
+        CartItem::mergeGuestCartIntoUser('guest-session-1', $user->id);
+
+        $this->assertDatabaseHas('cart_items', [
+            'user_id' => $user->id,
+            'session_id' => null,
+            'variant_id' => $targetVariant->id,
+            'quantity' => 2,
+        ]);
+        $this->assertDatabaseHas('cart_items', [
+            'user_id' => null,
+            'session_id' => 'guest-session-2',
+            'variant_id' => $otherVariant->id,
+            'quantity' => 3,
+        ]);
+        $this->assertDatabaseMissing('cart_items', [
+            'session_id' => 'guest-session-1',
+        ]);
+        $this->assertDatabaseCount('cart_items', 2);
+    }
+
+    public function test_deleting_a_variant_cascades_to_its_cart_item_before_merge(): void
+    {
+        $user = User::factory()->create();
+        $variant = $this->createVariant('deleted-variant-cascade', 10);
+        $this->createCartItem(null, 'guest-session-1', $variant, 2);
+
+        $variant->delete();
+
+        // The FK cascade removes the cart row, so merge has nothing to process.
+        $this->assertDatabaseMissing('cart_items', [
+            'session_id' => 'guest-session-1',
+            'variant_id' => $variant->id,
+        ]);
+
+        CartItem::mergeGuestCartIntoUser('guest-session-1', $user->id);
+
+        $this->assertDatabaseCount('cart_items', 0);
+    }
 }
