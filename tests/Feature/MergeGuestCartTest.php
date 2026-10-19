@@ -8,6 +8,10 @@ use App\Models\Product;
 use App\Models\User;
 use App\Models\Variant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 class MergeGuestCartTest extends TestCase
@@ -180,6 +184,7 @@ class MergeGuestCartTest extends TestCase
     {
         $user = User::factory()->create();
         $userVariant = $this->createVariant('empty-guest-user-item', 10);
+
         $this->createCartItem($user->id, null, $userVariant, 4);
 
         CartItem::mergeGuestCartIntoUser('empty-guest-session', $user->id);
@@ -190,12 +195,14 @@ class MergeGuestCartTest extends TestCase
             'variant_id' => $userVariant->id,
             'quantity' => 4,
         ]);
+
         $this->assertDatabaseCount('cart_items', 1);
     }
 
     public function test_multiple_guest_items_are_all_transferred_to_the_user(): void
     {
         $user = User::factory()->create();
+
         $firstVariant = $this->createVariant('multiple-guest-first', 10);
         $secondVariant = $this->createVariant('multiple-guest-second', 6);
         $thirdVariant = $this->createVariant('multiple-guest-third', 2);
@@ -212,27 +219,32 @@ class MergeGuestCartTest extends TestCase
             'variant_id' => $firstVariant->id,
             'quantity' => 2,
         ]);
+
         $this->assertDatabaseHas('cart_items', [
             'user_id' => $user->id,
             'session_id' => null,
             'variant_id' => $secondVariant->id,
             'quantity' => 4,
         ]);
+
         $this->assertDatabaseHas('cart_items', [
             'user_id' => $user->id,
             'session_id' => null,
             'variant_id' => $thirdVariant->id,
             'quantity' => 2,
         ]);
+
         $this->assertDatabaseMissing('cart_items', [
             'session_id' => 'guest-session-1',
         ]);
+
         $this->assertDatabaseCount('cart_items', 3);
     }
 
     public function test_items_from_another_guest_session_are_left_untouched(): void
     {
         $user = User::factory()->create();
+
         $targetVariant = $this->createVariant('target-guest-session', 10);
         $otherVariant = $this->createVariant('other-guest-session', 10);
 
@@ -247,15 +259,18 @@ class MergeGuestCartTest extends TestCase
             'variant_id' => $targetVariant->id,
             'quantity' => 2,
         ]);
+
         $this->assertDatabaseHas('cart_items', [
             'user_id' => null,
             'session_id' => 'guest-session-2',
             'variant_id' => $otherVariant->id,
             'quantity' => 3,
         ]);
+
         $this->assertDatabaseMissing('cart_items', [
             'session_id' => 'guest-session-1',
         ]);
+
         $this->assertDatabaseCount('cart_items', 2);
     }
 
@@ -263,6 +278,7 @@ class MergeGuestCartTest extends TestCase
     {
         $user = User::factory()->create();
         $variant = $this->createVariant('deleted-variant-cascade', 10);
+
         $this->createCartItem(null, 'guest-session-1', $variant, 2);
 
         $variant->delete();
@@ -276,5 +292,51 @@ class MergeGuestCartTest extends TestCase
         CartItem::mergeGuestCartIntoUser('guest-session-1', $user->id);
 
         $this->assertDatabaseCount('cart_items', 0);
+    }
+
+    public function test_merge_failure_is_logged_without_exposing_session_id(): void
+    {
+        $user = User::factory()->create();
+        $variant = $this->createVariant('merge-forced-failure', 10);
+        $sessionId = 'guest-session-sensitive-12345';
+
+        $this->createCartItem(null, $sessionId, $variant, 2);
+
+        // Register the listener only after preparing the test data.
+        // The SQL query has already executed when this callback is invoked.
+        // Throwing here makes the query fail from the application's perspective
+        // and allows the merge transaction to roll back.
+        DB::listen(function ($query) use ($sessionId): void {
+            if (str_contains(strtolower($query->sql), 'variants')) {
+                throw new RuntimeException(
+                    "Forced failure for session {$sessionId}"
+                );
+            }
+        });
+
+        Log::shouldReceive('warning')
+            ->once()
+            ->with(
+                'Guest cart merge failed; authentication may continue.',
+                Mockery::on(function (array $context) use ($user, $sessionId): bool {
+                    $expectedCause = 'RuntimeException: Forced failure for session '
+                        .'[session-id-redacted]';
+
+                    $cause = $context['cause'] ?? '';
+
+                    return ($context['user_id'] ?? null) === $user->id
+                        && $cause === $expectedCause
+                        && ! str_contains($cause, $sessionId);
+                })
+            );
+
+        CartItem::mergeGuestCartIntoUser($sessionId, $user->id);
+
+        $this->assertDatabaseHas('cart_items', [
+            'user_id' => null,
+            'session_id' => $sessionId,
+            'variant_id' => $variant->id,
+            'quantity' => 2,
+        ]);
     }
 }
