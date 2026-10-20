@@ -14,13 +14,6 @@
     --border:rgba(245,245,245,.12);
 }
 
-html[data-theme="light"]{
-    --bg:#F5F5F5;
-    --text:#0A0A0A;
-    --accent:#B02E26;
-    --border:rgba(10,10,10,.12);
-}
-
 *{
     margin:0;
     padding:0;
@@ -36,39 +29,49 @@ body{
 
 .static-page{
     padding:4rem 1.5rem;
+    background:var(--bg);
 }
 
 .static-page__content{
     max-width:960px;
     margin:0 auto;
     padding:3rem;
-    background:#f5f1ea;
-    border:1px solid rgba(20,20,20,.1);
-    color:#1d1b18;
+    background:rgba(255,255,255,.02);
+    border:1px solid var(--border);
+    color:var(--text);
 }
 
 .static-page__eyebrow{
     margin-bottom:1rem;
-    color:#7a6b5c;
+    color:var(--accent);
     font-size:.72rem;
+    font-family:"SF Mono", Monaco, "Cascadia Code", monospace;
+    letter-spacing:.15em;
     text-transform:uppercase;
 }
 
 .static-page__title{
     margin-bottom:1rem;
     font-size:2.5rem;
+    font-weight:900;
     text-transform:uppercase;
-}
-
-.static-page__subtitle,
-.static-page__body{
-    color:#463f39;
-    font-size:1rem;
-    line-height:1.8;
+    color:#fff;
+    letter-spacing:-.02em;
 }
 
 .static-page__subtitle{
+    color:rgba(245,245,245,.8);
+    font-size:1.1rem;
+    line-height:1.6;
     margin-bottom:1.5rem;
+    padding-bottom:1.5rem;
+    border-bottom:1px solid var(--border);
+}
+
+.static-page__body{
+    color:rgba(245,245,245,.7);
+    font-size:1rem;
+    line-height:1.8;
 }
 
 @media (max-width:600px){

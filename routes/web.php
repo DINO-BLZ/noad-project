@@ -15,6 +15,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DropController;
 use App\Http\Controllers\DropRequestController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SearchController;
@@ -163,6 +164,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/mes-demandes-whitelist', [WhitelistController::class, 'index'])
         ->name('whitelist.index');
 
+    Route::get('/mes-commandes', [OrderController::class, 'index'])
+        ->name('orders.index');
+
+    Route::get('/mes-commandes/{order}', [OrderController::class, 'show'])
+        ->name('orders.show');
 });
 
 /*

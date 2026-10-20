@@ -179,6 +179,17 @@
 
     @php
         $homeDrop = $activeDrop ?? $upcomingDrop ?? null;
+        $isUpcoming = false;
+        $countdownTarget = null;
+        $countdownLabel = 'COMPTE À REBOURS';
+        $countdownStatus = 'LIVE SERVER';
+
+        if ($homeDrop) {
+            $isUpcoming = $homeDrop->start_date && $homeDrop->start_date->isFuture();
+            $countdownTarget = $isUpcoming ? $homeDrop->start_date : $homeDrop->end_date;
+            $countdownLabel = $isUpcoming ? 'OUVERTURE DU DROP DANS' : ($homeDrop->isActive() ? 'CLÔTURE DU DROP DANS' : 'SESSION TERMINÉE');
+            $countdownStatus = $isUpcoming ? 'INSCRIPTION WHITELIST EN COURS' : ($homeDrop->isActive() ? 'DROP EN DIRECT // ACHATS OUVERTS' : 'SESSION CLÔTURÉE');
+        }
     @endphp
 
     @if($homeDrop)
@@ -276,62 +287,68 @@
 
                         <div
                             class="countdown-hud-panel font-mono"
-                            data-end="{{ $homeDrop->end_date?->toIso8601String() }}"
+                            data-countdown-target="{{ $countdownTarget?->toIso8601String() }}"
+                            data-is-upcoming="{{ $isUpcoming ? '1' : '0' }}"
                         >
 
-                            <span class="hud-label">
-                                DROP OPENS IN
+                            <span class="hud-label" data-countdown-label>
+                                {{ $countdownLabel }}
                             </span>
 
                             <div class="countdown-digits">
 
                                 <div class="digit-box">
+                                    <span
+                                        class="digit-num"
+                                        data-countdown-days
+                                    >
+                                        00
+                                    </span>
+                                    <span class="digit-unit">
+                                        JOURS
+                                    </span>
+                                </div>
 
+                                <span class="digit-sep">:</span>
+
+                                <div class="digit-box">
                                     <span
                                         class="digit-num"
                                         data-countdown-hours
                                     >
                                         00
                                     </span>
-
                                     <span class="digit-unit">
-                                        HOURS
+                                        HEURES
                                     </span>
-
                                 </div>
 
                                 <span class="digit-sep">:</span>
 
                                 <div class="digit-box">
-
                                     <span
                                         class="digit-num"
                                         data-countdown-minutes
                                     >
                                         00
                                     </span>
-
                                     <span class="digit-unit">
                                         MINUTES
                                     </span>
-
                                 </div>
 
                                 <span class="digit-sep">:</span>
 
                                 <div class="digit-box">
-
                                     <span
                                         class="digit-num text-accent"
                                         data-countdown-seconds
                                     >
                                         00
                                     </span>
-
                                     <span class="digit-unit">
-                                        SECONDS
+                                        SECONDES
                                     </span>
-
                                 </div>
 
                             </div>
@@ -341,7 +358,7 @@
                                 data-countdown-status
                             >
                                 <span class="dot-red-pulse">●</span>
-                                LIVE SERVER
+                                <span class="status-text">{{ $countdownStatus }}</span>
                             </div>
 
                         </div>
@@ -358,11 +375,44 @@
 
 
     {{-- =========================================================
-         04. JOURNAL
-         Cette section reste statique tant que le Journal
-         n'est pas branché au backend.
+         03.5 BRAND SHOWCASE / MAQUETTE DE MARQUE
     ========================================================== --}}
+    <section class="section-brand-showcase">
+        <div class="container-home">
+            <div class="brand-showcase-box">
+                <div class="brand-showcase-meta font-mono">
+                    <span class="dot-red">■</span>
+                    SYS.BRAND // ARCHIVE & MANIFESTE VISUEL
+                    <span class="rule-line"></span>
+                </div>
 
+                <div class="brand-showcase-media">
+                    @if(file_exists(public_path('images/brand/noad-brand-mockup.png')))
+                        <img src="{{ asset('images/brand/noad-brand-mockup.png') }}" alt="NOAD Brand Mockup" class="brand-mockup-img">
+                    @elseif(file_exists(public_path('images/brand/noad-brand-mockup.jpg')))
+                        <img src="{{ asset('images/brand/noad-brand-mockup.jpg') }}" alt="NOAD Brand Mockup" class="brand-mockup-img">
+                    @else
+                        {{-- CADRE RÉSERVÉ À VOTRE MAQUETTE --}}
+                        <div class="brand-mockup-placeholder">
+                            <div class="placeholder-grid-lines"></div>
+                            <div class="placeholder-inner">
+                                <span class="placeholder-tag font-mono">CADRE RÉSERVÉ // MAQUETTE OFFICIELLE NOAD</span>
+                                <h3 class="placeholder-title">DEFEND YOUR PRINCIPLES</h3>
+                                <p class="placeholder-desc">
+                                    Déposez votre maquette dans <code class="font-mono">public/images/brand/noad-brand-mockup.png</code>
+                                    pour afficher ici le visuel de la marque.
+                                </p>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- =========================================================
+         04. JOURNAL
+    ========================================================== --}}
     <section class="section-journal-strip">
 
         <div class="container-home">
@@ -388,15 +438,10 @@
                 </div>
 
                 @if(Route::has('journal.index'))
-
-                    
-                        <a href="{{ route('journal.index') }}"
-                        class="journal-top-link font-mono"
-                    >
-                        LIRE L'ARTICLE
+                    <a href="{{ route('journal.index') }}" class="journal-top-link font-mono">
+                        VOIR TOUS LES ARTICLES
                         <span class="arrow">→</span>
                     </a>
-
                 @endif
 
             </div>
@@ -407,8 +452,10 @@
 
                     <div
                         class="card-thumb"
-                        style="background-image: url('{{ asset('images/journal/journal-01.jpg') }}');"
-                    ></div>
+                        style="background-image: url('{{ asset('images/journal/journal-01.jpg') }}'), linear-gradient(135deg, #220b0b 0%, #0a0a0a 100%);"
+                    >
+                        <span class="thumb-badge font-mono">01 // MANIFESTE</span>
+                    </div>
 
                     <div class="card-body">
 
@@ -427,15 +474,10 @@
                         </p>
 
                         @if(Route::has('journal.show'))
-
-                            
-                                <a href="{{ route('journal.show', 1) }}"
-                                class="post-link font-mono"
-                            >
+                            <a href="{{ route('journal.show', 1) }}" class="post-link font-mono">
                                 READ MORE
                                 <span class="arrow">→</span>
                             </a>
-
                         @endif
 
                     </div>
@@ -447,8 +489,10 @@
 
                     <div
                         class="card-thumb"
-                        style="background-image: url('{{ asset('images/journal/journal-02.jpg') }}');"
-                    ></div>
+                        style="background-image: url('{{ asset('images/journal/journal-02.jpg') }}'), linear-gradient(135deg, #0d1522 0%, #0a0a0a 100%);"
+                    >
+                        <span class="thumb-badge font-mono">02 // TERRACE SUB-CULTURE</span>
+                    </div>
 
                     <div class="card-body">
 
@@ -461,16 +505,16 @@
                             PAST, PRESENT, FUTURE
                         </h3>
 
-                        @if(Route::has('journal.show'))
+                        <p class="post-snippet">
+                            From the terraces of 80s Britain to technical Italian sportswear.
+                            The subcultural heritage shaping NOAD's identity.
+                        </p>
 
-                            
-                                <a href="{{ route('journal.show', 2) }}"
-                                class="post-link font-mono"
-                            >
+                        @if(Route::has('journal.show'))
+                            <a href="{{ route('journal.show', 2) }}" class="post-link font-mono">
                                 READ MORE
                                 <span class="arrow">→</span>
                             </a>
-
                         @endif
 
                     </div>
@@ -482,8 +526,10 @@
 
                     <div
                         class="card-thumb"
-                        style="background-image: url('{{ asset('images/journal/journal-03.jpg') }}');"
-                    ></div>
+                        style="background-image: url('{{ asset('images/journal/journal-03.jpg') }}'), linear-gradient(135deg, #161616 0%, #0a0a0a 100%);"
+                    >
+                        <span class="thumb-badge font-mono">03 // SAVOIR-FAIRE</span>
+                    </div>
 
                     <div class="card-body">
 
@@ -495,16 +541,16 @@
                             QUALITY OVER TRENDS
                         </h3>
 
-                        @if(Route::has('journal.show'))
+                        <p class="post-snippet">
+                            Why heavyweight cotton, reinforced stitching, and limited drops
+                            outweigh fleeting trends and fast-fashion mass production.
+                        </p>
 
-                            
-                                <a href="{{ route('journal.show', 3) }}"
-                                class="post-link font-mono"
-                            >
+                        @if(Route::has('journal.show'))
+                            <a href="{{ route('journal.show', 3) }}" class="post-link font-mono">
                                 READ MORE
                                 <span class="arrow">→</span>
                             </a>
-
                         @endif
 
                     </div>
@@ -1436,6 +1482,94 @@ document.addEventListener('DOMContentLoaded', function () {
         font-size: 8px;
     }
 
+    /* BRAND SHOWCASE / MAQUETTE */
+    .section-brand-showcase {
+        padding: 60px 0;
+        border-bottom: 1px solid #1a1a1a;
+    }
+
+    .brand-showcase-box {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: #0d0d0d;
+        padding: 24px;
+        position: relative;
+    }
+
+    .brand-showcase-meta {
+        font-size: 10px;
+        letter-spacing: 0.15em;
+        color: #888888;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+
+    .brand-showcase-meta .rule-line {
+        flex: 1;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .brand-showcase-media {
+        width: 100%;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .brand-mockup-img {
+        width: 100%;
+        height: auto;
+        display: block;
+        object-fit: cover;
+    }
+
+    .brand-mockup-placeholder {
+        min-height: 380px;
+        background: radial-gradient(circle at center, #181818 0%, #0a0a0a 100%);
+        border: 1px dashed rgba(255, 255, 255, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 40px 20px;
+        position: relative;
+    }
+
+    .placeholder-inner {
+        max-width: 600px;
+    }
+
+    .placeholder-tag {
+        display: block;
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        color: #d32f2f;
+        margin-bottom: 12px;
+    }
+
+    .placeholder-title {
+        font-size: 28px;
+        font-weight: 900;
+        letter-spacing: 0.05em;
+        color: #ffffff;
+        margin: 0 0 12px;
+    }
+
+    .placeholder-desc {
+        font-size: 13px;
+        color: #777777;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    .placeholder-desc code {
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.08);
+        padding: 3px 6px;
+        font-size: 12px;
+    }
+
     .section-journal-strip {
         padding: 80px 0;
         border-bottom: 1px solid #1a1a1a;
@@ -1491,6 +1625,20 @@ document.addEventListener('DOMContentLoaded', function () {
         background-size: cover;
         background-position: center;
         background-color: #161616;
+        display: flex;
+        align-items: flex-end;
+        padding: 12px;
+        position: relative;
+    }
+
+    .thumb-badge {
+        font-size: 9px;
+        letter-spacing: 0.15em;
+        color: #d32f2f;
+        background: rgba(10, 10, 10, 0.85);
+        padding: 4px 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        text-transform: uppercase;
     }
 
     .journal-card .card-body {

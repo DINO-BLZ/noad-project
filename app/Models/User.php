@@ -52,4 +52,9 @@ class User extends Authenticatable
     {
         return $this->approvedDropWhitelists()->where('drop_id', $drop->id)->exists();
     }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
 }

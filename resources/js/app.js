@@ -43,37 +43,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /*
     |--------------------------------------------------------------------------
-    | Theme
+    | Theme : Mode sombre permanent (nettoyage de l'ancien mode clair)
     |--------------------------------------------------------------------------
     */
-
-    const html = document.documentElement;
-    const savedTheme = localStorage.getItem("noad-theme");
-
-    if (savedTheme) {
-        html.setAttribute("data-theme", savedTheme);
-    }
-
-    const themeToggle = document.getElementById("theme-toggle");
-
-    if (themeToggle) {
-        themeToggle.addEventListener("click", () => {
-
-            const current =
-                html.getAttribute("data-theme") === "light"
-                    ? "light"
-                    : "dark";
-
-            const next =
-                current === "light"
-                    ? "dark"
-                    : "light";
-
-            html.setAttribute("data-theme", next);
-
-            localStorage.setItem("noad-theme", next);
-        });
-    }
+    localStorage.removeItem("noad-theme");
+    document.documentElement.removeAttribute("data-theme");
 
 
     initializeSearch();
@@ -722,80 +696,75 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /*
     |--------------------------------------------------------------------------
-    | Compte à rebours prochain Drop
+    | Compte à rebours dynamique Drop (HUD Panel & Home Drop)
     |--------------------------------------------------------------------------
     */
+    const hudPanel = document.querySelector(".countdown-hud-panel");
 
-    const countdownEl =
-        document.querySelector(
-            ".home-drop__countdown"
-        );
+    if (hudPanel) {
+        const rawTarget = hudPanel.dataset.countdownTarget || hudPanel.dataset.end;
 
+        if (rawTarget) {
+            const targetTime = new Date(rawTarget).getTime();
+            const daysEl = hudPanel.querySelector("[data-countdown-days]");
+            const hoursEl = hudPanel.querySelector("[data-countdown-hours]");
+            const minutesEl = hudPanel.querySelector("[data-countdown-minutes]");
+            const secondsEl = hudPanel.querySelector("[data-countdown-seconds]");
+            const statusEl = hudPanel.querySelector("[data-countdown-status] .status-text") || hudPanel.querySelector("[data-countdown-status]");
+            const labelEl = hudPanel.querySelector("[data-countdown-label]");
+            const isUpcoming = hudPanel.dataset.isUpcoming === "1";
 
-    if (countdownEl) {
+            const updateHudCountdown = () => {
+                const now = Date.now();
+                const diff = targetTime - now;
 
-        const target =
-            new Date(
-                countdownEl.dataset.target
-            ).getTime();
+                if (diff <= 0) {
+                    if (daysEl) daysEl.textContent = "00";
+                    if (hoursEl) hoursEl.textContent = "00";
+                    if (minutesEl) minutesEl.textContent = "00";
+                    if (secondsEl) secondsEl.textContent = "00";
 
+                    if (labelEl) {
+                        labelEl.textContent = isUpcoming ? "DROP MAINTENANT OUVERT" : "DROP CLÔTURÉ";
+                    }
+                    if (statusEl) {
+                        statusEl.textContent = isUpcoming ? "DISPONIBLE EN BOUTIQUE" : "SESSION TERMINÉE";
+                    }
+                    return;
+                }
 
-        const updateCountdown = () => {
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                const minutes = Math.floor((diff / (1000 * 60)) % 60);
+                const seconds = Math.floor((diff / 1000) % 60);
 
-            const diff =
-                target - Date.now();
+                if (daysEl) daysEl.textContent = String(days).padStart(2, "0");
+                if (hoursEl) hoursEl.textContent = String(hours).padStart(2, "0");
+                if (minutesEl) minutesEl.textContent = String(minutes).padStart(2, "0");
+                if (secondsEl) secondsEl.textContent = String(seconds).padStart(2, "0");
+            };
 
-
-            if (diff <= 0) {
-
-                countdownEl.textContent =
-                    "Disponible maintenant";
-
-                return;
-            }
-
-
-            const days =
-                Math.floor(
-                    diff /
-                    (1000 * 60 * 60 * 24)
-                );
-
-
-            const hours =
-                Math.floor(
-                    (diff /
-                        (1000 * 60 * 60)) %
-                    24
-                );
-
-
-            const minutes =
-                Math.floor(
-                    (diff /
-                        (1000 * 60)) %
-                    60
-                );
-
-
-            const seconds =
-                Math.floor(
-                    (diff / 1000) %
-                    60
-                );
-
-
-            countdownEl.textContent =
-                `${days}j ${hours}h ${minutes}m ${seconds}s`;
-        };
-
-
-        updateCountdown();
-
-        setInterval(
-            updateCountdown,
-            1000
-        );
+            updateHudCountdown();
+            setInterval(updateHudCountdown, 1000);
+        }
     }
 
+    const legacyCountdownEl = document.querySelector(".home-drop__countdown");
+    if (legacyCountdownEl && legacyCountdownEl.dataset.target) {
+        const legacyTarget = new Date(legacyCountdownEl.dataset.target).getTime();
+        const updateLegacy = () => {
+            const diff = legacyTarget - Date.now();
+            if (diff <= 0) {
+                legacyCountdownEl.textContent = "Disponible maintenant";
+                return;
+            }
+            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const m = Math.floor((diff / (1000 * 60)) % 60);
+            const s = Math.floor((diff / 1000) % 60);
+            legacyCountdownEl.textContent = `${d}j ${h}h ${m}m ${s}s`;
+        };
+        updateLegacy();
+        setInterval(updateLegacy, 1000);
+    }
 });
