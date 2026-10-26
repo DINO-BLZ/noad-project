@@ -10,37 +10,64 @@ use Illuminate\Support\Facades\DB;
 
 class UpdateCartAction
 {
+    private const MAX_TRANSACTION_ATTEMPTS = 3;
+
     public function __construct(private CartService $cartService) {}
 
     public function execute(int $variantId, int $quantity): array
     {
         return DB::transaction(function () use ($variantId, $quantity) {
-            $variant = $this->cartService->withRowLock(Variant::with('product'))
+            /*
+             * 1. Verrouillage de la variante.
+             */
+            $variant = $this->cartService
+                ->withRowLock(Variant::with('product'))
                 ->findOrFail($variantId);
 
             if (! $variant->product) {
                 abort(404, 'Produit introuvable pour cette variante.');
             }
 
+            /*
+             * 2. Identification du propriétaire du panier.
+             */
             [$userId, $sessionId] = $this->cartService->owner();
 
+            /*
+             * 3. Verrouillage de la ligne du panier après la variante.
+             */
             $cartItem = $this->cartService->withRowLock(
-                CartItem::forOwner($userId, $sessionId)->where('variant_id', $variant->id)
+                CartItem::forOwner($userId, $sessionId)
+                    ->where('variant_id', $variant->id)
             )->first();
 
             if (! $cartItem) {
-                abort(403, 'Vous ne pouvez pas modifier le panier d\'un autre utilisateur.');
+                abort(
+                    403,
+                    'Vous ne pouvez pas modifier le panier d\'un autre utilisateur.'
+                );
             }
 
             if (Auth::check() && $cartItem->user_id !== Auth::id()) {
-                abort(403, 'Vous ne pouvez pas modifier le panier d\'un autre utilisateur.');
+                abort(
+                    403,
+                    'Vous ne pouvez pas modifier le panier d\'un autre utilisateur.'
+                );
             }
 
+            /*
+             * 4. Vérification du stock.
+             */
             if ($quantity > $variant->stock) {
                 abort(422, 'Quantité demandée indisponible.');
             }
 
-            $cartItem->update(['quantity' => $quantity]);
+            /*
+             * 5. Mise à jour de la quantité.
+             */
+            $cartItem->update([
+                'quantity' => $quantity,
+            ]);
 
             $subtotal = $variant->product->price * $quantity;
             $summary = $this->cartService->summary();
@@ -50,6 +77,6 @@ class UpdateCartAction
                 'total' => $summary['total'],
                 'count' => $summary['count'],
             ];
-        });
+        }, self::MAX_TRANSACTION_ATTEMPTS);
     }
 }

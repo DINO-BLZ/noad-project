@@ -782,12 +782,12 @@
                     </div>
 
 
-                    {{-- WILAYA --}}
+                    {{-- WILAYA & COMMUNE --}}
 
                     <div class="dest-field-block">
 
                         <span class="dest-sub-label">
-                            WILAYA
+                            WILAYA &amp; COMMUNE
                         </span>
 
                         <div class="wilaya-highlight-box">
@@ -796,10 +796,32 @@
 
                                 <span class="wilaya-name">
                                     {{ $order->wilaya ?? 'WILAYA NON RENSEIGNÉE' }}
+                                    @if($order->commune)
+                                        — {{ $order->commune }}
+                                    @endif
                                 </span>
 
                             </div>
 
+                        </div>
+
+                    </div>
+
+                    {{-- MODE DE LIVRAISON --}}
+
+                    <div class="dest-field-block">
+
+                        <span class="dest-sub-label">
+                            MODE &amp; FRAIS D'EXPÉDITION (YALIDINE / ZR)
+                        </span>
+
+                        <div style="margin-top: 6px; display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #111; border: 1px solid #282828;">
+                            <span style="font-family: monospace; font-size: 11px; font-weight: 700; color: #fff;">
+                                {{ $order->delivery_type === 'desk' ? '🏢 STOP-DESK (BUREAU)' : '🏠 À DOMICILE' }}
+                            </span>
+                            <span style="font-family: monospace; font-size: 11px; color: var(--accent, #b02e26); font-weight: 700;">
+                                FRAIS : {{ number_format((float) $order->shipping_cost, 0, ',', ' ') }} DA
+                            </span>
                         </div>
 
                     </div>

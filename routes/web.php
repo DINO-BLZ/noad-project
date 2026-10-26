@@ -309,6 +309,9 @@ Route::prefix('admin')
         Route::get('/commandes', [AdminOrderController::class, 'index'])
             ->name('orders.index');
 
+        Route::get('/commandes/export-manifest', [AdminOrderController::class, 'exportManifest'])
+            ->name('orders.export-manifest');
+
         Route::get('/commandes/{order}', [AdminOrderController::class, 'show'])
             ->name('orders.show');
 

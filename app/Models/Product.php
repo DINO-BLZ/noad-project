@@ -119,6 +119,28 @@ class Product extends Model
         return $this->category_id !== null;
     }
 
+    /**
+     * Rend la synchronisation Scout tolérante aux pannes si le cluster
+     * de recherche (Elasticsearch) est indisponible ou hors-ligne.
+     */
+    public function syncMakeSearchable($models)
+    {
+        try {
+            return parent::syncMakeSearchable($models);
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    public function syncRemoveFromSearch($models)
+    {
+        try {
+            return parent::syncRemoveFromSearch($models);
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Nettoyage des fichiers

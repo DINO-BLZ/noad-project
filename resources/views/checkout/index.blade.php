@@ -5,6 +5,9 @@
 @section('content')
 
 <div class="checkout-confirmation-page">
+@php
+    $wilayas = $wilayas ?? (new \App\Services\AlgeriaShippingService())->all();
+@endphp
 
     {{-- =========================================================
          HEADER
@@ -173,10 +176,95 @@
                     </div>
 
 
+                    {{-- 01. Mode de livraison --}}
+                    <div class="checkout-field">
+                        <label>
+                            MODE DE LIVRAISON (YALIDINE / ZR EXPRESS) *
+                        </label>
+
+                        <div class="delivery-type-grid">
+                            <label class="delivery-type-card" for="delivery_home">
+                                <input
+                                    type="radio"
+                                    id="delivery_home"
+                                    name="delivery_type"
+                                    value="home"
+                                    {{ old('delivery_type', 'home') === 'home' ? 'checked' : '' }}
+                                >
+                                <div class="delivery-card-content">
+                                    <span class="delivery-badge-indicator">🏠 LIVRAISON À DOMICILE</span>
+                                    <span class="delivery-card-desc">Remise en main propre à votre porte</span>
+                                </div>
+                            </label>
+
+                            <label class="delivery-type-card" for="delivery_desk">
+                                <input
+                                    type="radio"
+                                    id="delivery_desk"
+                                    name="delivery_type"
+                                    value="desk"
+                                    {{ old('delivery_type') === 'desk' ? 'checked' : '' }}
+                                >
+                                <div class="delivery-card-content">
+                                    <span class="delivery-badge-indicator">🏢 STOP-DESK (BUREAU)</span>
+                                    <span class="delivery-card-desc">Récupération au centre Yalidine / ZR de votre commune</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- 02. Sélecteur de Wilaya --}}
+                    <div class="checkout-field">
+
+                        <label for="wilaya">
+                            WILAYA *
+                        </label>
+
+                        <select
+                            id="wilaya"
+                            name="wilaya"
+                            required
+                            class="checkout-select"
+                        >
+                            <option value="">-- CHOISISSEZ VOTRE WILAYA (1 à 58) --</option>
+                            @foreach($wilayas as $w)
+                                <option
+                                    value="{{ $w['name'] }}"
+                                    data-code="{{ $w['code'] }}"
+                                    data-zone="{{ $w['zone'] }}"
+                                    {{ old('wilaya') === $w['name'] ? 'selected' : '' }}
+                                >
+                                    {{ $w['name'] }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                    </div>
+
+                    {{-- 03. Sélecteur de Commune (en cascade) --}}
+                    <div class="checkout-field">
+
+                        <label for="commune">
+                            COMMUNE *
+                        </label>
+
+                        <select
+                            id="commune"
+                            name="commune"
+                            required
+                            class="checkout-select"
+                            data-old-val="{{ old('commune') }}"
+                        >
+                            <option value="">-- SÉLECTIONNEZ D'ABORD UNE WILAYA --</option>
+                        </select>
+
+                    </div>
+
+                    {{-- 04. Adresse complète --}}
                     <div class="checkout-field">
 
                         <label for="address">
-                            ADRESSE *
+                            ADRESSE COMPLÈTE *
                         </label>
 
                         <input
@@ -186,25 +274,7 @@
                             value="{{ old('address') }}"
                             required
                             autocomplete="street-address"
-                            placeholder="Ex : Cité 2000 Logts, bâtiment 12"
-                        >
-
-                    </div>
-
-
-                    <div class="checkout-field">
-
-                        <label for="wilaya">
-                            WILAYA *
-                        </label>
-
-                        <input
-                            type="text"
-                            id="wilaya"
-                            name="wilaya"
-                            value="{{ old('wilaya') }}"
-                            required
-                            placeholder="Ex : Alger"
+                            placeholder="Ex : Cité 2000 Logts, Bâtiment 12, ou Agence Yalidine"
                         >
 
                     </div>
@@ -412,9 +482,21 @@
                             LIVRAISON
                         </span>
 
-                        <span>
+                        <span id="shipping-fee-status">
                             À CONFIRMER AVANT EXPÉDITION
                         </span>
+
+                    </div>
+
+                    <div class="checkout-summary-row shipping-estimate-row" id="shipping-estimate-row" style="display: none;">
+
+                        <span>
+                            ESTIMATION TRANSPORT (YALIDINE/ZR)
+                        </span>
+
+                        <strong id="shipping-estimate-amount" style="color: var(--accent, #b02e26);">
+                            0 DA
+                        </strong>
 
                     </div>
 
@@ -427,10 +509,21 @@
                         TOTAL ARTICLES, HORS LIVRAISON
                     </span>
 
-                    <strong>
+                    <strong id="summary-items-total" data-items-total="{{ $total }}">
                         {{ number_format($total, 0, ',', ' ') }} DA
                     </strong>
 
+                </div>
+
+                <div class="checkout-summary-final-box" id="summary-final-box" style="display: none;">
+                    <div class="final-box-inner">
+                        <span class="final-box-label">
+                            TOTAL ESTIMÉ À LA LIVRAISON (COD)
+                        </span>
+                        <strong id="summary-grand-total" class="final-box-val">
+                            {{ number_format($total, 0, ',', ' ') }} DA
+                        </strong>
+                    </div>
                 </div>
 
 
@@ -955,6 +1048,243 @@
 
 }
 
+/* Selects */
+.checkout-field select {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--border, #242424);
+    background: #080808;
+    color: #fff;
+    padding: 16px;
+    outline: none;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color .2s ease;
+}
+
+.checkout-field select:focus {
+    border-color: #777;
+}
+
+.checkout-field select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Grille de type de livraison */
+.delivery-type-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+@media (max-width: 600px) {
+    .delivery-type-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.delivery-type-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    border: 1px solid var(--border, #242424);
+    background: #080808;
+    padding: 16px;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+
+.delivery-type-card:hover {
+    border-color: #555;
+}
+
+.delivery-type-card:has(input:checked) {
+    border-color: var(--accent, #b02e26);
+    background: rgba(176, 46, 38, 0.05);
+}
+
+.delivery-type-card input[type="radio"] {
+    margin-top: 3px;
+    accent-color: var(--accent, #b02e26);
+    width: auto;
+}
+
+.delivery-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.delivery-badge-indicator {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: .05em;
+}
+
+.delivery-card-desc {
+    font-size: 11px;
+    color: #777;
+    line-height: 1.4;
+}
+
+.checkout-summary-final-box {
+    margin-top: 16px;
+    padding: 16px;
+    background: rgba(176, 46, 38, 0.08);
+    border: 1px solid rgba(176, 46, 38, 0.35);
+}
+
+.final-box-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.final-box-label {
+    font-family: monospace;
+    font-size: 10px;
+    letter-spacing: .1em;
+    color: #ddd;
+}
+
+.final-box-val {
+    font-family: monospace;
+    font-size: 17px;
+    font-weight: 800;
+    color: #fff;
+}
+
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const wilayasData = @json($wilayas);
+    const wilayaSelect = document.getElementById('wilaya');
+    const communeSelect = document.getElementById('commune');
+    const oldCommune = communeSelect ? communeSelect.dataset.oldVal : '';
+    const deliveryTypeInputs = document.querySelectorAll('input[name="delivery_type"]');
+    const shippingEstimateRow = document.getElementById('shipping-estimate-row');
+    const shippingEstimateAmount = document.getElementById('shipping-estimate-amount');
+    const summaryFinalBox = document.getElementById('summary-final-box');
+    const summaryGrandTotal = document.getElementById('summary-grand-total');
+    const itemsTotal = parseFloat(document.getElementById('summary-items-total')?.dataset.itemsTotal || '0');
+
+    const zoneFees = {
+        'alger': { home: 500, desk: 350 },
+        'centre': { home: 600, desk: 400 },
+        'nord': { home: 750, desk: 450 },
+        'est_ouest': { home: 800, desk: 500 },
+        'hauts_plateaux': { home: 850, desk: 550 },
+        'sahara_nord': { home: 1050, desk: 700 },
+        'grand_sud': { home: 1350, desk: 900 }
+    };
+
+    function updateCommunes() {
+        if (!wilayaSelect || !communeSelect) return;
+        const selectedVal = wilayaSelect.value;
+        communeSelect.innerHTML = '';
+
+        if (!selectedVal) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = '-- SÉLECTIONNEZ D\'ABORD UNE WILAYA --';
+            communeSelect.appendChild(opt);
+            communeSelect.disabled = true;
+            updateShippingEstimate(0);
+            return;
+        }
+
+        communeSelect.disabled = false;
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '-- CHOISISSEZ VOTRE COMMUNE --';
+        communeSelect.appendChild(defaultOpt);
+
+        let found = null;
+        for (const key in wilayasData) {
+            if (wilayasData[key].name === selectedVal || wilayasData[key].code === selectedVal) {
+                found = wilayasData[key];
+                break;
+            }
+        }
+
+        if (found && Array.isArray(found.communes)) {
+            found.communes.forEach(function (communeName) {
+                const opt = document.createElement('option');
+                opt.value = communeName;
+                opt.textContent = communeName;
+                if (oldCommune && oldCommune === communeName) {
+                    opt.selected = true;
+                }
+                communeSelect.appendChild(opt);
+            });
+        }
+
+        calculateFee(found);
+    }
+
+    function getSelectedDeliveryType() {
+        const checked = document.querySelector('input[name="delivery_type"]:checked');
+        return checked ? checked.value : 'home';
+    }
+
+    function calculateFee(foundWilaya) {
+        if (!foundWilaya) {
+            const selectedVal = wilayaSelect ? wilayaSelect.value : '';
+            for (const key in wilayasData) {
+                if (wilayasData[key].name === selectedVal || wilayasData[key].code === selectedVal) {
+                    foundWilaya = wilayasData[key];
+                    break;
+                }
+            }
+        }
+
+        if (!foundWilaya) {
+            updateShippingEstimate(0);
+            return;
+        }
+
+        const type = getSelectedDeliveryType();
+        const zone = foundWilaya.zone || 'nord';
+        const fees = zoneFees[zone] || zoneFees['nord'];
+        const fee = (type === 'desk') ? fees.desk : fees.home;
+
+        updateShippingEstimate(fee);
+    }
+
+    function updateShippingEstimate(fee) {
+        if (!shippingEstimateRow || !shippingEstimateAmount || !summaryFinalBox || !summaryGrandTotal) return;
+
+        if (fee > 0) {
+            shippingEstimateRow.style.display = 'flex';
+            shippingEstimateAmount.textContent = fee.toLocaleString('fr-FR') + ' DA';
+            summaryFinalBox.style.display = 'block';
+            const grandTotal = itemsTotal + fee;
+            summaryGrandTotal.textContent = grandTotal.toLocaleString('fr-FR') + ' DA';
+        } else {
+            shippingEstimateRow.style.display = 'none';
+            summaryFinalBox.style.display = 'none';
+        }
+    }
+
+    if (wilayaSelect) {
+        wilayaSelect.addEventListener('change', updateCommunes);
+    }
+
+    deliveryTypeInputs.forEach(function (input) {
+        input.addEventListener('change', function () {
+            calculateFee(null);
+        });
+    });
+
+    if (wilayaSelect && wilayaSelect.value) {
+        updateCommunes();
+    }
+});
+</script>
 
 @endsection

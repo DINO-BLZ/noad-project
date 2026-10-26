@@ -8,6 +8,7 @@ use App\Exceptions\CartChangedDuringCheckoutException;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\Variant;
+use App\Services\AlgeriaShippingService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -108,12 +109,18 @@ class CreateOrderAction
 
                     /*
                      * 4. Verrouillage du panier après les variantes.
+                     *
+                     * Le tri est effectué dans la requête SQL,
+                     * avant get(), afin de demander les verrous
+                     * dans un ordre déterministe :
+                     * variant_id, puis id.
                      */
                     $cartItems = $this->withRowLock(
                         CartItem::forOwner($userId, $sessionId)
                     )
+                        ->orderBy('variant_id')
+                        ->orderBy('id')
                         ->get()
-                        ->sortBy('variant_id')
                         ->values();
 
                     $lockedCartState = $cartItems
@@ -294,12 +301,19 @@ class CreateOrderAction
                     /*
                      * 8. Création de la commande.
                      */
+                    $deliveryType = $data['delivery_type'] ?? 'home';
+                    $shippingCost = (new AlgeriaShippingService)
+                        ->calculateShippingFee($data['wilaya'] ?? null, $deliveryType);
+
                     $order = Order::create([
                         'user_id' => $userId,
                         'full_name' => $data['full_name'],
                         'phone' => $data['phone'],
                         'address' => $data['address'],
                         'wilaya' => $data['wilaya'],
+                        'commune' => $data['commune'] ?? null,
+                        'delivery_type' => $deliveryType,
+                        'shipping_cost' => $shippingCost,
                         'payment_method' => $data['payment_method'],
                         'status' => OrderStatus::Pending,
                         'checkout_token' => $checkoutToken,

@@ -67,4 +67,66 @@ class OrderController extends Controller
 
         return back()->with('success', 'Statut de la commande mis à jour.');
     }
+
+    /**
+     * Exporte les commandes prêtes à expédier au format CSV pour Yalidine / ZR Express.
+     */
+    public function exportManifest(Request $request)
+    {
+        $orders = Order::query()
+            ->with('items')
+            ->whereIn('status', [OrderStatus::Pending, OrderStatus::Paid])
+            ->latest()
+            ->get();
+
+        $filename = 'yalidine_zr_manifest_'.now()->format('Y-m-d_His').'.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () use ($orders) {
+            $handle = fopen('php://output', 'w');
+            fwrite($handle, "\xEF\xBB\xBF");
+
+            fputcsv($handle, [
+                'Reference_Commande',
+                'Nom_Destinataire',
+                'Telephone',
+                'Wilaya',
+                'Commune',
+                'Adresse',
+                'Type_Livraison',
+                'Montant_COD',
+                'Designation_Articles',
+                'Remarque',
+            ], ';');
+
+            foreach ($orders as $order) {
+                $articles = $order->items->map(function ($item) {
+                    return ($item->product_name ?? 'Article').' ('.($item->variant_size ?? '').' x'.$item->quantity.')';
+                })->implode(' + ');
+
+                $wilayaClean = preg_replace('/^[0-9]+\s*-\s*/', '', (string) $order->wilaya);
+
+                fputcsv($handle, [
+                    $order->formatted_reference,
+                    $order->full_name,
+                    $order->phone,
+                    $wilayaClean,
+                    $order->commune ?? $wilayaClean,
+                    $order->address,
+                    $order->delivery_type === 'desk' ? 'Stopdesk' : 'Domicile',
+                    (int) $order->total + (int) $order->shipping_cost,
+                    $articles,
+                    'Paiement à la livraison (COD)',
+                ], ';');
+            }
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }

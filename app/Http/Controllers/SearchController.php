@@ -11,9 +11,12 @@ class SearchController extends Controller
     public function index(Request $request)
     {
         $query = trim((string) $request->input('q', ''));
+        $scoutDriver = config('scout.driver');
 
         if ($query === '') {
             $products = Product::query()->whereRaw('0 = 1')->paginate(12);
+        } elseif ($scoutDriver === 'null' || empty($scoutDriver)) {
+            $products = $this->databaseSearch($query)->paginate(12)->withQueryString();
         } else {
             try {
                 $products = Product::search($query)->paginate(12)->withQueryString();
@@ -56,11 +59,17 @@ class SearchController extends Controller
             return response()->json([]);
         }
 
-        try {
-            $products = Product::search($query)->take(5)->get();
-        } catch (Throwable $exception) {
-            report($exception);
+        $scoutDriver = config('scout.driver');
+
+        if ($scoutDriver === 'null' || empty($scoutDriver)) {
             $products = $this->databaseSearch($query)->take(5)->get();
+        } else {
+            try {
+                $products = Product::search($query)->take(5)->get();
+            } catch (Throwable $exception) {
+                report($exception);
+                $products = $this->databaseSearch($query)->take(5)->get();
+            }
         }
 
         return response()->json(

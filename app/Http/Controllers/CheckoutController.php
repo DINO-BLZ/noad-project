@@ -7,6 +7,7 @@ use App\Http\Requests\CheckoutRequest;
 use App\Mail\OrderConfirmationMail;
 use App\Models\CartItem;
 use App\Models\Order;
+use App\Services\AlgeriaShippingService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -42,7 +43,10 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index');
         }
 
-        return view('checkout.index', compact('items', 'total'));
+        $shippingService = new AlgeriaShippingService;
+        $wilayas = $shippingService->all();
+
+        return view('checkout.index', compact('items', 'total', 'wilayas'));
     }
 
     public function store(CheckoutRequest $request, CreateOrderAction $createOrderAction)

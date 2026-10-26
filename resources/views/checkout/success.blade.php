@@ -203,11 +203,11 @@
                         </span>
 
                         <span class="data-sub">
-                            {{ $order->wilaya }}
+                            {{ $order->commune ? $order->commune . ', ' : '' }}{{ $order->wilaya }}
                         </span>
 
                         <span class="delivery-badge">
-                            LIVRAISON À DOMICILE
+                            {{ $order->delivery_type === 'desk' ? 'RÉCUPÉRATION BUREAU (STOP-DESK)' : 'LIVRAISON À DOMICILE' }}
                         </span>
 
                     </div>

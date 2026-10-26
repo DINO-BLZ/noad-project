@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 class Order extends Model
 {
     protected $fillable = [
-        'user_id', 'full_name', 'phone', 'address', 'wilaya',
+        'user_id', 'full_name', 'phone', 'address', 'wilaya', 'commune',
+        'delivery_type', 'shipping_cost', 'tracking_number',
         'payment_method', 'status', 'payment_status', 'total', 'checkout_token',
         'delivered_at',
     ];
@@ -20,7 +21,16 @@ class Order extends Model
             'status' => OrderStatus::class,
             'payment_status' => PaymentStatus::class,
             'delivered_at' => 'datetime',
+            'shipping_cost' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Libellé lisible du type de livraison.
+     */
+    public function getDeliveryTypeLabelAttribute(): string
+    {
+        return $this->delivery_type === 'desk' ? 'Bureau / Stop-Desk' : 'À Domicile';
     }
 
     /**

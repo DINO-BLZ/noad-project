@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class AddToCartAction
 {
+    private const MAX_TRANSACTION_ATTEMPTS = 3;
+
     public function __construct(private CartService $cartService) {}
 
     public function execute(
@@ -132,6 +134,6 @@ class AddToCartAction
             }
 
             return $this->cartService->summary();
-        });
+        }, self::MAX_TRANSACTION_ATTEMPTS);
     }
 }

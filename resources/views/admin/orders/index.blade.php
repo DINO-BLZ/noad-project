@@ -60,13 +60,14 @@
 
     <div class="head-actions-stack">
 
-        <button
-            type="button"
+        <a
+            href="{{ route('admin.orders.export-manifest') }}"
             class="btn-ops-outline"
+            style="text-decoration: none;"
         >
             <span class="icon">⤓</span>
-            EXPORTER MANIFESTE (.CSV)
-        </button>
+            EXPORTER YALIDINE / ZR (.CSV)
+        </a>
 
         <button
             type="button"
