@@ -124,4 +124,84 @@ class AlgeriaShippingTest extends TestCase
         $this->assertStringContainsString('Domicile', $content);
         $this->assertStringContainsString('12500', $content); // 12000 + 500
     }
+
+    public function test_checkout_rejects_unknown_wilaya(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::create(['name' => 'Streetwear', 'slug' => 'streetwear']);
+        $product = Product::create([
+            'name' => 'Hoodie Tech',
+            'slug' => 'hoodie-tech',
+            'price' => 8500.00,
+            'category_id' => $category->id,
+        ]);
+        $variant = Variant::create([
+            'product_id' => $product->id,
+            'size' => 'L',
+            'stock' => 5,
+        ]);
+        CartItem::create([
+            'user_id' => $user->id,
+            'variant_id' => $variant->id,
+            'quantity' => 1,
+        ]);
+
+        $response = $this->actingAs($user)->post(route('checkout.store'), [
+            'full_name' => 'Test User',
+            'phone' => '0550123456',
+            'address' => 'Unknown address',
+            'wilaya' => '99 - Mars',
+            'commune' => 'Unknown',
+            'delivery_type' => 'home',
+            'payment_method' => 'cod',
+        ]);
+
+        $response->assertSessionHasErrors('wilaya');
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_checkout_rejects_mismatched_commune(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::create(['name' => 'Streetwear', 'slug' => 'streetwear']);
+        $product = Product::create([
+            'name' => 'Hoodie Tech',
+            'slug' => 'hoodie-tech',
+            'price' => 8500.00,
+            'category_id' => $category->id,
+        ]);
+        $variant = Variant::create([
+            'product_id' => $product->id,
+            'size' => 'L',
+            'stock' => 5,
+        ]);
+        CartItem::create([
+            'user_id' => $user->id,
+            'variant_id' => $variant->id,
+            'quantity' => 1,
+        ]);
+
+        $response = $this->actingAs($user)->post(route('checkout.store'), [
+            'full_name' => 'Test User',
+            'phone' => '0550123456',
+            'address' => 'Some address',
+            'wilaya' => '16 - Alger',
+            'commune' => 'Es Senia', // Belongs to Oran, not Alger
+            'delivery_type' => 'home',
+            'payment_method' => 'cod',
+        ]);
+
+        $response->assertSessionHasErrors('commune');
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_order_cod_amount_accessor(): void
+    {
+        $order = new Order([
+            'total' => 4500,
+            'shipping_cost' => 500,
+        ]);
+
+        $this->assertSame(5000.0, $order->cod_amount);
+    }
 }

@@ -118,7 +118,7 @@ class OrderController extends Controller
                     $order->commune ?? $wilayaClean,
                     $order->address,
                     $order->delivery_type === 'desk' ? 'Stopdesk' : 'Domicile',
-                    (int) $order->total + (int) $order->shipping_cost,
+                    (int) $order->cod_amount,
                     $articles,
                     'Paiement à la livraison (COD)',
                 ], ';');

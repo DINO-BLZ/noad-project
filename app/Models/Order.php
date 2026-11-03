@@ -34,6 +34,14 @@ class Order extends Model
     }
 
     /**
+     * Montant total payable en espèces à la livraison (Articles + Livraison).
+     */
+    public function getCodAmountAttribute(): float
+    {
+        return (float) $this->total + (float) $this->shipping_cost;
+    }
+
+    /**
      * Référence de commande normalisée : ND-000012.
      *
      * Format unique utilisé dans toutes les vues et emails.

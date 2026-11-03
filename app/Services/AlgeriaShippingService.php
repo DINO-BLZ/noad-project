@@ -414,6 +414,10 @@ class AlgeriaShippingService
 
         $queryClean = mb_strtolower(trim($query));
 
+        if ($queryClean === 'algiers') {
+            return self::WILAYAS[16];
+        }
+
         foreach (self::WILAYAS as $id => $data) {
             if (
                 mb_strtolower($data['name']) === $queryClean

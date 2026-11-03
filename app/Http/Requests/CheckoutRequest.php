@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Services\AlgeriaShippingService;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CheckoutRequest extends FormRequest
@@ -28,5 +29,35 @@ class CheckoutRequest extends FormRequest
             // le paiement carte activé.
             'payment_method' => 'required|in:cod',
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $shippingService = new AlgeriaShippingService;
+            $wilaya = $this->input('wilaya');
+
+            if ($wilaya !== null && $wilaya !== '') {
+                $found = $shippingService->findWilaya($wilaya);
+                if (! $found) {
+                    $validator->errors()->add('wilaya', 'La wilaya sélectionnée est inconnue.');
+
+                    return;
+                }
+
+                $commune = $this->input('commune');
+                if ($commune !== null && $commune !== '') {
+                    $validCommunes = $shippingService->getCommunesForWilaya($wilaya);
+                    if (! empty($validCommunes)) {
+                        $match = collect($validCommunes)->first(
+                            fn ($c) => mb_strtolower($c) === mb_strtolower($commune)
+                        );
+                        if (! $match) {
+                            $validator->errors()->add('commune', 'La commune ne correspond pas à la wilaya sélectionnée.');
+                        }
+                    }
+                }
+            }
+        });
     }
 }

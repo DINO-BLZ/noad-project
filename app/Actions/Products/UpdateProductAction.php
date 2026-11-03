@@ -101,7 +101,20 @@ class UpdateProductAction
                  * ---------------------------------------------------------
                  * 3. VARIANTES
                  * ---------------------------------------------------------
+                 *
+                 * Les variantes existantes sont TOUTES verrouillées en premier
+                 * par ordre croissant d'identifiant (orderBy('id')).
+                 * Cela garantit l'alignement strict avec l'ordre global des
+                 * verrous du projet (Variants par ID croissant) et élimine
+                 * tout risque d'interblocage (deadlock) avec les commandes
+                 * ou les suppressions concurrentes.
                  */
+                $existingVariants = $product->variants()
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
                 // A. Format "sizes" issu du formulaire Blade (edit.blade.php)
                 if (array_key_exists('sizes', $data) && is_array($data['sizes'])) {
                     foreach ($data['sizes'] as $size => $sizeData) {
@@ -111,22 +124,20 @@ class UpdateProductAction
 
                         $stock = (int) $sizeData['stock'];
 
-                        $variant = $product->variants()
-                            ->where('size', $size)
-                            ->lockForUpdate()
-                            ->first();
+                        $variant = $existingVariants->firstWhere('size', (string) $size);
 
                         if ($variant) {
                             $variant->update([
                                 'stock' => $stock,
                             ]);
                         } elseif ($stock > 0) {
-                            $product->variants()->create([
+                            $newVariant = $product->variants()->create([
                                 'size' => (string) $size,
                                 'stock' => $stock,
                                 'sku' => null,
                                 'color' => '',
                             ]);
+                            $existingVariants->put($newVariant->id, $newVariant);
                         }
                     }
                 }
@@ -137,14 +148,7 @@ class UpdateProductAction
                         $variantId = $variantData['id'] ?? null;
 
                         if ($variantId) {
-                            /*
-                             * Sécurité importante :
-                             * la variante doit appartenir à CE produit.
-                             */
-                            $variant = $product->variants()
-                                ->whereKey($variantId)
-                                ->lockForUpdate()
-                                ->first();
+                            $variant = $existingVariants->get($variantId) ?? $existingVariants->firstWhere('id', $variantId);
 
                             if (! $variant) {
                                 throw ValidationException::withMessages([
@@ -159,12 +163,13 @@ class UpdateProductAction
                                 'color' => $variantData['color'] ?? '',
                             ]);
                         } else {
-                            $product->variants()->create([
+                            $newVariant = $product->variants()->create([
                                 'size' => $variantData['size'],
                                 'stock' => $variantData['stock'],
                                 'sku' => $this->nullableSku($variantData['sku'] ?? null),
                                 'color' => $variantData['color'] ?? '',
                             ]);
+                            $existingVariants->put($newVariant->id, $newVariant);
                         }
                     }
                 }
@@ -173,10 +178,8 @@ class UpdateProductAction
                 $removeVariantIds = $data['remove_variants'] ?? [];
 
                 if (! empty($removeVariantIds)) {
-                    $variantsToRemove = $product->variants()
-                        ->whereIn('id', $removeVariantIds)
-                        ->lockForUpdate()
-                        ->get();
+                    $variantsToRemove = $existingVariants
+                        ->whereIn('id', $removeVariantIds);
 
                     if ($variantsToRemove->count() !== count(array_unique($removeVariantIds))) {
                         throw ValidationException::withMessages([
@@ -328,7 +331,7 @@ class UpdateProductAction
                     'variants',
                     'images',
                 ]);
-            });
+            }, 3);
 
             /*
              * -------------------------------------------------------------
