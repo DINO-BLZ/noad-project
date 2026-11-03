@@ -180,16 +180,24 @@ class Product extends Model
     |--------------------------------------------------------------------------
     | Nettoyage des fichiers
     |--------------------------------------------------------------------------
+    |
+    | La suppression physique des fichiers est gérée par DeleteProductAction
+    | APRÈS le commit de la transaction SQL. Le model event se contente de
+    | supprimer les lignes en base (images galerie) sans toucher au disque,
+    | afin qu'un rollback ne laisse pas de lignes orphelines pointant vers
+    | des fichiers déjà supprimés.
+    |
+    | ProductImage possède un hook deleting qui supprime le fichier physique.
+    | On le désactive ici car la suppression physique est différée au
+    | post-commit dans DeleteProductAction.
     */
 
     protected static function booted()
     {
         static::deleting(function (Product $product) {
-            $product->images->each->delete();
-
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
-            }
+            ProductImage::withoutEvents(function () use ($product) {
+                $product->images()->delete();
+            });
         });
     }
 }

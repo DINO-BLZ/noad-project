@@ -6,44 +6,36 @@ use App\Enums\OrderStatus;
 use App\Models\Product;
 use App\Models\Variant;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class DeleteProductAction
 {
     public function execute(Product $product): void
     {
-        DB::transaction(function () use ($product) {
+        $filesToDelete = [];
+
+        DB::transaction(function () use ($product, &$filesToDelete) {
             /*
              * 1. Verrouiller la ligne du produit en premier.
-             *
-             * Ce verrou sérialise toute opération concurrente sur ce produit
-             * (autre suppression, UpdateProductAction, etc.).
-             *
-             * Il doit être acquis AVANT les variantes pour respecter la
-             * hiérarchie globale des verrous du projet :
-             *
-             *   Product (FOR UPDATE)
-             *     └── Variants (FOR UPDATE, par ID croissant)
-             *
-             * UpdateProductAction doit également acquérir ce verrou en premier
-             * pour que la sérialisation soit effective (voir UpdateProductAction).
-             *
-             * Pourquoi ce verrou est nécessaire même si le produit n'a aucune
-             * variante : sans lui, deux suppressions concurrentes du même produit
-             * sans variantes passeraient toutes les deux la vérification
-             * hasActiveOrders avant de supprimer le produit.
-             *
-             * De plus, sans ce verrou, UpdateProductAction pourrait créer une
-             * nouvelle variante entre la lecture des variantes existantes et la
-             * vérification des commandes actives, rendant la vérification
-             * potentiellement incomplète.
-             *
-             * CreateOrderAction ne verrouille jamais Product, donc ce verrou
-             * ne crée aucun cycle.
              */
             $lockedProduct = Product::query()
                 ->lockForUpdate()
                 ->findOrFail($product->id);
+
+            /*
+             * Collecter les fichiers à supprimer pour ne les effacer
+             * physiquement qu'après le commit réussi de la transaction SQL.
+             */
+            if ($lockedProduct->image) {
+                $filesToDelete[] = $lockedProduct->image;
+            }
+
+            foreach ($lockedProduct->images as $image) {
+                if ($image->path) {
+                    $filesToDelete[] = $image->path;
+                }
+            }
 
             /*
              * 2. Récupérer les identifiants de variantes triés de façon
@@ -55,22 +47,6 @@ class DeleteProductAction
 
             /*
              * 3. Verrouiller les variantes dans l'ordre croissant.
-             *
-             * Aligné sur CreateOrderAction & CancelOrderAction.
-             *
-             * Pourquoi lockForUpdate() est suffisant ici et pourquoi il n'est
-             * pas nécessaire sur hasActiveOrders :
-             *
-             * CreateOrderAction verrouille les variantes (FOR UPDATE) AVANT de
-             * créer une commande. Si DeleteProductAction tient déjà le verrou
-             * sur ces variantes, CreateOrderAction est bloqué et ne peut pas
-             * créer de commande pour ces variantes. Donc, une fois les variantes
-             * verrouillées, la lecture hasActiveOrders est cohérente et stable.
-             *
-             * Ajouter lockForUpdate() sur hasActiveOrders (jointure
-             * order_items + orders) créerait un risque de deadlock avec
-             * CancelOrderAction (Variant → Order), ce qui est interdit par la
-             * hiérarchie des verrous.
              */
             if ($variantIds->isNotEmpty()) {
                 Variant::query()
@@ -81,15 +57,12 @@ class DeleteProductAction
             }
 
             /*
-             * 4. Vérifier s'il existe des commandes actives (Pending ou Paid).
+             * 4. Vérifier s'il existe des commandes actives ou en cours (Pending, Paid ou Shipped).
              *
-             * Lecture NON verrouillante (pas de lockForUpdate), justifiée
-             * ci-dessus.
-             *
-             * La condition sur product_id couvre le cas d'un produit sans
-             * variante : si une commande existait quand une variante était
-             * présente et que la variante a depuis été supprimée (nullOnDelete),
-             * l'order_item conserve product_id mais a variant_id = NULL.
+             * On bloque également 'Shipped' car CancelOrderAction permet d'annuler
+             * une commande expédiée (ex: colis refusé ou retour client) afin de réintégrer
+             * le stock dans la variante. Supprimer la variante pendant l'expédition corromprait
+             * la restitution du stock lors d'un éventuel retour.
              */
             $hasActiveOrders = DB::table('order_items')
                 ->join('orders', 'orders.id', '=', 'order_items.order_id')
@@ -102,28 +75,28 @@ class DeleteProductAction
                 ->whereIn('orders.status', [
                     OrderStatus::Pending->value,
                     OrderStatus::Paid->value,
+                    OrderStatus::Shipped->value,
                 ])
                 ->exists();
 
             if ($hasActiveOrders) {
                 throw ValidationException::withMessages([
-                    'product' => ['Impossible de supprimer un produit associé à des commandes actives (en attente ou payées).'],
+                    'product' => ['Impossible de supprimer un produit associé à des commandes actives ou expédiées (en attente, payées ou en cours de livraison).'],
                 ]);
             }
 
             /*
-             * 5. Supprimer le produit.
-             *
-             * On supprime via $lockedProduct (instance fraîche et verrouillée)
-             * plutôt que $product (instance passée en paramètre, potentiellement
-             * périmée si un UPDATE concurrent a eu lieu avant l'entrée en
-             * transaction).
-             *
-             * Déclenche la suppression en cascade des variantes
-             * (cascadeOnDelete sur variants.product_id) et le nettoyage des
-             * images via les observers/événements du modèle Product.
+             * 5. Supprimer les lignes d'images et le produit.
              */
+            $lockedProduct->images()->delete();
             $lockedProduct->delete();
-        });
+        }, 3);
+
+        /*
+         * 6. Suppression physique des fichiers après le commit réussi de la transaction.
+         */
+        foreach (array_unique($filesToDelete) as $filePath) {
+            Storage::disk('public')->delete($filePath);
+        }
     }
 }

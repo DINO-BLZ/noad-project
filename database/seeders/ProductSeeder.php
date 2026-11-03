@@ -31,7 +31,7 @@ class ProductSeeder extends Seeder
                 'name' => 'Noad Tee — Edition 01',
                 'description' => 'T-shirt Noad, coupe droite, coton lourd 240g.',
                 'price' => 3500,
-                'image' => 'placeholder.jpg',
+                'image' => 'products/placeholder.jpg',
             ]
         );
 

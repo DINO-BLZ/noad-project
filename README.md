@@ -187,6 +187,18 @@ Chaque push/PR (toutes branches) déclenche automatiquement, via GitHub Actions 
 ## Notes
 
 - Le paiement par carte (CIB/Edahabia) est temporairement désactivé — seul le paiement à la livraison (COD) est disponible. Voir le commentaire dans `app/Http/Requests/CheckoutRequest.php`.
-- Le total enregistré et affiché couvre les articles; les frais de livraison sont explicitement indiqués comme à confirmer avant expédition. Aucun tarif n'est codé tant qu'une règle commerciale de livraison n'est pas décidée.
+- Le total enregistré et affiché couvre les articles plus les frais de livraison. Les tarifs de livraison sont définis dans `AlgeriaShippingService::ZONE_FEES` selon la grille estimative suivante (en DA) :
+
+  | Zone            | Domicile | Point-relais |
+  |-----------------|----------|--------------|
+  | Alger           | 500      | 350          |
+  | Centre          | 600      | 400          |
+  | Nord            | 750      | 450          |
+  | Est / Ouest     | 800      | 500          |
+  | Hauts Plateaux  | 850      | 550          |
+  | Sahara Nord     | 1 050    | 700          |
+  | Grand Sud       | 1 350    | 900          |
+
+  Ces tarifs sont des estimations basées sur Yalidine / ZR Express et doivent être vérifiés avec le transporteur retenu avant mise en production. Le montant COD envoyé au transporteur inclut le total articles + les frais de livraison.
 - Les inscriptions newsletter sont enregistrées dans `newsletter_subscribers`; la réponse distingue une nouvelle inscription d'une adresse déjà inscrite.
 - Le sitemap public est disponible sur `/sitemap.xml`; les pages d'administration portent `noindex, nofollow`.

@@ -187,19 +187,20 @@ class UpdateProductAction
                         ]);
                     }
 
-                    // Empêcher la suppression des variantes utilisées par des commandes actives (Pending ou Paid)
+                    // Empêcher la suppression des variantes utilisées par des commandes actives ou expédiées
                     $hasActiveOrders = DB::table('order_items')
                         ->join('orders', 'orders.id', '=', 'order_items.order_id')
                         ->whereIn('order_items.variant_id', $removeVariantIds)
                         ->whereIn('orders.status', [
                             OrderStatus::Pending->value,
                             OrderStatus::Paid->value,
+                            OrderStatus::Shipped->value,
                         ])
                         ->exists();
 
                     if ($hasActiveOrders) {
                         throw ValidationException::withMessages([
-                            'remove_variants' => ['Impossible de supprimer une variante associée à une commande active (en attente ou payée).'],
+                            'remove_variants' => ['Impossible de supprimer une variante associée à une commande active ou expédiée (en attente, payée ou en cours de livraison).'],
                         ]);
                     }
 

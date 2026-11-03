@@ -19,10 +19,17 @@ class SecurityHeaders
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
         if ($request->isSecure() || app()->environment('production')) {
-            $response->headers->set(
-                'Strict-Transport-Security',
-                'max-age=31536000; includeSubDomains; preload'
-            );
+            $hsts = 'max-age=31536000';
+
+            if (filter_var(env('HSTS_INCLUDE_SUBDOMAINS', false), FILTER_VALIDATE_BOOLEAN)) {
+                $hsts .= '; includeSubDomains';
+            }
+
+            if (filter_var(env('HSTS_PRELOAD', false), FILTER_VALIDATE_BOOLEAN)) {
+                $hsts .= '; preload';
+            }
+
+            $response->headers->set('Strict-Transport-Security', $hsts);
         }
 
         return $response;

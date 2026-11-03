@@ -404,7 +404,20 @@ class AlgeriaShippingService
     }
 
     /**
-     * Recherche d'une wilaya par son nom ou code.
+     * Alias connus pour certaines wilayas (noms internationaux ou courants).
+     */
+    private const ALIASES = [
+        'algiers' => 16,
+        'oran' => 31,
+        'constantine' => 25,
+        'annaba' => 23,
+    ];
+
+    /**
+     * Recherche d'une wilaya par son nom exact, code exact ou identifiant numérique.
+     *
+     * Aucune correspondance partielle n'est acceptée afin d'éviter
+     * une mauvaise attribution des frais de livraison.
      */
     public function findWilaya(?string $query): ?array
     {
@@ -414,17 +427,31 @@ class AlgeriaShippingService
 
         $queryClean = mb_strtolower(trim($query));
 
-        if ($queryClean === 'algiers') {
-            return self::WILAYAS[16];
+        // Alias connus (noms internationaux)
+        if (isset(self::ALIASES[$queryClean])) {
+            return self::WILAYAS[self::ALIASES[$queryClean]];
         }
 
         foreach (self::WILAYAS as $id => $data) {
-            if (
-                mb_strtolower($data['name']) === $queryClean
-                || mb_strtolower($data['code']) === $queryClean
-                || (string) $id === $queryClean
-                || str_contains(mb_strtolower($data['name']), $queryClean)
-            ) {
+            // Correspondance par identifiant numérique (ex: "16")
+            if ((string) $id === $queryClean) {
+                return $data;
+            }
+
+            // Correspondance par code exact (ex: "16")
+            if (mb_strtolower($data['code']) === $queryClean) {
+                return $data;
+            }
+
+            // Correspondance par nom complet exact (ex: "16 - Alger")
+            if (mb_strtolower($data['name']) === $queryClean) {
+                return $data;
+            }
+
+            // Correspondance par nom court exact sans le préfixe code
+            // Permet "alger" pour "16 - Alger", "blida" pour "09 - Blida", etc.
+            $shortName = mb_strtolower(trim(mb_substr($data['name'], mb_strpos($data['name'], '- ') + 2)));
+            if ($shortName === $queryClean) {
                 return $data;
             }
         }
