@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Scout\Searchable;
 
@@ -92,7 +93,7 @@ class Product extends Model
      */
     public function searchableAs(): string
     {
-        return 'products_index';
+        return 'products';
     }
 
     /**
@@ -102,8 +103,12 @@ class Product extends Model
      */
     public function toSearchableArray(): array
     {
+        $this->loadMissing('category');
+
         return [
+            'id' => (int) $this->id,
             'name' => $this->name,
+            'slug' => $this->slug,
             'description' => $this->description,
             'category' => $this->category?->name,
             'price' => (float) $this->price,
@@ -120,24 +125,54 @@ class Product extends Model
     }
 
     /**
+     * Charge les relations nécessaires lors de l'import massif.
+     */
+    public function makeAllSearchableUsing($query)
+    {
+        return $query->with('category');
+    }
+
+    /**
      * Rend la synchronisation Scout tolérante aux pannes si le cluster
-     * de recherche (Elasticsearch) est indisponible ou hors-ligne.
+     * de recherche (Elasticsearch) est indisponible ou hors-ligne,
+     * tout en consignant et rapportant l'erreur.
      */
     public function syncMakeSearchable($models)
     {
+        if ($models->isEmpty()) {
+            return;
+        }
+
         try {
-            return parent::syncMakeSearchable($models);
+            return $models
+                ->first()
+                ->makeSearchableUsing($models)
+                ->first()
+                ->searchableUsing()
+                ->update($models);
         } catch (\Throwable $exception) {
             report($exception);
+            Log::error('Erreur lors de la synchronisation de l\'index Scout (makeSearchable) : '.$exception->getMessage(), [
+                'exception' => $exception,
+                'product_ids' => $models->pluck('id')->all(),
+            ]);
         }
     }
 
     public function syncRemoveFromSearch($models)
     {
+        if ($models->isEmpty()) {
+            return;
+        }
+
         try {
-            return parent::syncRemoveFromSearch($models);
+            return $models->first()->searchableUsing()->delete($models);
         } catch (\Throwable $exception) {
             report($exception);
+            Log::error('Erreur lors de la suppression de l\'index Scout (removeFromSearch) : '.$exception->getMessage(), [
+                'exception' => $exception,
+                'product_ids' => $models->pluck('id')->all(),
+            ]);
         }
     }
 

@@ -111,6 +111,18 @@ class DropController extends Controller
 
         /*
          * --------------------------------------------------------
+         * Produits sélectionnables dans le formulaire de création
+         * --------------------------------------------------------
+         *
+         * La vue admin.drops.index affiche cette liste avec une case
+         * à cocher et un quota par produit.
+         */
+        $products = Product::query()
+            ->orderBy('name')
+            ->get();
+
+        /*
+         * --------------------------------------------------------
          * Vue
          * --------------------------------------------------------
          */
@@ -128,6 +140,7 @@ class DropController extends Controller
                 'activeDropSalesRate',
                 'whitelistCount',
                 'archivedRevenue',
+                'products',
             )
         );
     }

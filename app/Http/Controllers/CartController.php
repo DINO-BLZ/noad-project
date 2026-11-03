@@ -64,6 +64,16 @@ class CartController extends Controller
         int $variantId,
         UpdateCartAction $action
     ) {
+        if (Auth::check() && Auth::user()->is_admin) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Les comptes administrateurs ne peuvent pas effectuer d\'achats.',
+                ], 403);
+            }
+
+            return redirect()->route('admin.dashboard');
+        }
+
         try {
             $summary = $action->execute(
                 $variantId,
@@ -111,6 +121,16 @@ class CartController extends Controller
         int $variantId,
         RemoveCartItemAction $action
     ) {
+        if (Auth::check() && Auth::user()->is_admin) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Les comptes administrateurs ne peuvent pas effectuer d\'achats.',
+                ], 403);
+            }
+
+            return redirect()->route('admin.dashboard');
+        }
+
         try {
             $summary = $action->execute($variantId);
         } catch (HttpException $e) {

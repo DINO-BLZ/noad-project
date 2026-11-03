@@ -10,25 +10,41 @@ class ProductSeeder extends Seeder
 {
     public function run(): void
     {
-        $category = Category::create([
-            'name' => 'T-Shirts',
-            'slug' => 't-shirts',
-        ]);
+        if (app()->environment('production')) {
+            $this->command?->info(
+                'Les seeders sont désactivés en production. '
+                .'Utilisez `php artisan app:create-admin {email} {name}` pour créer un administrateur.'
+            );
 
-        $product = Product::create([
-            'category_id' => $category->id,
-            'name' => 'Noad Tee — Edition 01',
-            'slug' => 'noad-tee-edition-01',
-            'description' => 'T-shirt Noad, coupe droite, coton lourd 240g.',
-            'price' => 3500,
-            'image' => 'placeholder.jpg',
-        ]);
+            return;
+        }
 
-        $product->variants()->createMany([
-            ['size' => 'S', 'stock' => 10],
-            ['size' => 'M', 'stock' => 15],
-            ['size' => 'L', 'stock' => 8],
-            ['size' => 'XL', 'stock' => 0],
-        ]);
+        $category = Category::firstOrCreate(
+            ['slug' => 't-shirts'],
+            ['name' => 'T-Shirts']
+        );
+
+        $product = Product::firstOrCreate(
+            ['slug' => 'noad-tee-edition-01'],
+            [
+                'category_id' => $category->id,
+                'name' => 'Noad Tee — Edition 01',
+                'description' => 'T-shirt Noad, coupe droite, coton lourd 240g.',
+                'price' => 3500,
+                'image' => 'placeholder.jpg',
+            ]
+        );
+
+        foreach ([
+            'S' => 10,
+            'M' => 15,
+            'L' => 8,
+            'XL' => 0,
+        ] as $size => $stock) {
+            $product->variants()->firstOrCreate(
+                ['size' => $size, 'color' => ''],
+                ['stock' => $stock]
+            );
+        }
     }
 }

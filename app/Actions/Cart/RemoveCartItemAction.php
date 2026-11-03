@@ -4,6 +4,7 @@ namespace App\Actions\Cart;
 
 use App\Models\CartItem;
 use App\Services\CartService;
+use Illuminate\Support\Facades\Auth;
 
 class RemoveCartItemAction
 {
@@ -11,6 +12,10 @@ class RemoveCartItemAction
 
     public function execute(int $variantId): array
     {
+        if (Auth::check() && Auth::user()->is_admin) {
+            abort(403, 'Les comptes administrateurs ne peuvent pas modifier un panier.');
+        }
+
         [$userId, $sessionId] = $this->cartService->owner();
 
         CartItem::forOwner($userId, $sessionId)

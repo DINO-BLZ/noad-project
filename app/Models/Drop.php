@@ -44,23 +44,18 @@ class Drop extends Model
 
     /**
      * Calcule les statistiques de quota du drop.
-     *
-     * Le quota est défini produit par produit.
-     *
-     * Seuls les produits dont le quota est strictement supérieur
-     * à zéro participent au calcul.
-     *
-     * Les ventes sont comptabilisées uniquement pour les commandes
-     * confirmées : paid, shipped et delivered.
-     *
-     * Chaque produit est plafonné individuellement à son propre quota
-     * avant que les totaux du drop soient calculés.
      */
     public function quotaMonitoring(): array
     {
         return self::quotaMonitoringFor([$this])[$this->id];
     }
 
+    /**
+     * Calcule les quotas, ventes et revenus de plusieurs drops.
+     *
+     * Les ventes sont calculées par produit et plafonnées
+     * individuellement au quota correspondant.
+     */
     public static function quotaMonitoringFor(iterable $drops): Collection
     {
         $dropIds = collect($drops)
@@ -90,9 +85,15 @@ class Drop extends Model
                 OrderStatus::Shipped->value,
                 OrderStatus::Delivered->value,
             ])
-            ->select('order_items.drop_id', 'order_items.product_id')
+            ->select(
+                'order_items.drop_id',
+                'order_items.product_id'
+            )
             ->selectRaw('SUM(order_items.quantity) as sold')
-            ->groupBy('order_items.drop_id', 'order_items.product_id')
+            ->groupBy(
+                'order_items.drop_id',
+                'order_items.product_id'
+            )
             ->get()
             ->groupBy('drop_id');
 
@@ -105,9 +106,17 @@ class Drop extends Model
                 OrderStatus::Delivered->value,
             ])
             ->select('order_items.drop_id')
-            ->selectRaw('SUM(order_items.quantity) as actual_sold')
             ->selectRaw(
-                'SUM(CASE WHEN orders.payment_status = ? THEN order_items.quantity * order_items.price ELSE 0 END) as revenue',
+                'SUM(order_items.quantity) as actual_sold'
+            )
+            ->selectRaw(
+                'SUM(
+                    CASE
+                        WHEN orders.payment_status = ?
+                        THEN order_items.quantity * order_items.price
+                        ELSE 0
+                    END
+                ) as revenue',
                 [PaymentStatus::Paid->value]
             )
             ->selectRaw('COUNT(DISTINCT orders.id) as orders')
@@ -115,36 +124,75 @@ class Drop extends Model
             ->get()
             ->keyBy('drop_id');
 
-        return $dropIds->mapWithKeys(function (int $dropId) use ($quotas, $salesByProduct, $financials) {
-            $dropQuotas = $quotas->get($dropId, collect());
-            $productSales = $salesByProduct->get($dropId, collect())->keyBy('product_id');
-            $totalQuota = (int) $dropQuotas->sum('quota');
-            $totalSold = (int) $dropQuotas->sum(function ($quota) use ($productSales) {
-                $unitsSold = (int) ($productSales->get($quota->product_id)->sold ?? 0);
+        return $dropIds->mapWithKeys(
+            function (int $dropId) use (
+                $quotas,
+                $salesByProduct,
+                $financials
+            ) {
+                $dropQuotas = $quotas->get($dropId, collect());
 
-                return min($unitsSold, (int) $quota->quota);
-            });
-            $dropFinancials = $financials->get($dropId);
-            $remaining = max(0, $totalQuota - $totalSold);
-            $quotaDefined = $totalQuota > 0;
+                $productSales = $salesByProduct
+                    ->get($dropId, collect())
+                    ->keyBy('product_id');
 
-            return [$dropId => [
-                'quota_defined' => $quotaDefined,
-                'quota' => $totalQuota,
-                'sold' => $totalSold,
-                'actual_sold' => (int) ($dropFinancials->actual_sold ?? 0),
-                'available' => $remaining,
-                'remaining' => $remaining,
-                'percentage' => $quotaDefined
-                    ? min(100, (int) floor(($totalSold / $totalQuota) * 100))
-                    : 0,
-                'revenue' => (float) ($dropFinancials->revenue ?? 0),
-                'orders' => (int) ($dropFinancials->orders ?? 0),
-                'quota_status' => ! $quotaDefined
-                    ? 'undefined'
-                    : ($remaining === 0 ? 'reached' : 'available'),
-            ]];
-        });
+                $totalQuota = (int) $dropQuotas->sum('quota');
+
+                $totalSold = (int) $dropQuotas->sum(
+                    function ($quota) use ($productSales) {
+                        $unitsSold = (int) (
+                            $productSales->get(
+                                $quota->product_id
+                            )->sold ?? 0
+                        );
+
+                        return min(
+                            $unitsSold,
+                            (int) $quota->quota
+                        );
+                    }
+                );
+
+                $dropFinancials = $financials->get($dropId);
+
+                $remaining = max(0, $totalQuota - $totalSold);
+                $quotaDefined = $totalQuota > 0;
+
+                return [
+                    $dropId => [
+                        'quota_defined' => $quotaDefined,
+                        'quota' => $totalQuota,
+                        'sold' => $totalSold,
+                        'actual_sold' => (int) (
+                            $dropFinancials->actual_sold ?? 0
+                        ),
+                        'available' => $remaining,
+                        'remaining' => $remaining,
+                        'percentage' => $quotaDefined
+                            ? min(
+                                100,
+                                (int) floor(
+                                    ($totalSold / $totalQuota) * 100
+                                )
+                            )
+                            : 0,
+                        'revenue' => (float) (
+                            $dropFinancials->revenue ?? 0
+                        ),
+                        'orders' => (int) (
+                            $dropFinancials->orders ?? 0
+                        ),
+                        'quota_status' => ! $quotaDefined
+                            ? 'undefined'
+                            : (
+                                $remaining === 0
+                                    ? 'reached'
+                                    : 'available'
+                            ),
+                    ],
+                ];
+            }
+        );
     }
 
     public function whitelists()
@@ -159,29 +207,36 @@ class Drop extends Model
     }
 
     /**
-     * Statut calculé du drop, jamais stocké en base :
-     * dépend des dates ET du stock des produits associés.
+     * Statut calculé du drop :
      *
-     * Toutes les vues Blade qui lisent $drop->status continuent
-     * de fonctionner sans modification.
+     * - ended : date de fin dépassée ;
+     * - upcoming : date de début dans le futur ;
+     * - ended : drop commencé mais sans stock disponible ;
+     * - active : drop ouvert avec du stock disponible.
+     *
+     * Le statut n'est pas enregistré en base de données.
      */
     protected function status(): Attribute
     {
         return Attribute::make(
             get: function () {
-                $hasAvailableStock = array_key_exists('has_available_stock', $this->attributes)
+                $hasAvailableStock = array_key_exists(
+                    'has_available_stock',
+                    $this->attributes
+                )
                     ? (bool) $this->attributes['has_available_stock']
                     : ! $this->isSoldOut();
 
-                if (
-                    $this->end_date->isPast()
-                    || ! $hasAvailableStock
-                ) {
+                if ($this->end_date->isPast()) {
                     return 'ended';
                 }
 
                 if ($this->start_date->isFuture()) {
                     return 'upcoming';
+                }
+
+                if (! $hasAvailableStock) {
+                    return 'ended';
                 }
 
                 return 'active';
@@ -194,17 +249,13 @@ class Drop extends Model
         return $query
             ->where('start_date', '<=', now())
             ->where('end_date', '>=', now())
-            ->whereHas('products.variants', function ($q) {
-                $q->where('stock', '>', 0);
+            ->whereHas('products.variants', function ($query) {
+                $query->where('stock', '>', 0);
             });
     }
 
     /**
-     * Retourne les drops actifs dans l'ordre du plus récent
-     * au plus ancien.
-     *
-     * Utilisé lorsqu'il peut exister plusieurs drops actifs
-     * simultanément et qu'il faut déterminer le drop courant.
+     * Retourne les drops actifs du plus récent au plus ancien.
      */
     public function scopeCurrent($query)
     {
@@ -222,14 +273,34 @@ class Drop extends Model
     {
         return $query->where(function ($query) {
             $query->where('end_date', '<', now())
-                ->orWhereDoesntHave('products.variants', fn ($variants) => $variants->where('stock', '>', 0));
+                ->orWhere(function ($soldOut) {
+                    $soldOut
+                        ->where('start_date', '<=', now())
+                        ->whereDoesntHave(
+                            'products.variants',
+                            fn ($variants) => $variants->where(
+                                'stock',
+                                '>',
+                                0
+                            )
+                        );
+                });
         });
     }
 
+    /**
+     * Charge le statut du stock dans la requête principale
+     * pour éviter une requête supplémentaire par drop.
+     */
     public function scopeWithStockStatus($query)
     {
         $availableStock = DB::table('drop_product')
-            ->join('variants', 'variants.product_id', '=', 'drop_product.product_id')
+            ->join(
+                'variants',
+                'variants.product_id',
+                '=',
+                'drop_product.product_id'
+            )
             ->whereColumn('drop_product.drop_id', 'drops.id')
             ->where('variants.stock', '>', 0)
             ->selectRaw('1')

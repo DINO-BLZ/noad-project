@@ -16,10 +16,14 @@ class RedirectAdminFromShop
 
             $allowed = $name !== null && (
                 str_starts_with($name, 'admin.')
-                || in_array($name, ['login', 'logout', 'register', 'password.request', 'password.email', 'password.reset', 'password.update'])
+                || in_array($name, ['login', 'logout', 'password.request', 'password.email', 'password.reset', 'password.update'], true)
             );
 
             if (! $allowed) {
+                if ($request->expectsJson()) {
+                    abort(403, 'Les comptes administrateurs ne peuvent pas effectuer d\'actions réservées aux clients.');
+                }
+
                 return redirect()->route('admin.dashboard');
             }
         }

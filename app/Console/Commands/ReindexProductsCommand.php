@@ -21,8 +21,15 @@ class ReindexProductsCommand extends Command
             return self::SUCCESS;
         }
 
-        return $this->call('scout:import', [
-            'model' => Product::class,
-        ]);
+        try {
+            return $this->call('scout:import', [
+                'model' => Product::class,
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+            $this->error('Erreur lors de la réindexation dans Elasticsearch : '.$exception->getMessage());
+
+            return self::FAILURE;
+        }
     }
 }

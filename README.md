@@ -30,12 +30,18 @@ php artisan key:generate
 
 ### Base de données (SQLite, par défaut)
 
+Pour utiliser les données de démonstration en local, renseigne `ADMIN_EMAIL` et
+`ADMIN_PASSWORD` dans `.env` (et éventuellement `ADMIN_NAME`) avant le seed.
+Le mot de passe n'a volontairement aucune valeur par défaut.
+
 ```bash
 touch database/database.sqlite
 php artisan migrate --seed
 ```
 
 `DB_CONNECTION=sqlite` est déjà le défaut dans `.env.example` — aucune configuration supplémentaire n'est nécessaire pour démarrer en local.
+`AdminSeeder` échoue clairement si `ADMIN_EMAIL` ou `ADMIN_PASSWORD` manque, et ne modifie jamais un compte existant. `ProductSeeder` peut être relancé sans créer de doublons.
+En production, les seeders sont désactivés : `DatabaseSeeder`, `AdminSeeder` et `ProductSeeder` ne créent aucune donnée.
 Le fuseau applicatif est `Africa/Algiers`. Pour MySQL/MariaDB, la session DB utilise `DB_TIMEZONE=+01:00` afin de garder cohérents les timestamps sans réécrire les données existantes.
 
 ### Frontend
@@ -51,6 +57,8 @@ npm run build
 ```
 
 ### Créer un compte admin
+
+En production, ne lance pas `db:seed` pour créer un administrateur. Utilise la commande interactive dédiée, qui demande et confirme un mot de passe :
 
 ```bash
 php artisan app:create-admin {email} {name}

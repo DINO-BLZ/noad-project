@@ -7,6 +7,7 @@ use App\Enums\OrderStatus;
 use App\Exceptions\CartChangedDuringCheckoutException;
 use App\Models\CartItem;
 use App\Models\Order;
+use App\Models\User;
 use App\Models\Variant;
 use App\Services\AlgeriaShippingService;
 use Illuminate\Database\QueryException;
@@ -25,6 +26,10 @@ class CreateOrderAction
         ?string $sessionId,
         ?string $checkoutToken = null
     ): Order {
+        if ($userId !== null && User::where('id', $userId)->where('is_admin', true)->exists()) {
+            abort(403, 'Les comptes administrateurs ne peuvent pas passer de commande.');
+        }
+
         for (
             $attempt = 1;
             $attempt <= self::MAX_CHECKOUT_ATTEMPTS;

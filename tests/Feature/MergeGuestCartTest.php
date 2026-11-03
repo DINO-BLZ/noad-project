@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Cart\UpdateCartAction;
 use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Product;
@@ -11,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class MergeGuestCartTest extends TestCase
@@ -52,6 +54,16 @@ class MergeGuestCartTest extends TestCase
             'variant_id' => $variant->id,
             'quantity' => $quantity,
         ]);
+    }
+
+    public function test_cart_update_rejects_non_positive_quantity(): void
+    {
+        $variant = $this->createVariant('invalid-quantity', 10);
+
+        $this->expectException(HttpException::class);
+        $this->expectExceptionMessage('La quantité demandée est invalide.');
+
+        app(UpdateCartAction::class)->execute($variant->id, 0);
     }
 
     public function test_guest_cart_is_transferred_to_user_when_user_cart_is_empty(): void

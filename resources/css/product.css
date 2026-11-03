@@ -50,39 +50,6 @@
     flex-wrap:wrap;
 }
 
-.size-option{
-    position:relative;
-}
-
-.size-option input{
-    position:absolute;
-    opacity:0;
-}
-
-.size-option span{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    width:48px;
-    height:48px;
-    border:1px solid var(--border);
-    font-size:.8rem;
-    font-weight:600;
-    cursor:pointer;
-    transition:.2s;
-}
-
-.size-option input:checked + span{
-    background:var(--text);
-    color:var(--bg);
-}
-
-.size-option.is-disabled span{
-    opacity:.3;
-    text-decoration:line-through;
-    cursor:not-allowed;
-}
-
 .product__cta{
     width:100%;
     padding:1rem;

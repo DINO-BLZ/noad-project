@@ -51,6 +51,14 @@ class CheckoutController extends Controller
 
     public function store(CheckoutRequest $request, CreateOrderAction $createOrderAction)
     {
+        if (Auth::check() && Auth::user()->is_admin) {
+            return back()
+                ->withErrors([
+                    'checkout' => 'Les comptes administrateurs ne peuvent pas passer commande.',
+                ])
+                ->withInput();
+        }
+
         [$userId, $sessionId] = $this->owner();
         $data = $request->validated();
         $checkoutToken = $data['checkout_token'] ?? null;
